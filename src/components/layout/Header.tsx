@@ -50,7 +50,7 @@ export function Header() {
               {user ? (
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
-                    <Link to="/_authenticated/dashboard">
+                    <Link to="/dashboard">
                       <User className="mr-1 h-4 w-4" />
                       My Listings
                     </Link>
@@ -65,7 +65,7 @@ export function Header() {
                     Sign out
                   </Button>
                   <Button variant="ghost" size="icon" className="sm:hidden" asChild>
-                    <Link to="/_authenticated/dashboard">
+                    <Link to="/dashboard">
                       <User className="h-5 w-5" />
                     </Link>
                   </Button>
