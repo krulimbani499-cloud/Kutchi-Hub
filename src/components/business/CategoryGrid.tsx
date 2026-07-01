@@ -1,6 +1,32 @@
 import { Link } from "@tanstack/react-router";
-import * as LucideIcons from "lucide-react";
+import {
+  Utensils,
+  Bed,
+  Stethoscope,
+  GraduationCap,
+  ShoppingCart,
+  Scissors,
+  Landmark,
+  Car,
+  Home,
+  Dumbbell,
+  Circle,
+  type LucideIcon,
+} from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+
+const iconMap: Record<string, LucideIcon> = {
+  utensils: Utensils,
+  bed: Bed,
+  stethoscope: Stethoscope,
+  "graduation-cap": GraduationCap,
+  "shopping-cart": ShoppingCart,
+  scissors: Scissors,
+  landmark: Landmark,
+  car: Car,
+  home: Home,
+  dumbbell: Dumbbell,
+};
 
 interface CategoryGridProps {
   categories: Tables<"categories">[];
@@ -16,9 +42,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
   return (
     <div className={`grid gap-3 ${sizeClasses}`}>
       {categories.map((category) => {
-        const Icon = (LucideIcons as Record<string, React.ComponentType<{ className?: string }>>)[
-          category.icon ?? "Circle"
-        ] ?? LucideIcons.Circle;
+        const Icon = iconMap[category.icon ?? ""] ?? Circle;
         return (
           <Link
             key={category.id}
