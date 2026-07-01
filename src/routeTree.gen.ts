@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as CategoriesRouteImport } from './routes/categories'
@@ -17,7 +18,15 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BusinessSlugRouteImport } from './routes/business.$slug'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedBusinessNewRouteImport } from './routes/_authenticated/business.new'
+import { Route as AuthenticatedBusinessSlugEditRouteImport } from './routes/_authenticated/business.$slug.edit'
+import { Route as AuthenticatedBusinessSlugClaimRouteImport } from './routes/_authenticated/business.$slug.claim'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
@@ -57,6 +66,24 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedBusinessNewRoute =
+  AuthenticatedBusinessNewRouteImport.update({
+    id: '/business/new',
+    path: '/business/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedBusinessSlugEditRoute =
+  AuthenticatedBusinessSlugEditRouteImport.update({
+    id: '/business/$slug/edit',
+    path: '/business/$slug/edit',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedBusinessSlugClaimRoute =
+  AuthenticatedBusinessSlugClaimRouteImport.update({
+    id: '/business/$slug/claim',
+    path: '/business/$slug/claim',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -64,8 +91,12 @@ export interface FileRoutesByFullPath {
   '/categories': typeof CategoriesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/business/$slug': typeof BusinessSlugRoute
+  '/business/new': typeof AuthenticatedBusinessNewRoute
+  '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
+  '/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -73,8 +104,12 @@ export interface FileRoutesByTo {
   '/categories': typeof CategoriesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/business/$slug': typeof BusinessSlugRoute
+  '/business/new': typeof AuthenticatedBusinessNewRoute
+  '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
+  '/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -84,8 +119,12 @@ export interface FileRoutesById {
   '/categories': typeof CategoriesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/business/$slug': typeof BusinessSlugRoute
+  '/_authenticated/business/new': typeof AuthenticatedBusinessNewRoute
+  '/_authenticated/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
+  '/_authenticated/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -95,8 +134,12 @@ export interface FileRouteTypes {
     | '/categories'
     | '/reset-password'
     | '/search'
+    | '/sitemap.xml'
     | '/dashboard'
     | '/business/$slug'
+    | '/business/new'
+    | '/business/$slug/claim'
+    | '/business/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -104,8 +147,12 @@ export interface FileRouteTypes {
     | '/categories'
     | '/reset-password'
     | '/search'
+    | '/sitemap.xml'
     | '/dashboard'
     | '/business/$slug'
+    | '/business/new'
+    | '/business/$slug/claim'
+    | '/business/$slug/edit'
   id:
     | '__root__'
     | '/'
@@ -114,8 +161,12 @@ export interface FileRouteTypes {
     | '/categories'
     | '/reset-password'
     | '/search'
+    | '/sitemap.xml'
     | '/_authenticated/dashboard'
     | '/business/$slug'
+    | '/_authenticated/business/new'
+    | '/_authenticated/business/$slug/claim'
+    | '/_authenticated/business/$slug/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -125,11 +176,19 @@ export interface RootRouteChildren {
   CategoriesRoute: typeof CategoriesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   BusinessSlugRoute: typeof BusinessSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/search': {
       id: '/search'
       path: '/search'
@@ -186,15 +245,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/business/new': {
+      id: '/_authenticated/business/new'
+      path: '/business/new'
+      fullPath: '/business/new'
+      preLoaderRoute: typeof AuthenticatedBusinessNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/business/$slug/edit': {
+      id: '/_authenticated/business/$slug/edit'
+      path: '/business/$slug/edit'
+      fullPath: '/business/$slug/edit'
+      preLoaderRoute: typeof AuthenticatedBusinessSlugEditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/business/$slug/claim': {
+      id: '/_authenticated/business/$slug/claim'
+      path: '/business/$slug/claim'
+      fullPath: '/business/$slug/claim'
+      preLoaderRoute: typeof AuthenticatedBusinessSlugClaimRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedBusinessNewRoute: typeof AuthenticatedBusinessNewRoute
+  AuthenticatedBusinessSlugClaimRoute: typeof AuthenticatedBusinessSlugClaimRoute
+  AuthenticatedBusinessSlugEditRoute: typeof AuthenticatedBusinessSlugEditRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedBusinessNewRoute: AuthenticatedBusinessNewRoute,
+  AuthenticatedBusinessSlugClaimRoute: AuthenticatedBusinessSlugClaimRoute,
+  AuthenticatedBusinessSlugEditRoute: AuthenticatedBusinessSlugEditRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -207,8 +293,19 @@ const rootRouteChildren: RootRouteChildren = {
   CategoriesRoute: CategoriesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   BusinessSlugRoute: BusinessSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
