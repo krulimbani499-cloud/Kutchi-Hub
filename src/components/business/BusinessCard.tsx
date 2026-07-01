@@ -2,13 +2,21 @@ import { Link } from "@tanstack/react-router";
 import { MapPin, Phone, Star, BadgeCheck } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
-import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessCardProps {
-  business: Tables<"businesses"> & {
-    categories: { id: string; name: string; slug: string; color: string | null } | null;
+  business: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    address: string | null;
+    city: string | null;
+    phone: string | null;
+    verified: boolean;
+    featured_image: string | null;
     avgRating?: number;
     reviewCount?: number;
+    categories: { id: string; name: string; slug: string; color: string | null } | null;
   };
 }
 
