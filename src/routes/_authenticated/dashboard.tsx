@@ -48,7 +48,7 @@ function DashboardPage() {
           <p className="text-sm text-muted-foreground">Manage your listings and ownership claims.</p>
         </div>
         <Button className="bg-primary text-primary-foreground" asChild>
-          <Link to="/_authenticated/business/new">Add New Business</Link>
+          <Link to="/business/new">Add New Business</Link>
         </Button>
       </div>
 
@@ -67,7 +67,7 @@ function DashboardPage() {
                   You haven't listed any businesses yet.
                   <div className="mt-4">
                     <Button className="bg-primary text-primary-foreground" asChild>
-                      <Link to="/_authenticated/business/new">Add a business</Link>
+                      <Link to="/business/new">Add a business</Link>
                     </Button>
                   </div>
                 </div>
@@ -77,27 +77,27 @@ function DashboardPage() {
                     <div key={b.id} className="flex items-start justify-between rounded-lg border border-border p-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-foreground">{(b as unknown as { name: string }).name}</h3>
+                          <h3 className="font-semibold text-foreground">{b.name}</h3>
                           <Badge variant="outline" className="text-xs">
-                            {(b as unknown as { status: string }).status}
+                            {b.status}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <MapPin className="h-3.5 w-3.5" />
-                          {(b as unknown as { city: string | null }).city}
+                          {b.city}
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Star className="h-3.5 w-3.5" />
-                          {(b as unknown as { categories: { name: string } | null }).categories?.name}
+                          {b.categoryName}
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="ghost" size="icon" asChild>
-                          <Link to="/_authenticated/business/$slug/edit" params={{ slug: (b as unknown as { slug: string }).slug }}>
+                          <Link to="/business/$slug/edit" params={{ slug: b.slug }}>
                             <Edit className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete((b as unknown as { id: string }).id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(b.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -125,16 +125,16 @@ function DashboardPage() {
                   {data.claims.map((claim) => (
                     <div key={claim.id} className="rounded-lg border border-border p-4">
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="font-medium text-foreground">{(claim as unknown as { businesses: { name: string } }).businesses.name}</span>
-                        <Badge variant="outline">{(claim as unknown as { status: string }).status}</Badge>
+                        <span className="font-medium text-foreground">{claim.businessName}</span>
+                        <Badge variant="outline">{claim.status}</Badge>
                       </div>
-                      <p className="mb-2 text-xs text-muted-foreground">{(claim as unknown as { message: string | null }).message || "No message"}</p>
-                      {data.isAdmin && (claim as unknown as { status: string }).status === "pending" && (
+                      <p className="mb-2 text-xs text-muted-foreground">{claim.message || "No message"}</p>
+                      {data.isAdmin && claim.status === "pending" && (
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="text-success" onClick={() => handleClaim((claim as unknown as { id: string }).id, "approved")}>
+                          <Button size="sm" variant="outline" className="text-success" onClick={() => handleClaim(claim.id, "approved")}>
                             Approve
                           </Button>
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleClaim((claim as unknown as { id: string }).id, "rejected")}>
+                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleClaim(claim.id, "rejected")}>
                             Reject
                           </Button>
                         </div>
