@@ -150,7 +150,7 @@ export const getHomeData = createServerFn({ method: "GET" }).handler(async () =>
     supabase.from("categories").select("*").order("display_order", { ascending: true }).limit(12),
     supabase
       .from("businesses")
-      .select("id, name, slug, description, city, phone, verified, featured_image, categories:category_id(id, name, slug, color)")
+      .select("id, name, slug, description, address, city, phone, verified, featured_image, categories:category_id(id, name, slug, color)")
       .eq("status", "published")
       .order("verified", { ascending: false })
       .limit(8),
