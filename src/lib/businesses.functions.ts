@@ -342,7 +342,7 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     let businessesQuery = supabase
       .from("businesses")
-      .select("*, categories:category_id(name, slug, color)")
+      .select("id, name, slug, status, city, category_id, categories:category_id(name, slug)")
       .order("created_at", { ascending: false });
     if (!isAdmin) {
       businessesQuery = businessesQuery.eq("owner_id", userId);
@@ -352,7 +352,7 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     let claimsQuery = supabase
       .from("business_claims")
-      .select("*, businesses:business_id(name, slug, city, owner_id), profiles:user_id(display_name)")
+      .select("id, business_id, user_id, status, message, created_at, businesses:business_id(name, slug, city)")
       .order("created_at", { ascending: false });
     if (!isAdmin) {
       claimsQuery = claimsQuery.eq("user_id", userId);
@@ -360,7 +360,23 @@ export const getDashboard = createServerFn({ method: "GET" })
     const { data: claims, error: claimsError } = await claimsQuery;
     if (claimsError) throw new Error(claimsError.message);
 
-    return { businesses: businesses ?? [], claims: claims ?? [], isAdmin: !!isAdmin, isOwner: !!isOwner };
+    const typedBusinesses = (businesses ?? []).map((b) => ({
+      id: (b as unknown as { id: string }).id,
+      name: (b as unknown as { name: string }).name,
+      slug: (b as unknown as { slug: string }).slug,
+      status: (b as unknown as { status: string }).status,
+      city: (b as unknown as { city: string | null }).city,
+      categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
+    }));
+
+    const typedClaims = (claims ?? []).map((c) => ({
+      id: (c as unknown as { id: string }).id,
+      status: (c as unknown as { status: string }).status,
+      message: (c as unknown as { message: string | null }).message,
+      businessName: (c as unknown as { businesses: { name: string } | null }).businesses?.name ?? "",
+    }));
+
+    return { businesses: typedBusinesses, claims: typedClaims, isAdmin: !!isAdmin, isOwner: !!isOwner };
   });
 
 export const updateClaimStatus = createServerFn({ method: "POST" })
