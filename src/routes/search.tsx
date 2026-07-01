@@ -58,12 +58,18 @@ function SearchPage() {
   const { data: results, isLoading } = useSuspenseQuery(searchQueryOptions(applied.q, applied.category, applied.city, applied.sort));
 
   const applyFilters = () => {
-    setApplied({ ...filters });
+    const normalized = {
+      q: filters.q,
+      category: filters.category === "all" ? "" : filters.category,
+      city: filters.city,
+      sort: filters.sort,
+    };
+    setApplied(normalized);
     const params = new URLSearchParams();
-    if (filters.q) params.set("q", filters.q);
-    if (filters.category) params.set("category", filters.category);
-    if (filters.city) params.set("city", filters.city);
-    if (filters.sort) params.set("sort", filters.sort);
+    if (normalized.q) params.set("q", normalized.q);
+    if (normalized.category) params.set("category", normalized.category);
+    if (normalized.city) params.set("city", normalized.city);
+    if (normalized.sort) params.set("sort", normalized.sort);
     window.history.replaceState({}, "", `/search?${params.toString()}`);
   };
 
