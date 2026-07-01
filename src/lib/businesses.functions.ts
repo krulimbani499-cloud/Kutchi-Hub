@@ -110,9 +110,26 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
 
     const { data: reviews } = await supabase
       .from("business_reviews")
-      .select("*, profiles:user_id(display_name, avatar_url)")
+      .select("*")
       .eq("business_id", business.id)
       .order("created_at", { ascending: false });
+
+    const userIds = [...new Set((reviews ?? []).map((r) => r.user_id))];
+    let profiles: Record<string, { display_name: string | null; avatar_url: string | null }> = {};
+    if (userIds.length > 0) {
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, avatar_url")
+        .in("user_id", userIds);
+      for (const p of profileRows ?? []) {
+        profiles[p.user_id] = p;
+      }
+    }
+
+    const reviewsWithProfiles = (reviews ?? []).map((r) => ({
+      ...r,
+      profiles: profiles[r.user_id] ?? null,
+    }));
 
     const { data: photos } = await supabase
       .from("business_photos")
@@ -127,7 +144,7 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
 
     return {
       business,
-      reviews: reviews ?? [],
+      reviews: reviewsWithProfiles,
       photos: photos ?? [],
       avgRating,
       reviewCount: reviews?.length ?? 0,

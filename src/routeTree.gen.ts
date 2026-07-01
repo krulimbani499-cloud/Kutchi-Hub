@@ -9,10 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as CategoriesRouteImport } from './routes/categories'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BusinessSlugRouteImport } from './routes/business.$slug'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategoriesRoute = CategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -20,6 +45,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BusinessSlugRoute = BusinessSlugRouteImport.update({
+  id: '/business/$slug',
+  path: '/business/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -30,33 +60,104 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/categories': typeof CategoriesRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/search': typeof SearchRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/business/$slug': typeof BusinessSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/categories': typeof CategoriesRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/search': typeof SearchRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/business/$slug': typeof BusinessSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/categories': typeof CategoriesRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/search': typeof SearchRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/business/$slug': typeof BusinessSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/categories'
+    | '/reset-password'
+    | '/search'
+    | '/dashboard'
+    | '/business/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard'
-  id: '__root__' | '/' | '/_authenticated' | '/_authenticated/dashboard'
+  to:
+    | '/'
+    | '/auth'
+    | '/categories'
+    | '/reset-password'
+    | '/search'
+    | '/dashboard'
+    | '/business/$slug'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/categories'
+    | '/reset-password'
+    | '/search'
+    | '/_authenticated/dashboard'
+    | '/business/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  CategoriesRoute: typeof CategoriesRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SearchRoute: typeof SearchRoute
+  BusinessSlugRoute: typeof BusinessSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/categories': {
+      id: '/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof CategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -69,6 +170,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business/$slug': {
+      id: '/business/$slug'
+      path: '/business/$slug'
+      fullPath: '/business/$slug'
+      preLoaderRoute: typeof BusinessSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/dashboard': {
@@ -95,6 +203,11 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  CategoriesRoute: CategoriesRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SearchRoute: SearchRoute,
+  BusinessSlugRoute: BusinessSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
