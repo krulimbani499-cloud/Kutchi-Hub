@@ -117,11 +117,36 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        router.invalidate();
+        if (event !== "SIGNED_OUT") {
+          queryClient.invalidateQueries();
+        }
+      }
+    });
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, [queryClient, router]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1">
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </main>
+        <footer className="border-t border-border bg-card py-6">
+          <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} NearMe. All rights reserved.</p>
+          </div>
+        </footer>
+      </div>
     </QueryClientProvider>
   );
 }
