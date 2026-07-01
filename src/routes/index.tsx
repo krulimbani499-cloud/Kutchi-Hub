@@ -101,7 +101,7 @@ function HomePage() {
             <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
             <p className="mt-3 text-muted-foreground">No featured listings yet. Add your business today!</p>
             <Button className="mt-4 bg-primary text-primary-foreground" asChild>
-              <Link to="/_authenticated/business/new">Add a business</Link>
+              <Link to="/business/new">Add a business</Link>
             </Button>
           </div>
         )}
@@ -115,7 +115,7 @@ function HomePage() {
               <p className="mt-1 opacity-90">List your business on NearMe and reach thousands of customers.</p>
             </div>
             <Button size="lg" className="bg-primary-foreground text-foreground hover:bg-white/90" asChild>
-              <Link to="/_authenticated/business/new">Add your business</Link>
+              <Link to="/business/new">Add your business</Link>
             </Button>
           </div>
         </div>
