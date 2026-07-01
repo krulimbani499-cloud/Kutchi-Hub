@@ -92,20 +92,19 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ slug: z.string(), city: z.string().optional() }).parse(input))
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
-    const query = supabase
+    let query = supabase
       .from("businesses")
       .select(
         "*, categories:category_id(id, name, slug, color, icon)",
       )
       .eq("slug", data.slug)
-      .eq("status", "published")
-      .maybeSingle();
+      .eq("status", "published");
 
     if (data.city) {
-      query.eq("city", data.city);
+      query = query.eq("city", data.city);
     }
 
-    const { data: business, error } = await query;
+    const { data: business, error } = await query.maybeSingle();
     if (error) throw new Error(error.message);
     if (!business) throw new Error("Business not found");
 
