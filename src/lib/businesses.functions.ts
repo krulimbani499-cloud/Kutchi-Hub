@@ -35,11 +35,11 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       }
     }
 
-    if (data.category) {
+    if (data.category && data.category !== "all") {
       query = query.eq("categories.slug", data.category);
     }
 
-    if (data.city) {
+    if (data.city && data.city !== "all") {
       query = query.ilike("city", `%${data.city}%`);
     }
 
