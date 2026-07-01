@@ -126,7 +126,7 @@ export function BusinessForm({ categories, initial }: BusinessFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="category">Category</Label>
-        <Select value={form.category_id} onValueChange={(value) => setForm((f) => ({ ...f, category_id: value }))}>
+        <Select value={form.category_id || undefined} onValueChange={(value) => setForm((f) => ({ ...f, category_id: value }))}>
           <SelectTrigger id="category">
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
