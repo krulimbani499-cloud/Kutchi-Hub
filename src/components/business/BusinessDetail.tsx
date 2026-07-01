@@ -120,7 +120,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               </Button>
             )}
             <Button variant="outline" asChild>
-              <Link to="/_authenticated/business/$slug/claim" params={{ slug: business.slug }}>
+              <Link to="/business/$slug/claim" params={{ slug: business.slug }}>
                 Claim this business
               </Link>
             </Button>
