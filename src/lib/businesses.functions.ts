@@ -240,7 +240,7 @@ export const createBusiness = createServerFn({ method: "POST" })
       .insert({
         ...data,
         owner_id: userId,
-        status: "published",
+        status: "pending",
         website: data.website || null,
         email: data.email || null,
         featured_image: data.featured_image || null,
@@ -289,6 +289,43 @@ export const updateBusiness = createServerFn({ method: "POST" })
       .eq("id", id);
     if (error) throw new Error(error.message);
     return { success: true };
+  });
+
+// -------- Admin: business approval --------
+
+export const listPendingBusinesses = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const supabase = context.supabase;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { data, error } = await supabase
+      .from("businesses")
+      .select("id, name, slug, description, address, city, state, phone, email, website, featured_image, status, created_at, owner_id, categories:category_id(name, slug)")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((b) => ({
+      ...b,
+      categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
+    }));
+  });
+
+export const reviewBusinessSubmission = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ id: z.string().uuid(), action: z.enum(["approve", "reject"]) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const newStatus = data.action === "approve" ? "published" : "rejected";
+    const { error } = await supabase.from("businesses").update({ status: newStatus }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { success: true, status: newStatus };
   });
 
 const reviewSchema = z.object({
