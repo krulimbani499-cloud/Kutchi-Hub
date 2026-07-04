@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Chrome, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Chrome, Loader2, Apple } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -65,6 +65,15 @@ export function AuthForms() {
     }
   };
 
+  const handleApple = async () => {
+    const result = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setMessage(result.error.message);
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="mb-6 text-center">
@@ -74,16 +83,28 @@ export function AuthForms() {
 
       {mode !== "reset" && (
         <>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogle}
-            disabled={loading}
-          >
-            <Chrome className="mr-2 h-4 w-4" />
-            Continue with Google
-          </Button>
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogle}
+              disabled={loading}
+            >
+              <Chrome className="mr-2 h-4 w-4" />
+              Continue with Google
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleApple}
+              disabled={loading}
+            >
+              <Apple className="mr-2 h-4 w-4" />
+              Continue with Apple
+            </Button>
+          </div>
           <div className="my-4 flex items-center gap-2">
             <div className="h-px flex-1 bg-border" />
             <span className="text-xs text-muted-foreground">or</span>

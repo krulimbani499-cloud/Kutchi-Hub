@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { MapPin, Phone, Mail, Globe, Clock, BadgeCheck, Star, ThumbsUp, ExternalLink } from "lucide-react";
 import { StarRating } from "./StarRating";
+import { BusinessMap } from "./BusinessMap";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
@@ -134,6 +135,14 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
 
             <section>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Location & Hours</h2>
+              <div className="mb-4">
+                <BusinessMap
+                  lat={business.latitude}
+                  lng={business.longitude}
+                  name={business.name}
+                  address={[business.address, business.city, business.state].filter(Boolean).join(", ")}
+                />
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 text-sm">
                   <div className="flex items-start gap-2 text-muted-foreground">
@@ -246,9 +255,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 <span className="text-foreground">{hours[today] ?? "Closed today"}</span>
               </div>
             </div>
-            <div className="mt-4 rounded-lg bg-muted p-3 text-center text-xs text-muted-foreground">
-              <MapPin className="mx-auto mb-1 h-5 w-5" />
-              Map view coming soon. Use the address above for directions.
+            <div className="mt-4">
+              <BusinessMap
+                lat={business.latitude}
+                lng={business.longitude}
+                name={business.name}
+                address={[business.address, business.city].filter(Boolean).join(", ")}
+              />
             </div>
           </div>
         </aside>

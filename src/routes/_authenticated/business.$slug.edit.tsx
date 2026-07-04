@@ -41,7 +41,7 @@ function EditBusinessPage() {
       <h1 className="mb-2 text-2xl font-bold text-foreground">Edit Business</h1>
       <p className="mb-6 text-muted-foreground">Update your business details below.</p>
       <div className="rounded-2xl border border-border bg-card p-6">
-        <BusinessForm categories={categories} initial={data.business} />
+        <BusinessForm categories={categories} initial={data.business} photos={data.photos} />
       </div>
     </div>
   );
