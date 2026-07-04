@@ -90,8 +90,8 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
         <div className="grid gap-0 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
           {/* Gallery */}
           <div className="relative bg-muted">
-            <div className="grid h-64 grid-cols-4 grid-rows-2 gap-1 sm:h-80">
-              <div className="relative col-span-2 row-span-2 overflow-hidden bg-muted">
+            <div className="grid h-56 grid-cols-2 grid-rows-1 gap-1 sm:h-80 sm:grid-cols-4 sm:grid-rows-2">
+              <div className="relative col-span-2 row-span-1 overflow-hidden bg-muted sm:row-span-2">
                 {business.featured_image ? (
                   <img src={business.featured_image} alt={business.name} className="h-full w-full object-cover" />
                 ) : (
@@ -103,7 +103,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               {[0, 1, 2, 3].map((i) => {
                 const p = galleryPhotos[i];
                 return (
-                  <div key={i} className="relative overflow-hidden bg-muted">
+                  <div key={i} className="relative hidden overflow-hidden bg-muted sm:block">
                     {p ? (
                       <img src={p.url} alt={p.caption ?? ""} className="h-full w-full object-cover" loading="lazy" />
                     ) : (

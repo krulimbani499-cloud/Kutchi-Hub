@@ -42,7 +42,7 @@ export function Header() {
         </div>
 
         <form
-          className="relative order-last flex w-full min-w-0 flex-1 items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#ff6a00] sm:order-none sm:max-w-xl"
+          className="relative order-last flex basis-full min-w-0 items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#ff6a00] sm:order-none sm:basis-auto sm:flex-1 sm:max-w-xl"
           onSubmit={(e) => {
             e.preventDefault();
             if (search.trim()) {
