@@ -12,7 +12,7 @@ import { Header } from "@/components/layout/Header";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
-import ogImage from "@/assets/nearme-og.jpg";
+import logoIcon from "@/assets/nearme-logo.png";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -94,7 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", type: "image/png", href: ogImage.replace(/-og\.jpg$/, "-logo.png") },
+      { rel: "icon", type: "image/png", href: logoIcon },
     ],
   }),
   shellComponent: RootShell,

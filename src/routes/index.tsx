@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
-import { getHomeData, getCategories } from "@/lib/businesses.functions";
+import { getHomeData } from "@/lib/businesses.functions";
 import { CategoryGrid } from "@/components/business/CategoryGrid";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import ogImage from "@/assets/nearme-og.jpg";
 
 const homeQueryOptions = queryOptions({
   queryKey: ["home"],
@@ -21,6 +22,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Find the best restaurants, hospitals, salons, hotels and more near you." },
       { property: "og:title", content: "NearMe — Discover Local Businesses" },
       { property: "og:description", content: "Find the best restaurants, hospitals, salons, hotels and more near you." },
+      { property: "og:image", content: ogImage },
+      { name: "twitter:image", content: ogImage },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(homeQueryOptions),
