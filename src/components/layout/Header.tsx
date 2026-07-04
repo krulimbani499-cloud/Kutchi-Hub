@@ -5,6 +5,7 @@ import { useAuth, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import logoUrl from "@/assets/kutchi-hub-logo.png";
+import { CitySelector } from "@/components/layout/CitySelector";
 
 export function Header() {
   const { user, isLoading } = useAuth();
@@ -17,6 +18,8 @@ export function Header() {
           <img src={logoUrl} alt="Kutchi Hub" className="h-12 w-auto object-contain" />
           <span className="hidden bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent sm:inline tracking-tight -ml-2">Kutchi Hub</span>
         </Link>
+
+        <CitySelector compact className="hidden md:inline-flex" />
 
         <form
           className="relative flex-1 max-w-xl"
