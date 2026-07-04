@@ -39,7 +39,7 @@ export function Header() {
 
         <Link
           to="/"
-          className="flex flex-1 items-center justify-center text-lg font-bold tracking-tight uppercase font-['Montserrat',sans-serif] -ml-3 sm:hidden"
+          className="hidden max-sm:flex flex-1 items-center justify-center text-lg font-bold tracking-tight uppercase font-['Montserrat',sans-serif] -ml-3"
         >
           <span className="text-[#ff6a00]">KUTCHI</span>&nbsp;<span className="text-black">HUB</span>
         </Link>
