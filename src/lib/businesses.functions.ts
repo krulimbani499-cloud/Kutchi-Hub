@@ -221,7 +221,13 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
   .inputValidator((input) => updateCategorySchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const patch: Record<string, unknown> = {
+    const patch: {
+      name: string;
+      slug: string;
+      icon?: string | null;
+      color?: string | null;
+      display_order?: number;
+    } = {
       name: data.name.trim(),
       slug: data.slug.trim(),
     };
