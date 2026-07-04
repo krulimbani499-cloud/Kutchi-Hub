@@ -178,6 +178,7 @@ function AdminPage() {
       )}
 
       <CategoriesAdmin />
+      <BannersAdmin />
     </div>
   );
 }
