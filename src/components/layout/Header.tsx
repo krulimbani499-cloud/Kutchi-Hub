@@ -42,7 +42,7 @@ export function Header() {
         </div>
 
         <form
-          className="relative flex flex-1 max-w-xl items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#f26c22]"
+          className="relative flex flex-1 max-w-xl items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#16a34a]"
           onSubmit={(e) => {
             e.preventDefault();
             if (search.trim()) {
@@ -60,7 +60,7 @@ export function Header() {
           <button
             type="submit"
             aria-label="Search"
-            className="flex items-center justify-center bg-[#f26c22] px-4 text-white hover:bg-[#d95f1c] transition-colors"
+            className="flex items-center justify-center bg-[#16a34a] px-4 text-white hover:bg-[#15803d] transition-colors"
           >
             <Search className="h-4 w-4" />
           </button>

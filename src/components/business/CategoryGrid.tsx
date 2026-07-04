@@ -73,7 +73,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
             search={{ category: category.slug }}
             className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 text-3xl leading-none">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-green-50 to-green-100/60 text-3xl leading-none">
               <span aria-hidden>{emoji}</span>
             </div>
             <span className="text-xs font-medium text-foreground leading-tight">{category.name}</span>
