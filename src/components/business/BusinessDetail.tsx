@@ -95,7 +95,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 {business.featured_image ? (
                   <img src={business.featured_image} alt={business.name} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-amber-50 text-2xl font-bold text-primary">
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-green-100 to-green-50 text-2xl font-bold text-primary">
                     {business.name.charAt(0)}
                   </div>
                 )}
@@ -149,11 +149,11 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
 
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex items-start gap-2 text-foreground">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#f26c22]" />
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#16a34a]" />
                   <span className="text-muted-foreground">{addressLine || "Address not provided"}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 shrink-0 text-[#f26c22]" />
+                  <Clock className="h-4 w-4 shrink-0 text-[#16a34a]" />
                   <span className={`font-semibold ${isOpen ? "text-green-600" : "text-red-600"}`}>
                     {isOpen ? "Open now" : "Closed"}
                   </span>
@@ -164,7 +164,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {business.phone && (
-                <Button asChild className="h-11 bg-[#f26c22] text-white hover:bg-[#d95c17]">
+                <Button asChild className="h-11 bg-[#16a34a] text-white hover:bg-[#15803d]">
                   <a href={`tel:${business.phone}`}>
                     <Phone className="mr-1.5 h-4 w-4" /> Call
                   </a>
