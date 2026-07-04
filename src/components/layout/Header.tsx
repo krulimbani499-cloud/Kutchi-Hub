@@ -13,9 +13,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
-        <Link to="/" className="flex shrink-0 items-center gap-2 text-lg font-bold text-foreground">
-          <img src={logoUrl} alt="Kutchi Hub" className="h-11 w-auto object-contain" />
-          <span className="hidden bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent sm:inline">Kutchi Hub</span>
+        <Link to="/" className="flex shrink-0 items-center gap-1 text-2xl font-bold text-foreground -ml-1">
+          <img src={logoUrl} alt="Kutchi Hub" className="h-12 w-auto object-contain" />
+          <span className="hidden bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent sm:inline tracking-tight">Kutchi Hub</span>
         </Link>
 
         <form
