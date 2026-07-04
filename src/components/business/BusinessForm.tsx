@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { MapPin, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -14,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createBusiness, updateBusiness } from "@/lib/businesses.functions";
+import { geocodeAddress } from "@/lib/maps.functions";
+import { PhotoUploader } from "./PhotoUploader";
 import type { Tables } from "@/integrations/supabase/types";
 
 const businessFormSchema = z.object({
@@ -34,15 +37,22 @@ const businessFormSchema = z.object({
 interface BusinessFormProps {
   categories: Tables<"categories">[];
   initial?: Tables<"businesses">;
+  photos?: Tables<"business_photos">[];
 }
 
-export function BusinessForm({ categories, initial }: BusinessFormProps) {
+export function BusinessForm({ categories, initial, photos = [] }: BusinessFormProps) {
   const navigate = useNavigate();
   const createFn = useServerFn(createBusiness);
   const updateFn = useServerFn(updateBusiness);
+  const geocodeFn = useServerFn(geocodeAddress);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({
+    lat: initial?.latitude ?? null,
+    lng: initial?.longitude ?? null,
+  });
 
   const [form, setForm] = useState({
     name: initial?.name ?? "",
@@ -82,11 +92,11 @@ export function BusinessForm({ categories, initial }: BusinessFormProps) {
     try {
       const payload = businessFormSchema.parse(form);
       if (initial) {
-        await updateFn({ data: { ...payload, id: initial.id } });
+        await updateFn({ data: { ...payload, id: initial.id, latitude: coords.lat, longitude: coords.lng } });
         setFormMessage("Business updated successfully.");
       } else {
-        const result = await createFn({ data: payload });
-        void navigate({ to: "/business/$slug", params: { slug: result.id } });
+        const result = await createFn({ data: { ...payload, latitude: coords.lat, longitude: coords.lng } });
+        void navigate({ to: "/business/$slug", params: { slug: result.slug } });
       }
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -102,6 +112,29 @@ export function BusinessForm({ categories, initial }: BusinessFormProps) {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGeocode = async () => {
+    const composed = [form.address, form.city, form.state, form.pincode].filter(Boolean).join(", ");
+    if (!composed) {
+      setFormMessage("Enter an address or city first.");
+      return;
+    }
+    setGeocoding(true);
+    setFormMessage("");
+    try {
+      const res = await geocodeFn({ data: { address: composed } });
+      if (!res.found) {
+        setFormMessage("Could not find that address on the map.");
+      } else {
+        setCoords({ lat: res.latitude, lng: res.longitude });
+        setFormMessage(`Location found: ${res.formatted_address}`);
+      }
+    } catch (err) {
+      setFormMessage(err instanceof Error ? err.message : "Geocoding failed.");
+    } finally {
+      setGeocoding(false);
     }
   };
 
@@ -184,10 +217,37 @@ export function BusinessForm({ categories, initial }: BusinessFormProps) {
         {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
       </div>
 
+      <div className="rounded-lg border border-border bg-muted/50 p-4">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <Label>Map location</Label>
+          <Button type="button" variant="outline" size="sm" onClick={handleGeocode} disabled={geocoding}>
+            {geocoding ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <MapPin className="mr-2 h-3.5 w-3.5" />}
+            Find on map
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {coords.lat != null && coords.lng != null
+            ? `Coordinates: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
+            : "No coordinates set. Click 'Find on map' to geocode the address."}
+        </p>
+      </div>
+
       <div className="space-y-2">
-        <Label htmlFor="featured_image">Featured image URL</Label>
+        <Label htmlFor="featured_image">Featured image URL (or use uploads below)</Label>
         <Input id="featured_image" value={form.featured_image} onChange={(e) => setForm((f) => ({ ...f, featured_image: e.target.value }))} />
       </div>
+
+      {initial && (
+        <div className="space-y-2">
+          <Label>Photos</Label>
+          <PhotoUploader
+            businessId={initial.id}
+            featuredImage={form.featured_image || null}
+            initialPhotos={photos}
+            onFeaturedChange={(url) => setForm((f) => ({ ...f, featured_image: url }))}
+          />
+        </div>
+      )}
 
       <Button type="submit" disabled={submitting} className="bg-primary text-primary-foreground">
         {submitting ? (initial ? "Updating..." : "Creating...") : initial ? "Update Business" : "Create Business"}
