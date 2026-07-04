@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Header } from "@/components/layout/Header";
-import { SiteFooter } from "@/components/layout/SiteFooter";
+// import { SiteFooter } from "@/components/layout/SiteFooter";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
@@ -150,7 +150,7 @@ function RootComponent() {
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
         </main>
-        <SiteFooter />
+        {/* <SiteFooter /> — temporarily hidden */}
       </div>
     </QueryClientProvider>
   );
