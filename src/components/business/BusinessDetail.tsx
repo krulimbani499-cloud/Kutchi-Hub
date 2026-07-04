@@ -164,43 +164,50 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {business.phone && (
-                <Button asChild className="h-11 bg-[#ff6a00] text-white hover:bg-[#e65a00]">
-                  <a href={`tel:${business.phone}`}>
-                    <Phone className="mr-1.5 h-4 w-4" /> Call
+                <Button asChild className="h-11 min-w-0 bg-[#ff6a00] px-2 text-white hover:bg-[#e65a00]">
+                  <a href={`tel:${business.phone}`} className="flex items-center justify-center">
+                    <Phone className="mr-1 h-4 w-4 shrink-0" />
+                    <span className="truncate text-sm">Call</span>
                   </a>
                 </Button>
               )}
               {business.phone && (
-                <Button asChild variant="outline" className="h-11 border-green-600 text-green-700 hover:bg-green-50">
+                <Button asChild variant="outline" className="h-11 min-w-0 border-green-600 px-2 text-green-700 hover:bg-green-50">
                   <a
                     href={`https://wa.me/${business.phone.replace(/[^0-9]/g, "")}`}
                     target="_blank"
                     rel="noreferrer"
+                    className="flex items-center justify-center"
                   >
-                    <MessageSquare className="mr-1.5 h-4 w-4" /> WhatsApp
+                    <MessageSquare className="mr-1 h-4 w-4 shrink-0" />
+                    <span className="truncate text-sm">WhatsApp</span>
                   </a>
                 </Button>
               )}
-              <Button asChild variant="outline" className="h-11">
-                <a href={mapsHref} target="_blank" rel="noreferrer">
-                  <Navigation className="mr-1.5 h-4 w-4" /> Directions
+              <Button asChild variant="outline" className="h-11 min-w-0 px-2">
+                <a href={mapsHref} target="_blank" rel="noreferrer" className="flex items-center justify-center">
+                  <Navigation className="mr-1 h-4 w-4 shrink-0" />
+                  <span className="truncate text-sm">Directions</span>
                 </a>
               </Button>
               {business.email ? (
-                <Button asChild variant="outline" className="h-11">
-                  <a href={`mailto:${business.email}`}>
-                    <Mail className="mr-1.5 h-4 w-4" /> Enquire
+                <Button asChild variant="outline" className="h-11 min-w-0 px-2">
+                  <a href={`mailto:${business.email}`} className="flex items-center justify-center">
+                    <Mail className="mr-1 h-4 w-4 shrink-0" />
+                    <span className="truncate text-sm">Enquire</span>
                   </a>
                 </Button>
               ) : business.website ? (
-                <Button asChild variant="outline" className="h-11">
-                  <a href={business.website} target="_blank" rel="noreferrer">
-                    <Globe className="mr-1.5 h-4 w-4" /> Website
+                <Button asChild variant="outline" className="h-11 min-w-0 px-2">
+                  <a href={business.website} target="_blank" rel="noreferrer" className="flex items-center justify-center">
+                    <Globe className="mr-1 h-4 w-4 shrink-0" />
+                    <span className="truncate text-sm">Website</span>
                   </a>
                 </Button>
               ) : (
-                <Button variant="outline" className="h-11" disabled>
-                  <Heart className="mr-1.5 h-4 w-4" /> Save
+                <Button variant="outline" className="h-11 min-w-0 px-2" disabled>
+                  <Heart className="mr-1 h-4 w-4 shrink-0" />
+                  <span className="truncate text-sm">Save</span>
                 </Button>
               )}
             </div>
