@@ -103,22 +103,22 @@ function HomePage() {
       <section className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           {/* Promo banner */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-100 to-amber-50 p-6 sm:p-8">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#fde3d0] to-[#fff5ee] p-6 sm:p-8">
             <div className="max-w-[70%]">
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Featured</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#d95c17]">Featured</p>
               <h3 className="mt-1 text-lg font-extrabold text-foreground sm:text-2xl">
                 List Your Business
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Get discovered by thousands of Kutchi customers every day.
               </p>
-              <Button size="sm" className="mt-4 rounded-full bg-amber-600 text-white hover:bg-amber-700" asChild>
+              <Button size="sm" className="mt-4 rounded-full bg-[#f26c22] text-white hover:bg-[#d95c17]" asChild>
                 <Link to="/business/new">
                   Get Started <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             </div>
-            <Building2 className="absolute -right-4 -bottom-4 h-40 w-40 text-amber-200" />
+            <Building2 className="absolute -right-4 -bottom-4 h-40 w-40 text-[#f9c8a5]" />
           </div>
 
           {/* Feature tiles */}
