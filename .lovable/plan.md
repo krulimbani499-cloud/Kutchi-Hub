@@ -1,36 +1,57 @@
-Building all four enhancements in one pass. Here's the approach:
+## Goal
 
-## 1. Google Maps integration
+Aapke ZIP wale complete Kutchi Hub project ki features current Lovable project (jismein hum already NearMe → Kutchi Hub rebrand kar chuke hain) mein port karna. Poora ek shot mein karna risky hai — 8800+ lines aur 11 migrations hain — isliye 4 phases mein karenge. Har phase ke baad aap preview verify karke aage jaao.
 
-- Connect the Google Maps Platform connector (I'll prompt this when we start — you'll authorize it in one click).
-- On business detail: replace the placeholder with an interactive Google Map centered on the business's lat/lng, with a marker.
-- On the business create/edit form: add a "Find on map" address geocode button that fills lat/lng via the Geocoding API (called through the connector gateway in a server function so the key stays server-side).
-- Fallback: if lat/lng is missing, show a static "Location not set" state instead of a broken map.
+## Difference snapshot
 
-## 2. Business photo uploads
+Current project already has: categories, businesses, reviews, claims, business photos, auth (email + Google + Apple), business detail with Google Maps, photo uploader, dashboard.
 
-- Create a public `business-photos` storage bucket.
-- RLS on `storage.objects`: public read; owners (or admins) can insert/update/delete photos only under their own `business_id/*` path.
-- New `PhotoUploader` component on the edit page: multi-file upload, previews, delete, drag-to-reorder for `display_order`.
-- Featured image: pick one uploaded photo as the business's `featured_image`.
+Missing (from ZIP): submission → admin approval flow, admin panel, marketing banners + carousel, advertise page, owner-editable "My Business" page, geolocation + city search + India cities list, mobile app shell (Capacitor), site footer.
 
-## 3. Social/OTP login
+## Phase 1 — Home page + city selector + footer + header split
 
-- Enable **Apple** sign-in alongside the existing Google + email. Add an "Continue with Apple" button in `AuthForms` using `lovable.auth.signInWithOAuth("apple", ...)`.
-- Skipping SMS OTP for now — it requires a paid Twilio/GatewayAPI connector and per-message costs. Happy to add it in a follow-up if you want; just say the word.
+Scope:
+- Split `Header.tsx` into `TopRibbon` (city selector + login), `DesktopHeader`, `MobileHeader`, `SearchBar`, `UserMenu` (matching ZIP structure).
+- Add `src/lib/cities.ts` (India cities list) and `src/lib/geolocation.ts` (browser geolocation + reverse geocode via existing Google Maps connector).
+- Add `SiteFooter.tsx` with links/socials.
+- Rebuild home (`index.tsx`) to match ZIP layout: hero + city detector, featured businesses row, category grid, "list your business" CTA.
 
-## 4. Branding & logo
+No DB changes in this phase.
 
-- Generate a custom "NearMe" wordmark + icon logo (warm amber/orange palette, matching the current design tokens).
-- Refine the header: use the real logo, tighten spacing, add a subtle gradient accent.
-- Polish the home hero (bigger search, category chips row), and add a proper footer with links + socials.
-- Set a real app title/description + og:image (using the generated logo) in `__root.tsx` and leaf routes.
+## Phase 2 — Business submission + admin approval flow
 
-## Order of execution
+Scope:
+- Migration: new tables `business_submissions` (pending user submissions), `admin_settings`; add `owner_id` column to `businesses`; RLS policies + GRANTs; helper policy so owners can see own hidden rows.
+- Routes: `/list-business` (public submission form), `/admin` (admin-only, list + approve/reject), `/my-business` (owner edit).
+- Server functions: `createSubmission`, `listPendingSubmissions` (admin), `approveSubmission`, `rejectSubmission`, `updateMyBusiness`.
+- Header updates: signed-in user sees "My Business" / "Submission Pending" / "List Business" based on status.
 
-1. Generate logo assets + apply branding (no external deps — fastest win).
-2. Storage bucket + photo uploads.
-3. Apple sign-in (single-tool config + button).
-4. Google Maps connector + map component + geocoding server fn.
+## Phase 3 — Marketing banners + advertise page
 
-I'll implement all four in sequence. Reply "go" (or with edits) and I'll start.
+Scope:
+- Migration: `banners` table (image_url, link, position, active, sort_order) + admin-only write RLS + public read.
+- Storage bucket `banner-images` (public).
+- `MarketingBannerCarousel.tsx` component using embla-carousel (already installed).
+- `BannerManager.tsx` in admin panel — upload, reorder, toggle active.
+- `/advertise` public route explaining ad packages with a lead form.
+
+## Phase 4 — Category pages polish + mobile app (Capacitor)
+
+Scope:
+- `/category/$slug` route with SEO metadata per category (currently only `/search?category=`).
+- Optional (ask before doing): Capacitor Android shell — `capacitor.config.ts`, `android/` folder, build scripts. This adds a native mobile app wrapper.
+
+## Technical details
+
+- Stack stays TanStack Start + Supabase (as current). ZIP uses same stack.
+- ZIP's schema is compatible with current one — will map their `reviews` → our existing `business_reviews`, add missing columns like `owner_id`, `whatsapp`, `pincode`, `hours` where absent.
+- Admin gate uses existing `user_roles` table + `has_role('admin')` RPC (already in DB).
+- All new tables get GRANTs + RLS in the same migration.
+- OAuth stays same (Google + Apple already configured).
+- Google Maps connector already linked — geolocation uses it via server fn.
+
+## Confirm before starting
+
+1. Kya **Phase 1 se shuru karu** (safe, no DB changes)?
+2. Phase 4 mein **Capacitor / Android app shell** chahiye ya skip karu? (Mobile app builds Lovable preview ke bahar hote hain — repo download karke Android Studio mein compile karna padta hai.)
+3. Koi phase priority change karna hai — jaise banners pehle chahiye?
