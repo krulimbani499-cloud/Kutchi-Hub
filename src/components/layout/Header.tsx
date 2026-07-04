@@ -37,7 +37,7 @@ export function Header() {
           </span>
         </Link>
 
-        <div className="flex shrink-0 items-center rounded-md border border-border px-1 py-1 text-sm text-foreground">
+        <div className="ml-auto flex shrink-0 items-center rounded-md border border-border px-0.5 py-0.5 text-sm text-foreground sm:ml-0 sm:px-1 sm:py-1">
           <CitySelector compact />
         </div>
 
