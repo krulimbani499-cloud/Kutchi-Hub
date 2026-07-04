@@ -245,7 +245,7 @@ export const createBusiness = createServerFn({ method: "POST" })
         email: data.email || null,
         featured_image: data.featured_image || null,
       })
-      .select("id")
+      .select("id, slug")
       .single();
     if (error) throw new Error(error.message);
 
