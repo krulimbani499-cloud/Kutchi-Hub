@@ -12,7 +12,7 @@ import { Header } from "@/components/layout/Header";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
-import logoIcon from "@/assets/nearme-logo.png";
+import logoIcon from "@/assets/kutchi-hub-logo.png";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -80,14 +80,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NearMe — Local Business Directory" },
+      { title: "Kutchi Hub — Local Business Directory" },
       { name: "description", content: "Discover local businesses, restaurants, hospitals, salons and more. Read reviews and connect with trusted service providers near you." },
-      { name: "author", content: "NearMe" },
-      { property: "og:title", content: "NearMe — Local Business Directory" },
+      { name: "author", content: "Kutchi Hub" },
+      { property: "og:title", content: "Kutchi Hub — Local Business Directory" },
       { property: "og:description", content: "Discover local businesses, restaurants, hospitals, salons and more. Read reviews and connect with trusted service providers near you." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@NearMe" },
+      { name: "twitter:site", content: "@Kutchi Hub" },
     ],
     links: [
       {
@@ -145,7 +145,7 @@ function RootComponent() {
         </main>
         <footer className="border-t border-border bg-card py-6">
           <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} NearMe. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Kutchi Hub. All rights reserved.</p>
           </div>
         </footer>
       </div>

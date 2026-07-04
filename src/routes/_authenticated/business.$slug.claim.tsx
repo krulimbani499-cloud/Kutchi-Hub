@@ -18,7 +18,7 @@ const businessQueryOptions = (slug: string) =>
 export const Route = createFileRoute("/_authenticated/business/$slug/claim")({
   head: () => ({
     meta: [
-      { title: "Claim Business — NearMe" },
+      { title: "Claim Business — Kutchi Hub" },
       { name: "description", content: "Submit a claim to manage this business listing." },
     ],
   }),

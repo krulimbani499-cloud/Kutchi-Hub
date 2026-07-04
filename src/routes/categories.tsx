@@ -12,8 +12,8 @@ const categoriesQueryOptions = queryOptions({
 export const Route = createFileRoute("/categories")({
   head: () => ({
     meta: [
-      { title: "Categories — NearMe" },
-      { name: "description", content: "Browse businesses by category on NearMe." },
+      { title: "Categories — Kutchi Hub" },
+      { name: "description", content: "Browse businesses by category on Kutchi Hub." },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions),

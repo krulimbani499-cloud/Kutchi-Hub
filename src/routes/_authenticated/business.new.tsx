@@ -12,8 +12,8 @@ const categoriesQueryOptions = queryOptions({
 export const Route = createFileRoute("/_authenticated/business/new")({
   head: () => ({
     meta: [
-      { title: "Add Business — NearMe" },
-      { name: "description", content: "Add your business to NearMe directory." },
+      { title: "Add Business — Kutchi Hub" },
+      { name: "description", content: "Add your business to Kutchi Hub directory." },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions),
@@ -26,7 +26,7 @@ function NewBusinessPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-2 text-2xl font-bold text-foreground">Add a Business</h1>
-      <p className="mb-6 text-muted-foreground">List your business on NearMe and start reaching customers.</p>
+      <p className="mb-6 text-muted-foreground">List your business on Kutchi Hub and start reaching customers.</p>
       <div className="rounded-2xl border border-border bg-card p-6">
         <BusinessForm categories={categories} />
       </div>

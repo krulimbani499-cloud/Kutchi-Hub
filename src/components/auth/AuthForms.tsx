@@ -77,7 +77,7 @@ export function AuthForms() {
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-foreground">Welcome to NearMe</h1>
+        <h1 className="text-2xl font-bold text-foreground">Welcome to Kutchi Hub</h1>
         <p className="mt-1 text-sm text-muted-foreground">Sign in to find and manage local businesses.</p>
       </div>
 

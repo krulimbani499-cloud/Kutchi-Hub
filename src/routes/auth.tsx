@@ -4,8 +4,8 @@ import { AuthForms } from "@/components/auth/AuthForms";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign In — NearMe" },
-      { name: "description", content: "Sign in or create an account on NearMe to manage business listings and write reviews." },
+      { title: "Sign In — Kutchi Hub" },
+      { name: "description", content: "Sign in or create an account on Kutchi Hub to manage business listings and write reviews." },
     ],
   }),
   component: AuthPage,

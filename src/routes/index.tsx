@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import ogImage from "@/assets/nearme-og.jpg";
+import ogImage from "@/assets/kutchi-hub-og.jpg";
 
 const homeQueryOptions = queryOptions({
   queryKey: ["home"],
@@ -18,9 +18,9 @@ const homeQueryOptions = queryOptions({
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "NearMe — Discover Local Businesses" },
+      { title: "Kutchi Hub — Discover Local Businesses" },
       { name: "description", content: "Find the best restaurants, hospitals, salons, hotels and more near you." },
-      { property: "og:title", content: "NearMe — Discover Local Businesses" },
+      { property: "og:title", content: "Kutchi Hub — Discover Local Businesses" },
       { property: "og:description", content: "Find the best restaurants, hospitals, salons, hotels and more near you." },
       { property: "og:image", content: ogImage },
       { name: "twitter:image", content: ogImage },
@@ -115,7 +115,7 @@ function HomePage() {
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-2xl font-bold">Own a business?</h2>
-              <p className="mt-1 opacity-90">List your business on NearMe and reach thousands of customers.</p>
+              <p className="mt-1 opacity-90">List your business on Kutchi Hub and reach thousands of customers.</p>
             </div>
             <Button size="lg" className="bg-primary-foreground text-foreground hover:bg-white/90" asChild>
               <Link to="/business/new">Add your business</Link>
