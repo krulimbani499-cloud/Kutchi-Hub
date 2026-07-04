@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      banner_ads: {
+        Row: {
+          active: boolean
+          business_id: string | null
+          city: string
+          created_at: string
+          cta_label: string | null
+          cta_url: string | null
+          end_at: string | null
+          id: string
+          image_url: string
+          owner_id: string | null
+          priority: number
+          start_at: string
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id?: string | null
+          city: string
+          created_at?: string
+          cta_label?: string | null
+          cta_url?: string | null
+          end_at?: string | null
+          id?: string
+          image_url: string
+          owner_id?: string | null
+          priority?: number
+          start_at?: string
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string | null
+          city?: string
+          created_at?: string
+          cta_label?: string | null
+          cta_url?: string | null
+          end_at?: string | null
+          id?: string
+          image_url?: string
+          owner_id?: string | null
+          priority?: number
+          start_at?: string
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banner_ads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_claims: {
         Row: {
           business_id: string
