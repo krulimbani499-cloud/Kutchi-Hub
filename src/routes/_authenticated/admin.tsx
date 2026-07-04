@@ -340,3 +340,250 @@ function CategoriesAdmin() {
     </div>
   );
 }
+
+type BannerFormState = {
+  id: string | null;
+  title: string;
+  subtitle: string;
+  image_url: string;
+  cta_label: string;
+  cta_url: string;
+  city: string;
+  priority: number;
+  active: boolean;
+  end_at: string;
+};
+
+const emptyBanner: BannerFormState = {
+  id: null,
+  title: "",
+  subtitle: "",
+  image_url: "",
+  cta_label: "",
+  cta_url: "",
+  city: "",
+  priority: 0,
+  active: true,
+  end_at: "",
+};
+
+function BannersAdmin() {
+  const { data: banners, refetch } = useSuspenseQuery(bannersAdminQueryOptions);
+  const createFn = useServerFn(adminCreateBannerAd);
+  const updateFn = useServerFn(adminUpdateBannerAd);
+  const deleteFn = useServerFn(adminDeleteBannerAd);
+  const [form, setForm] = useState<BannerFormState>(emptyBanner);
+  const [busy, setBusy] = useState(false);
+
+  const startEdit = (b: Tables<"banner_ads">) => {
+    setForm({
+      id: b.id,
+      title: b.title,
+      subtitle: b.subtitle ?? "",
+      image_url: b.image_url,
+      cta_label: b.cta_label ?? "",
+      cta_url: b.cta_url ?? "",
+      city: b.city,
+      priority: b.priority,
+      active: b.active,
+      end_at: b.end_at ? b.end_at.slice(0, 16) : "",
+    });
+  };
+
+  const save = async () => {
+    if (!form.title || !form.image_url || !form.city) {
+      toast.error("Title, image URL and city are required");
+      return;
+    }
+    setBusy(true);
+    try {
+      const payload = {
+        title: form.title.trim(),
+        subtitle: form.subtitle.trim() || null,
+        image_url: form.image_url.trim(),
+        cta_label: form.cta_label.trim() || null,
+        cta_url: form.cta_url.trim() || null,
+        city: form.city.trim(),
+        priority: Number(form.priority) || 0,
+        active: form.active,
+        end_at: form.end_at ? new Date(form.end_at).toISOString() : null,
+      };
+      if (form.id) {
+        await updateFn({ data: { id: form.id, ...payload } });
+        toast.success("Banner updated");
+      } else {
+        await createFn({ data: payload });
+        toast.success("Banner created");
+      }
+      setForm(emptyBanner);
+      await refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Delete this banner?")) return;
+    setBusy(true);
+    try {
+      await deleteFn({ data: { id } });
+      toast.success("Banner deleted");
+      await refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-10">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Marketing Banners</h2>
+          <p className="text-sm text-muted-foreground">
+            Paid sponsored banners shown on the homepage to visitors in the matching city.
+          </p>
+        </div>
+        <Badge variant="secondary">{banners.length} total</Badge>
+      </div>
+
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle className="text-base">
+            {form.id ? "Edit banner" : "Add a new banner"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Title *</Label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Subtitle</Label>
+              <Textarea
+                rows={2}
+                value={form.subtitle}
+                onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Image URL *</Label>
+              <Input
+                value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                placeholder="https://…"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">CTA label</Label>
+              <Input
+                value={form.cta_label}
+                onChange={(e) => setForm({ ...form, cta_label: e.target.value })}
+                placeholder="Shop Now"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">CTA URL</Label>
+              <Input
+                value={form.cta_url}
+                onChange={(e) => setForm({ ...form, cta_url: e.target.value })}
+                placeholder="https://…"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">City *</Label>
+              <Input
+                value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+                placeholder="Ahmedabad"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Priority</Label>
+              <Input
+                type="number"
+                value={form.priority}
+                onChange={(e) => setForm({ ...form, priority: Number(e.target.value) || 0 })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Ends at</Label>
+              <Input
+                type="datetime-local"
+                value={form.end_at}
+                onChange={(e) => setForm({ ...form, end_at: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center gap-3 pt-6">
+              <Switch
+                checked={form.active}
+                onCheckedChange={(v) => setForm({ ...form, active: v })}
+              />
+              <Label className="text-sm">Active</Label>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={save} disabled={busy}>
+              {form.id ? <Save className="mr-1.5 h-4 w-4" /> : <Plus className="mr-1.5 h-4 w-4" />}
+              {form.id ? "Save changes" : "Create banner"}
+            </Button>
+            {form.id && (
+              <Button variant="outline" onClick={() => setForm(emptyBanner)}>
+                Cancel
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          {banners.length === 0 ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">No banners yet.</div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {banners.map((b) => (
+                <li key={b.id} className="flex items-center gap-3 p-3">
+                  <div className="h-14 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
+                    {b.image_url ? (
+                      <img src={b.image_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                        <ImageIcon className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate font-medium text-foreground">{b.title}</span>
+                      <Badge variant="outline" className="text-xs">{b.city}</Badge>
+                      {b.active ? (
+                        <Badge className="bg-green-600 text-white hover:bg-green-600">Active</Badge>
+                      ) : (
+                        <Badge variant="secondary">Inactive</Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">priority: {b.priority}</span>
+                    </div>
+                    {b.subtitle && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{b.subtitle}</p>
+                    )}
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => startEdit(b)}>
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => remove(b.id)} disabled={busy}>
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
