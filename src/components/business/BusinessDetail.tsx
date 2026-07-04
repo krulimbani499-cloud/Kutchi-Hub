@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import { addReview } from "@/lib/businesses.functions";
+import { PhotoUploader } from "./PhotoUploader";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
@@ -29,6 +30,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const isOwner = !!user && user.id === business.owner_id;
 
   const hours = (business.hours as Record<string, string> | null) ?? {};
   const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
@@ -120,11 +122,6 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 </a>
               </Button>
             )}
-            <Button variant="outline" asChild>
-              <Link to="/business/$slug/claim" params={{ slug: business.slug }}>
-                Claim this business
-              </Link>
-            </Button>
           </div>
 
           <div className="space-y-6 rounded-2xl border border-border bg-card p-5">
@@ -166,6 +163,42 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 </div>
               </div>
             </section>
+          </div>
+
+          {/* Photo gallery + upload (owner only) */}
+          <div className="mt-6 rounded-2xl border border-border bg-card p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Photos</h2>
+              <span className="text-xs text-muted-foreground">{photos.length} photo{photos.length === 1 ? "" : "s"}</span>
+            </div>
+            {isOwner ? (
+              <PhotoUploader
+                businessId={business.id}
+                featuredImage={business.featured_image}
+                initialPhotos={photos}
+              />
+            ) : photos.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {photos.map((photo) => (
+                  <a
+                    key={photo.id}
+                    href={photo.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="overflow-hidden rounded-lg border border-border"
+                  >
+                    <img
+                      src={photo.url}
+                      alt={photo.caption ?? "Business photo"}
+                      loading="lazy"
+                      className="aspect-square w-full object-cover transition-transform hover:scale-105"
+                    />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No photos yet.</p>
+            )}
           </div>
 
           <div className="mt-6 rounded-2xl border border-border bg-card p-5">
