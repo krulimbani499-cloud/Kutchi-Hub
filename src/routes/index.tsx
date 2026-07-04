@@ -5,7 +5,7 @@ import { getHomeData } from "@/lib/businesses.functions";
 import { CategoryGrid } from "@/components/business/CategoryGrid";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Building2, TrendingUp, Phone, Star, ShieldCheck } from "lucide-react";
+import { Search, MapPin, Building2, Mic, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
@@ -37,17 +37,6 @@ function HomePage() {
   const [search, setSearch] = useState("");
   const { city } = useCity();
 
-  const trending = [
-    "Restaurants",
-    "Doctors",
-    "Beauty Salons",
-    "Hotels",
-    "Gyms",
-    "Schools",
-    "Grocery Stores",
-    "Car Repair",
-  ];
-
   const submitSearch = (q?: string) => {
     const params = new URLSearchParams();
     const term = (q ?? search).trim();
@@ -56,112 +45,114 @@ function HomePage() {
     window.location.href = `/search?${params.toString()}`;
   };
 
-  return (
-    <div className="flex flex-col">
-      {/* Hero — JustDial-style */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-orange-500 to-orange-600 py-14 text-white sm:py-20">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 60%, white 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-        <div className="relative mx-auto max-w-5xl px-4 text-center">
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">
-            Kutchi Hub — Your Local Search Engine
-          </h1>
-          <p className="mt-3 text-base opacity-95 sm:text-lg">
-            Find restaurants, doctors, salons, hotels, gyms and thousands more — right in your city.
-          </p>
+  const featureTiles = [
+    { title: "B2B", subtitle: "Quick Quotes", bg: "from-blue-500 to-blue-600" },
+    { title: "Repairs & Services", subtitle: "Get Nearest Vendor", bg: "from-slate-700 to-slate-900" },
+    { title: "Real Estate", subtitle: "Finest Agents", bg: "from-indigo-500 to-indigo-700" },
+    { title: "Doctors", subtitle: "Book Now", bg: "from-emerald-500 to-emerald-700" },
+  ];
 
-          {/* Pill search */}
+  return (
+    <div className="flex flex-col bg-muted/30">
+      {/* Search header — JustDial-style, clean white */}
+      <section className="bg-background border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
+          <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
+            Search across{" "}
+            <span className="text-primary">10,000+</span>{" "}
+            <span className="text-primary">Kutchi Businesses</span>
+          </h1>
+
           <form
-            className="mx-auto mt-8 flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white p-1.5 shadow-2xl sm:flex-row sm:rounded-full sm:p-2"
+            className="mt-5 flex flex-col gap-3 sm:flex-row"
             onSubmit={(e) => {
               e.preventDefault();
               submitSearch();
             }}
           >
-            <div className="flex flex-1 items-center gap-2 rounded-xl bg-white px-3 sm:rounded-full">
-              <MapPin className="h-5 w-5 shrink-0 text-primary" />
-              <div className="flex-1">
-                <CitySelector compact className="w-full justify-start bg-transparent px-0 text-foreground hover:bg-transparent" />
-              </div>
+            <div className="flex h-12 w-full items-center gap-2 rounded-md border border-border bg-background px-3 sm:w-72">
+              <MapPin className="h-4 w-4 shrink-0 text-primary" />
+              <CitySelector compact className="w-full justify-start bg-transparent px-0 text-foreground hover:bg-transparent" />
             </div>
-            <div className="hidden w-px bg-border sm:block" />
-            <div className="relative flex flex-1 items-center rounded-xl bg-white px-3 sm:rounded-full">
-              <Search className="h-5 w-5 shrink-0 text-primary" />
+            <div className="relative flex h-12 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3">
               <Input
                 type="search"
-                placeholder="Search for restaurants, salons, doctors..."
+                placeholder="Search for restaurants, doctors, salons..."
                 className="h-11 flex-1 border-0 bg-transparent text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </div>
-            <Button
-              type="submit"
-              className="ml-0 mt-2 h-12 rounded-xl bg-primary px-8 text-base font-semibold text-primary-foreground hover:bg-primary/90 sm:ml-2 sm:mt-0 sm:rounded-full"
-            >
-              <Search className="mr-1.5 h-4 w-4" /> Search
-            </Button>
-          </form>
-
-          {/* Trending chips */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm">
-            <span className="inline-flex items-center gap-1 font-semibold opacity-90">
-              <TrendingUp className="h-4 w-4" /> Trending:
-            </span>
-            {trending.map((t) => (
-              <button
-                key={t}
-                onClick={() => submitSearch(t)}
-                className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-white/20"
+              <Mic className="h-5 w-5 shrink-0 text-primary" />
+              <Button
+                type="submit"
+                size="icon"
+                className="h-9 w-10 rounded bg-primary text-primary-foreground hover:bg-primary/90"
+                aria-label="Search"
               >
-                {t}
-              </button>
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      {/* Promo banner + feature tiles row */}
+      <section className="mx-auto w-full max-w-7xl px-4 py-6">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          {/* Promo banner */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-100 to-amber-50 p-6 sm:p-8">
+            <div className="max-w-[70%]">
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Featured</p>
+              <h3 className="mt-1 text-lg font-extrabold text-foreground sm:text-2xl">
+                List Your Business
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Get discovered by thousands of Kutchi customers every day.
+              </p>
+              <Button size="sm" className="mt-4 rounded-full bg-amber-600 text-white hover:bg-amber-700" asChild>
+                <Link to="/business/new">
+                  Get Started <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+            <Building2 className="absolute -right-4 -bottom-4 h-40 w-40 text-amber-200" />
+          </div>
+
+          {/* Feature tiles */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {featureTiles.map((t) => (
+              <Link
+                key={t.title}
+                to="/categories"
+                className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${t.bg} p-4 text-white transition-transform hover:-translate-y-0.5`}
+              >
+                <p className="text-sm font-extrabold uppercase leading-tight">{t.title}</p>
+                <p className="mt-1 text-xs opacity-90">{t.subtitle}</p>
+                <ArrowRight className="mt-6 h-4 w-4" />
+              </Link>
             ))}
           </div>
+        </div>
+      </section>
 
-          {/* Trust bar */}
-          <div className="mt-8 grid grid-cols-3 gap-4 text-xs sm:text-sm">
-            <div className="flex items-center justify-center gap-2 opacity-95">
-              <Building2 className="h-5 w-5" /> <span>10K+ Businesses</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 opacity-95">
-              <Star className="h-5 w-5 fill-white" /> <span>Verified Reviews</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 opacity-95">
-              <ShieldCheck className="h-5 w-5" /> <span>Trusted Locally</span>
-            </div>
+      {/* Categories — clean icon grid, JD style */}
+      <section className="mx-auto w-full max-w-7xl px-4 py-6">
+        <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-bold text-foreground sm:text-lg">Popular Categories</h2>
+            <Link to="/categories" className="text-xs font-semibold text-primary hover:underline">
+              View all →
+            </Link>
           </div>
+          <CategoryGrid categories={home.categories} />
         </div>
       </section>
 
-      {/* Categories — big tiled grid */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
-        <div className="mb-6 flex items-end justify-between">
-          <div>
-            <h2 className="text-2xl font-extrabold text-foreground sm:text-3xl">Popular Categories</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {city ? `Explore top picks in ${city}` : "Browse services across every corner"}
-            </p>
-          </div>
-          <Link to="/categories" className="text-sm font-semibold text-primary hover:underline">
-            View all →
-          </Link>
-        </div>
-        <CategoryGrid categories={home.categories} />
-      </section>
-
-      {/* Quick actions row — JD-style */}
-      <section className="mx-auto w-full max-w-7xl px-4 pb-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <QuickAction icon={Phone} title="Call & Book" desc="Instant contact with businesses" />
-          <QuickAction icon={Star} title="Verified Reviews" desc="Real ratings from real customers" />
-          <QuickAction icon={MapPin} title="Near You" desc="Location-aware discovery" />
-        </div>
-      </section>
-
-      {/* Featured */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-10">
+      {/* Featured Businesses */}
+      <section className="mx-auto w-full max-w-7xl px-4 py-6">
+        <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-foreground sm:text-3xl">Featured Businesses</h2>
+          <h2 className="text-base font-bold text-foreground sm:text-lg">Featured Businesses{city ? ` in ${city}` : ""}</h2>
           <Link to="/search" className="text-sm font-medium text-primary hover:underline">
             Browse all
           </Link>
@@ -173,7 +164,7 @@ function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-border bg-card p-8 text-center">
+          <div className="rounded-xl border border-dashed border-border p-8 text-center">
             <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
             <p className="mt-3 text-muted-foreground">No featured listings yet. Add your business today!</p>
             <Button className="mt-4 bg-primary text-primary-foreground" asChild>
@@ -181,38 +172,23 @@ function HomePage() {
             </Button>
           </div>
         )}
-      </section>
-
-      {/* CTA */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-10">
-        <div className="overflow-hidden rounded-3xl bg-gradient-to-r from-primary to-orange-500 px-6 py-10 text-primary-foreground shadow-xl sm:px-12">
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-2xl font-extrabold sm:text-3xl">Own a business?</h2>
-              <p className="mt-2 max-w-lg opacity-95">
-                List free on Kutchi Hub and get discovered by thousands of local customers every day.
-              </p>
-            </div>
-            <Button size="lg" className="bg-white text-primary hover:bg-white/95" asChild>
-              <Link to="/business/new">List Your Business — Free</Link>
-            </Button>
-          </div>
         </div>
       </section>
-    </div>
-  );
-}
 
-function QuickAction({ icon: Icon, title, desc }: { icon: typeof Phone; title: string; desc: string }) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div>
-        <p className="text-sm font-bold text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground">{desc}</p>
-      </div>
+      {/* Bottom CTA — subtle */}
+      <section className="mx-auto w-full max-w-7xl px-4 py-8">
+        <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-background p-6 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="text-lg font-extrabold text-foreground">Own a business?</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              List free on Kutchi Hub and reach local customers.
+            </p>
+          </div>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
+            <Link to="/business/new">Add Your Business</Link>
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }
