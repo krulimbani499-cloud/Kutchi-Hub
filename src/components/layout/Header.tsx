@@ -28,17 +28,19 @@ export function Header() {
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-white shadow-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         <Link to="/" className="flex shrink-0 items-center gap-0 text-2xl font-bold -ml-1">
           <img src={logoUrl} alt="Kutchi Hub" className="h-12 w-auto object-contain" />
-          <span className="hidden sm:inline -ml-5 tracking-tight uppercase text-primary">KUTCHI HUB</span>
+          <span className="hidden sm:inline -ml-5 tracking-tight uppercase text-[#f26c22]">KUTCHI HUB</span>
         </Link>
 
-        <CitySelector compact className="hidden md:inline-flex" />
+        <div className="hidden md:flex items-center gap-1 rounded-md border border-border px-2 py-1.5 text-sm text-foreground">
+          <CitySelector compact />
+        </div>
 
         <form
-          className="relative flex-1 max-w-xl"
+          className="relative flex flex-1 max-w-xl items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#f26c22]"
           onSubmit={(e) => {
             e.preventDefault();
             if (search.trim()) {
@@ -46,14 +48,20 @@ export function Header() {
             }
           }}
         >
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search restaurants, hospitals, salons..."
-            className="h-10 border-input bg-background pl-9 pr-4 text-sm"
+            placeholder="Search for restaurants, hospitals, salons..."
+            className="h-10 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <button
+            type="submit"
+            aria-label="Search"
+            className="flex items-center justify-center bg-[#f26c22] px-4 text-white hover:bg-[#d95f1c] transition-colors"
+          >
+            <Search className="h-4 w-4" />
+          </button>
         </form>
 
         <div className="flex items-center gap-2">
