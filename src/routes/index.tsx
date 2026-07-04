@@ -63,8 +63,8 @@ function HomePage() {
         <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
           <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
             Search across{" "}
-            <span className="text-primary">10,000+</span>{" "}
-            <span className="text-primary">Kutchi Businesses</span>
+            <span className="text-[#ff6a00]">10,000+</span>{" "}
+            <span className="text-[#ff6a00]">Kutchi Businesses</span>
           </h1>
 
           <form
