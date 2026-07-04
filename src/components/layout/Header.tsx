@@ -30,18 +30,11 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-white shadow-sm">
       <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0">
-        <Link to="/" className="flex shrink-0 items-center gap-0 text-2xl font-bold -ml-1">
-          <img src={logoUrl} alt="Kutchi Hub" className="h-10 w-auto object-contain sm:h-12" />
-          <span className="hidden sm:inline -ml-5 tracking-tight uppercase font-['Montserrat',sans-serif] font-bold">
+        <Link to="/" className="flex shrink-0 items-center gap-0 font-bold -ml-1">
+          <img src={logoUrl} alt="Kutchi Hub" className="h-8 w-auto object-contain sm:h-12" />
+          <span className="-ml-3 sm:-ml-5 text-base sm:text-2xl tracking-tight uppercase font-['Montserrat',sans-serif] font-bold whitespace-nowrap">
             <span className="text-[#ff6a00]">KUTCHI</span> <span className="text-black">HUB</span>
           </span>
-        </Link>
-
-        <Link
-          to="/"
-          className="hidden max-sm:flex flex-1 items-center justify-center text-lg font-bold tracking-tight uppercase font-['Montserrat',sans-serif] -ml-3"
-        >
-          <span className="text-[#ff6a00]">KUTCHI</span>&nbsp;<span className="text-black">HUB</span>
         </Link>
 
         <div className="flex shrink-0 items-center rounded-md border border-border px-1 py-1 text-sm text-foreground">
