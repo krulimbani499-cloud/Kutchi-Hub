@@ -12,6 +12,7 @@ import { Header } from "@/components/layout/Header";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
+import ogImage from "@/assets/nearme-og.jpg";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -85,7 +86,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "NearMe — Local Business Directory" },
       { property: "og:description", content: "Discover local businesses, restaurants, hospitals, salons and more. Read reviews and connect with trusted service providers near you." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@NearMe" },
     ],
     links: [
@@ -93,6 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "icon", type: "image/png", href: ogImage.replace(/-og\.jpg$/, "-logo.png") },
     ],
   }),
   shellComponent: RootShell,

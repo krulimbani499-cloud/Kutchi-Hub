@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Search, MapPin, Menu, User, LogOut, Building2 } from "lucide-react";
+import { Search, Menu, User, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useAuth, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import logoUrl from "@/assets/nearme-logo.png";
 
 export function Header() {
   const { user, isLoading } = useAuth();
@@ -13,10 +14,8 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         <Link to="/" className="flex shrink-0 items-center gap-2 text-lg font-bold text-foreground">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Building2 className="h-5 w-5" />
-          </div>
-          <span className="hidden sm:inline">NearMe</span>
+          <img src={logoUrl} alt="NearMe" width={32} height={32} className="h-8 w-8 rounded-lg" />
+          <span className="hidden bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent sm:inline">NearMe</span>
         </Link>
 
         <form
