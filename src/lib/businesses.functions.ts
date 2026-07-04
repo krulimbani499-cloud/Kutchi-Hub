@@ -201,6 +201,63 @@ export const createCategory = createServerFn({ method: "POST" })
     return inserted;
   });
 
+const updateCategorySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(2).max(80),
+  slug: z.string().trim().min(2).max(80).regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and dashes only"),
+  icon: z.string().trim().max(60).nullable().optional(),
+  color: z.string().trim().max(30).nullable().optional(),
+  display_order: z.coerce.number().int().min(0).max(9999).optional(),
+});
+
+async function assertAdmin(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string) {
+  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Forbidden");
+}
+
+export const adminUpdateCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => updateCategorySchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const patch: Record<string, unknown> = {
+      name: data.name.trim(),
+      slug: data.slug.trim(),
+    };
+    if (data.icon !== undefined) patch.icon = data.icon?.trim() || null;
+    if (data.color !== undefined) patch.color = data.color?.trim() || null;
+    if (data.display_order !== undefined) patch.display_order = data.display_order;
+
+    const { data: updated, error } = await context.supabase
+      .from("categories")
+      .update(patch)
+      .eq("id", data.id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return updated;
+  });
+
+export const adminDeleteCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    // Guard: reject if any business uses this category
+    const { count, error: countErr } = await context.supabase
+      .from("businesses")
+      .select("id", { count: "exact", head: true })
+      .eq("category_id", data.id);
+    if (countErr) throw new Error(countErr.message);
+    if ((count ?? 0) > 0) {
+      throw new Error(`Cannot delete: ${count} business(es) are using this category.`);
+    }
+    const { error } = await context.supabase.from("categories").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const getHomeData = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = createServerSupabaseClient();
   const [{ data: categories }, { data: featured }] = await Promise.all([
