@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Search, Menu, User, LogOut } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth, signOut } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import logoUrl from "@/assets/kutchi-hub-logo.png";
@@ -10,6 +11,21 @@ import { CitySelector } from "@/components/layout/CitySelector";
 export function Header() {
   const { user, isLoading } = useAuth();
   const [search, setSearch] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
+      if (!cancelled) setIsAdmin(!!data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur">
@@ -51,6 +67,11 @@ export function Header() {
             <>
               {user ? (
                 <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
+                      <Link to="/admin">Admin</Link>
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
                     <Link to="/dashboard">
                       <User className="mr-1 h-4 w-4" />
