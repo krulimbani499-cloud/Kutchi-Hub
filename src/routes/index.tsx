@@ -70,9 +70,8 @@ function HomePage() {
               submitSearch();
             }}
           >
-            <div className="flex h-12 w-full items-center gap-2 rounded-md border border-border bg-background px-3 sm:w-72">
-              <MapPin className="h-4 w-4 shrink-0 text-primary" />
-              <CitySelector compact className="w-full justify-start bg-transparent px-0 text-foreground hover:bg-transparent" />
+            <div className="flex h-12 w-full items-center rounded-md border border-border bg-background px-1 sm:w-72">
+              <CitySelector compact className="w-full justify-start bg-transparent px-2 text-foreground hover:bg-transparent" />
             </div>
             <div className="relative flex h-12 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3">
               <Input
