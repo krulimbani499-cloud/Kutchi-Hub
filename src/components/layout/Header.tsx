@@ -33,7 +33,7 @@ export function Header() {
         <Link to="/" className="flex shrink-0 items-center gap-0 text-2xl font-bold -ml-1">
           <img src={logoUrl} alt="Kutchi Hub" className="h-12 w-auto object-contain" />
           <span className="hidden sm:inline -ml-5 tracking-tight uppercase font-['Montserrat',sans-serif] font-bold">
-            <span className="text-[#f26c22]">KUTCHI</span> <span className="text-black">HUB</span>
+            <span className="text-[#ff6a00]">KUTCHI</span> <span className="text-black">HUB</span>
           </span>
         </Link>
 
