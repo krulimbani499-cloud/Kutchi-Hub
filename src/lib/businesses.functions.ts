@@ -264,6 +264,118 @@ export const adminDeleteCategory = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---------- Banner ads ----------
+
+export const getBannerAdsForCity = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ city: z.string().trim().min(1).max(80).optional() }).parse(input ?? {}))
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    let query = supabase
+      .from("banner_ads")
+      .select("id, business_id, title, subtitle, image_url, cta_label, cta_url, city, priority")
+      .order("priority", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (data.city) {
+      query = query.ilike("city", data.city);
+    }
+    const { data: banners, error } = await query;
+    if (error) throw new Error(error.message);
+    return banners ?? [];
+  });
+
+const bannerInputSchema = z.object({
+  business_id: z.string().uuid().nullable().optional(),
+  title: z.string().trim().min(2).max(120),
+  subtitle: z.string().trim().max(200).nullable().optional(),
+  image_url: z.string().trim().url().max(500),
+  cta_label: z.string().trim().max(40).nullable().optional(),
+  cta_url: z.string().trim().url().max(500).nullable().optional(),
+  city: z.string().trim().min(1).max(80),
+  priority: z.coerce.number().int().min(0).max(9999).default(0),
+  active: z.boolean().default(true),
+  start_at: z.string().datetime().optional(),
+  end_at: z.string().datetime().nullable().optional(),
+});
+
+export const adminListBannerAds = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("banner_ads")
+      .select("*")
+      .order("city", { ascending: true })
+      .order("priority", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const adminCreateBannerAd = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => bannerInputSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data: inserted, error } = await context.supabase
+      .from("banner_ads")
+      .insert({
+        business_id: data.business_id ?? null,
+        owner_id: context.userId,
+        title: data.title,
+        subtitle: data.subtitle ?? null,
+        image_url: data.image_url,
+        cta_label: data.cta_label ?? null,
+        cta_url: data.cta_url ?? null,
+        city: data.city,
+        priority: data.priority,
+        active: data.active,
+        start_at: data.start_at,
+        end_at: data.end_at ?? null,
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return inserted;
+  });
+
+export const adminUpdateBannerAd = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => bannerInputSchema.extend({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { id, ...rest } = data;
+    const { data: updated, error } = await context.supabase
+      .from("banner_ads")
+      .update({
+        business_id: rest.business_id ?? null,
+        title: rest.title,
+        subtitle: rest.subtitle ?? null,
+        image_url: rest.image_url,
+        cta_label: rest.cta_label ?? null,
+        cta_url: rest.cta_url ?? null,
+        city: rest.city,
+        priority: rest.priority,
+        active: rest.active,
+        start_at: rest.start_at,
+        end_at: rest.end_at ?? null,
+      })
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return updated;
+  });
+
+export const adminDeleteBannerAd = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase.from("banner_ads").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const getHomeData = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = createServerSupabaseClient();
   const [{ data: categories }, { data: featured }] = await Promise.all([
