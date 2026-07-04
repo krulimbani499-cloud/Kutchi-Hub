@@ -30,9 +30,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
-        <Link to="/" className="flex shrink-0 items-center text-2xl font-bold text-foreground -ml-1">
+        <Link to="/" className="flex shrink-0 items-center gap-0 text-2xl font-bold -ml-1">
           <img src={logoUrl} alt="Kutchi Hub" className="h-12 w-auto object-contain" />
-          <span className="hidden bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent sm:inline tracking-tight -ml-2">Kutchi Hub</span>
+          <span className="hidden sm:inline -ml-3 tracking-tight uppercase text-primary">KUTCHI HUB</span>
         </Link>
 
         <CitySelector compact className="hidden md:inline-flex" />
