@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Header } from "@/components/layout/Header";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
@@ -143,11 +144,7 @@ function RootComponent() {
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
         </main>
-        <footer className="border-t border-border bg-card py-6">
-          <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Kutchi Hub. All rights reserved.</p>
-          </div>
-        </footer>
+        <SiteFooter />
       </div>
     </QueryClientProvider>
   );

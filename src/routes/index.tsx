@@ -9,6 +9,8 @@ import { Search, MapPin, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
+import { CitySelector } from "@/components/layout/CitySelector";
+import { useCity } from "@/hooks/useCity";
 
 const homeQueryOptions = queryOptions({
   queryKey: ["home"],
@@ -33,6 +35,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const { data: home } = useSuspenseQuery(homeQueryOptions);
   const [search, setSearch] = useState("");
+  const { city } = useCity();
 
   return (
     <div className="flex flex-col">
@@ -46,9 +49,10 @@ function HomePage() {
             className="mt-6 flex flex-col gap-2 sm:flex-row"
             onSubmit={(e) => {
               e.preventDefault();
-              if (search.trim()) {
-                window.location.href = `/search?q=${encodeURIComponent(search.trim())}`;
-              }
+              const params = new URLSearchParams();
+              if (search.trim()) params.set("q", search.trim());
+              if (city) params.set("city", city);
+              window.location.href = `/search?${params.toString()}`;
             }}
           >
             <div className="relative flex-1">
@@ -61,18 +65,18 @@ function HomePage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="relative flex-1">
-              <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="City or location"
-                className="h-12 border-0 bg-white pl-11 text-foreground placeholder:text-muted-foreground"
-              />
+            <div className="flex h-12 flex-1 items-center rounded-md bg-white px-2 text-foreground">
+              <CitySelector className="w-full justify-start hover:bg-transparent" />
             </div>
             <Button type="submit" className="h-12 bg-primary-foreground px-8 text-foreground hover:bg-white/90">
               Search
             </Button>
           </form>
+          {city && (
+            <p className="mt-3 flex items-center justify-center gap-1 text-xs opacity-80">
+              <MapPin className="h-3 w-3" /> Showing results near <span className="font-semibold">{city}</span>
+            </p>
+          )}
         </div>
       </section>
 
