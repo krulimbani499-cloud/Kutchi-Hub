@@ -9,14 +9,20 @@ import {
   getCategories,
   adminUpdateCategory,
   adminDeleteCategory,
+  adminListBannerAds,
+  adminCreateBannerAd,
+  adminUpdateBannerAd,
+  adminDeleteBannerAd,
 } from "@/lib/businesses.functions";
 import { getDashboard } from "@/lib/businesses.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save } from "lucide-react";
+import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save, Plus, Image as ImageIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
@@ -28,6 +34,11 @@ const pendingQueryOptions = queryOptions({
 const categoriesAdminQueryOptions = queryOptions({
   queryKey: ["admin", "categories"],
   queryFn: () => getCategories(),
+});
+
+const bannersAdminQueryOptions = queryOptions({
+  queryKey: ["admin", "banner-ads"],
+  queryFn: () => adminListBannerAds(),
 });
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -44,6 +55,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
     await Promise.all([
       context.queryClient.ensureQueryData(pendingQueryOptions),
       context.queryClient.ensureQueryData(categoriesAdminQueryOptions),
+      context.queryClient.ensureQueryData(bannersAdminQueryOptions),
     ]);
   },
   component: AdminPage,
