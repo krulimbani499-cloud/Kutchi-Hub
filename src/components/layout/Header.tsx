@@ -32,7 +32,7 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         <Link to="/" className="flex shrink-0 items-center gap-0 text-2xl font-bold -ml-1">
           <img src={logoUrl} alt="Kutchi Hub" className="h-12 w-auto object-contain" />
-          <span className="hidden sm:inline -ml-3 tracking-tight uppercase text-primary">KUTCHI HUB</span>
+          <span className="hidden sm:inline -ml-5 tracking-tight uppercase text-primary">KUTCHI HUB</span>
         </Link>
 
         <CitySelector compact className="hidden md:inline-flex" />
