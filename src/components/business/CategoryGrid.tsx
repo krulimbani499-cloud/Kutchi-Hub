@@ -37,10 +37,10 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
   const sizeClasses =
     size === "sm"
       ? "grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10"
-      : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6";
+      : "grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8";
 
   return (
-    <div className={`grid gap-3 ${sizeClasses}`}>
+    <div className={`grid gap-4 ${sizeClasses}`}>
       {categories.map((category) => {
         const Icon = iconMap[category.icon ?? ""] ?? Circle;
         return (
@@ -48,15 +48,15 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
             key={category.id}
             to="/search"
             search={{ category: category.slug }}
-            className="group flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-3 text-center transition-colors hover:border-primary/30 hover:bg-accent"
+            className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
           >
             <div
-              className="flex h-12 w-12 items-center justify-center rounded-full text-white"
+              className="flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-inner"
               style={{ backgroundColor: category.color ?? "var(--primary)" }}
             >
-              <Icon className="h-6 w-6" />
+              <Icon className="h-7 w-7" />
             </div>
-            <span className="text-xs font-medium text-foreground">{category.name}</span>
+            <span className="text-sm font-semibold text-foreground leading-tight">{category.name}</span>
           </Link>
         );
       })}
