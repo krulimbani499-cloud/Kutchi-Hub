@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createBusiness, updateBusiness } from "@/lib/businesses.functions";
+import { createBusiness, updateBusiness, createCategory } from "@/lib/businesses.functions";
 import { geocodeAddress } from "@/lib/maps.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import type { Tables } from "@/integrations/supabase/types";
@@ -45,10 +45,15 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
   const createFn = useServerFn(createBusiness);
   const updateFn = useServerFn(updateBusiness);
   const geocodeFn = useServerFn(geocodeAddress);
+  const createCategoryFn = useServerFn(createCategory);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [geocoding, setGeocoding] = useState(false);
+  const [categoryList, setCategoryList] = useState(categories);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
   const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({
     lat: initial?.latitude ?? null,
     lng: initial?.longitude ?? null,
@@ -164,13 +169,69 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
-            {categories.map((cat) => (
+            {categoryList.map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 {cat.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {!showAddCategory ? (
+          <button
+            type="button"
+            onClick={() => setShowAddCategory(true)}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            <Plus className="h-3 w-3" /> Add new category
+          </button>
+        ) : (
+          <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-3 sm:flex-row sm:items-center">
+            <Input
+              placeholder="New category name"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              className="h-9"
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={addingCategory || newCategoryName.trim().length < 2}
+                onClick={async () => {
+                  setAddingCategory(true);
+                  setFormMessage("");
+                  try {
+                    const created = await createCategoryFn({ data: { name: newCategoryName.trim() } });
+                    setCategoryList((list) =>
+                      list.some((c) => c.id === created.id) ? list : [...list, created],
+                    );
+                    setForm((f) => ({ ...f, category_id: created.id }));
+                    setNewCategoryName("");
+                    setShowAddCategory(false);
+                  } catch (err) {
+                    setFormMessage(err instanceof Error ? err.message : "Could not add category.");
+                  } finally {
+                    setAddingCategory(false);
+                  }
+                }}
+              >
+                {addingCategory ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+                Add
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowAddCategory(false);
+                  setNewCategoryName("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
         {errors.category_id && <p className="text-xs text-destructive">{errors.category_id}</p>}
       </div>
 
