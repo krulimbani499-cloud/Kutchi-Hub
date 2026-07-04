@@ -1,6 +1,21 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { MapPin, Phone, Mail, Globe, Clock, BadgeCheck, Star, ThumbsUp, ExternalLink } from "lucide-react";
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
+  Clock,
+  BadgeCheck,
+  Star,
+  ThumbsUp,
+  ExternalLink,
+  MessageSquare,
+  Navigation,
+  Share2,
+  Heart,
+  Camera,
+} from "lucide-react";
 import { StarRating } from "./StarRating";
 import { BusinessMap } from "./BusinessMap";
 import { Button } from "@/components/ui/button";
@@ -34,6 +49,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
 
   const hours = (business.hours as Record<string, string> | null) ?? {};
   const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+  const todayHours = hours[today];
+  const isOpen = !!todayHours && todayHours.toLowerCase() !== "closed";
+  const addressLine = [business.address, business.city, business.state, business.pincode].filter(Boolean).join(", ");
+  const mapsHref = business.latitude != null && business.longitude != null
+    ? `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + " " + addressLine)}`;
+  const galleryPhotos = photos.slice(0, 4);
 
   const handleReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,78 +74,161 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
-      <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
         <Link to="/" className="hover:text-foreground">Home</Link>
-        <span>/</span>
+        <span>›</span>
         <Link to="/search" search={{ category: business.categories?.slug }} className="hover:text-foreground">
           {business.categories?.name}
         </Link>
-        <span>/</span>
+        <span>›</span>
         <span className="text-foreground">{business.name}</span>
       </div>
 
-      <div className="relative h-48 overflow-hidden rounded-2xl bg-muted sm:h-64">
-        {business.featured_image ? (
-          <img src={business.featured_image} alt={business.name} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-muted text-2xl font-bold text-primary">
-            {business.name}
+      {/* JustDial-style hero card */}
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="grid gap-0 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+          {/* Gallery */}
+          <div className="relative bg-muted">
+            <div className="grid h-64 grid-cols-4 grid-rows-2 gap-1 sm:h-80">
+              <div className="relative col-span-2 row-span-2 overflow-hidden bg-muted">
+                {business.featured_image ? (
+                  <img src={business.featured_image} alt={business.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-amber-50 text-2xl font-bold text-primary">
+                    {business.name.charAt(0)}
+                  </div>
+                )}
+              </div>
+              {[0, 1, 2, 3].map((i) => {
+                const p = galleryPhotos[i];
+                return (
+                  <div key={i} className="relative overflow-hidden bg-muted">
+                    {p ? (
+                      <img src={p.url} alt={p.caption ?? ""} className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                        <Camera className="h-5 w-5" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {photos.length > 0 && (
+              <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
+                <Camera className="mr-1 inline h-3.5 w-3.5" /> {photos.length} Photos
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Summary panel */}
+          <div className="flex flex-col justify-between gap-4 p-5 sm:p-6">
+            <div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold text-foreground">
+                    <span className="truncate">{business.name}</span>
+                    {business.verified && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+                        <BadgeCheck className="h-3.5 w-3.5" /> Verified
+                      </span>
+                    )}
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {business.categories?.name} · {business.city}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-1 text-sm font-bold text-white">
+                    {avgRating.toFixed(1)} <Star className="h-3.5 w-3.5 fill-white" />
+                  </span>
+                  <span className="text-xs text-muted-foreground">{reviewCount} Ratings</span>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2 text-sm">
+                <div className="flex items-start gap-2 text-foreground">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#f26c22]" />
+                  <span className="text-muted-foreground">{addressLine || "Address not provided"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 shrink-0 text-[#f26c22]" />
+                  <span className={`font-semibold ${isOpen ? "text-green-600" : "text-red-600"}`}>
+                    {isOpen ? "Open now" : "Closed"}
+                  </span>
+                  {todayHours && <span className="text-muted-foreground">· {todayHours}</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {business.phone && (
+                <Button asChild className="h-11 bg-[#f26c22] text-white hover:bg-[#d95c17]">
+                  <a href={`tel:${business.phone}`}>
+                    <Phone className="mr-1.5 h-4 w-4" /> Call
+                  </a>
+                </Button>
+              )}
+              {business.phone && (
+                <Button asChild variant="outline" className="h-11 border-green-600 text-green-700 hover:bg-green-50">
+                  <a
+                    href={`https://wa.me/${business.phone.replace(/[^0-9]/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <MessageSquare className="mr-1.5 h-4 w-4" /> WhatsApp
+                  </a>
+                </Button>
+              )}
+              <Button asChild variant="outline" className="h-11">
+                <a href={mapsHref} target="_blank" rel="noreferrer">
+                  <Navigation className="mr-1.5 h-4 w-4" /> Directions
+                </a>
+              </Button>
+              {business.email ? (
+                <Button asChild variant="outline" className="h-11">
+                  <a href={`mailto:${business.email}`}>
+                    <Mail className="mr-1.5 h-4 w-4" /> Enquire
+                  </a>
+                </Button>
+              ) : business.website ? (
+                <Button asChild variant="outline" className="h-11">
+                  <a href={business.website} target="_blank" rel="noreferrer">
+                    <Globe className="mr-1.5 h-4 w-4" /> Website
+                  </a>
+                </Button>
+              ) : (
+                <Button variant="outline" className="h-11" disabled>
+                  <Heart className="mr-1.5 h-4 w-4" /> Save
+                </Button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
+              {business.website && (
+                <a href={business.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-foreground">
+                  <Globe className="h-3.5 w-3.5" /> Website <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && "share" in navigator) {
+                    navigator.share({ title: business.name, url: window.location.href }).catch(() => {});
+                  }
+                }}
+                className="ml-auto inline-flex items-center gap-1 hover:text-foreground"
+              >
+                <Share2 className="h-3.5 w-3.5" /> Share
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         <div className="flex-1">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">{business.name}</h1>
-                {business.verified && (
-                  <BadgeCheck className="h-5 w-5 text-success" />
-                )}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {business.categories?.name} · {business.city}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg bg-card px-3 py-2 shadow-sm">
-              <div className="flex items-center gap-1 text-rating">
-                <Star className="h-4 w-4 fill-rating" />
-                <span className="font-bold">{avgRating.toFixed(1)}</span>
-              </div>
-              <span className="text-sm text-muted-foreground">({reviewCount} reviews)</span>
-            </div>
-          </div>
-
-          <div className="mb-6 flex flex-wrap gap-2">
-            {business.phone && (
-              <Button className="bg-primary text-primary-foreground" asChild>
-                <a href={`tel:${business.phone}`}>
-                  <Phone className="mr-2 h-4 w-4" />
-                  Call Now
-                </a>
-              </Button>
-            )}
-            {business.email && (
-              <Button variant="outline" asChild>
-                <a href={`mailto:${business.email}`}>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Email
-                </a>
-              </Button>
-            )}
-            {business.website && (
-              <Button variant="outline" asChild>
-                <a href={business.website} target="_blank" rel="noreferrer">
-                  <Globe className="mr-2 h-4 w-4" />
-                  Website
-                  <ExternalLink className="ml-1 h-3 w-3" />
-                </a>
-              </Button>
-            )}
-          </div>
-
           <div className="space-y-6 rounded-2xl border border-border bg-card p-5">
             <section>
               <h2 className="mb-2 text-lg font-semibold text-foreground">About</h2>
