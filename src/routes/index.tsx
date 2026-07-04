@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import ogImage from "@/assets/nearme-og.jpg";
+import ogImage from "@/assets/kutchi-hub-og.jpg";
 
 const homeQueryOptions = queryOptions({
   queryKey: ["home"],
