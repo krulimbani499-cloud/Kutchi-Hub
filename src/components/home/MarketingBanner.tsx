@@ -39,26 +39,28 @@ export function MarketingBanner({ intervalMs = 4500 }: Props) {
           rel={current.cta_url ? "noreferrer" : undefined}
           className="block"
         >
-          <div className="relative aspect-[16/5] w-full bg-muted sm:aspect-[16/4]">
+          <div className="relative aspect-[4/3] w-full bg-muted sm:aspect-[16/5] md:aspect-[16/4]">
             <img
               src={current.image_url}
               alt={current.title}
               className="h-full w-full object-cover transition-opacity duration-500"
               loading="lazy"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
-            <div className="absolute inset-0 flex flex-col justify-center gap-2 p-5 sm:p-8">
-              <span className="w-fit rounded-full bg-[#ff6a00] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10" />
+            <div className="absolute inset-0 flex flex-col justify-center gap-1.5 p-4 sm:gap-2 sm:p-6 md:p-8">
+              <span className="w-fit rounded-full bg-[#ff6a00] px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white sm:px-3 sm:py-1 sm:text-[10px]">
                 Sponsored{city ? ` · ${city}` : ""}
               </span>
-              <h3 className="max-w-lg text-lg font-extrabold leading-tight text-white sm:text-2xl md:text-3xl">
+              <h3 className="max-w-[85%] text-base font-extrabold leading-tight text-white sm:max-w-lg sm:text-2xl md:text-3xl">
                 {current.title}
               </h3>
               {current.subtitle && (
-                <p className="max-w-md text-xs text-white/90 sm:text-sm">{current.subtitle}</p>
+                <p className="line-clamp-2 max-w-[85%] text-[11px] text-white/90 sm:max-w-md sm:text-sm">
+                  {current.subtitle}
+                </p>
               )}
               {current.cta_label && (
-                <span className="mt-2 inline-flex w-fit items-center rounded-full bg-white px-4 py-2 text-xs font-bold text-foreground shadow-sm sm:text-sm">
+                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-foreground shadow-sm sm:mt-2 sm:px-4 sm:py-2 sm:text-sm">
                   {current.cta_label}
                 </span>
               )}

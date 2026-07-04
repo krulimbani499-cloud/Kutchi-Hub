@@ -29,20 +29,20 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-white shadow-sm">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
+      <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0">
         <Link to="/" className="flex shrink-0 items-center gap-0 text-2xl font-bold -ml-1">
-          <img src={logoUrl} alt="Kutchi Hub" className="h-12 w-auto object-contain" />
+          <img src={logoUrl} alt="Kutchi Hub" className="h-10 w-auto object-contain sm:h-12" />
           <span className="hidden sm:inline -ml-5 tracking-tight uppercase font-['Montserrat',sans-serif] font-bold">
             <span className="text-[#ff6a00]">KUTCHI</span> <span className="text-black">HUB</span>
           </span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-1 rounded-md border border-border px-2 py-1.5 text-sm text-foreground">
+        <div className="flex shrink-0 items-center rounded-md border border-border px-1 py-1 text-sm text-foreground">
           <CitySelector compact />
         </div>
 
         <form
-          className="relative flex flex-1 max-w-xl items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#ff6a00]"
+          className="relative order-last flex w-full min-w-0 flex-1 items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#ff6a00] sm:order-none sm:max-w-xl"
           onSubmit={(e) => {
             e.preventDefault();
             if (search.trim()) {
@@ -52,21 +52,21 @@ export function Header() {
         >
           <Input
             type="search"
-            placeholder="Search for restaurants, hospitals, salons..."
-            className="h-10 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0"
+            placeholder="Search businesses..."
+            className="h-10 min-w-0 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           <button
             type="submit"
             aria-label="Search"
-            className="flex items-center justify-center bg-[#ff6a00] px-4 text-white hover:bg-[#e65a00] transition-colors"
+            className="flex shrink-0 items-center justify-center bg-[#ff6a00] px-3 text-white hover:bg-[#e65a00] transition-colors sm:px-4"
           >
             <Search className="h-4 w-4" />
           </button>
         </form>
 
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:ml-0 sm:gap-2">
           <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
             <Link to="/categories" title="Categories">
               <Menu className="h-5 w-5" />
