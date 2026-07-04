@@ -27,7 +27,7 @@ function NewBusinessPage() {
   return (
     <div className="bg-white">
       {/* Hero */}
-      <section className="border-b border-border bg-gradient-to-b from-green-50/60 to-white">
+      <section className="border-b border-border bg-gradient-to-b from-orange-50/60 to-white">
         <div className="mx-auto max-w-7xl px-4 py-10 md:py-14">
           <p className="mb-3 text-sm text-muted-foreground">
             <span className="hover:underline">Home</span>
@@ -37,13 +37,13 @@ function NewBusinessPage() {
           <div className="grid items-center gap-10 md:grid-cols-2">
             <div>
               <h1 className="text-4xl font-extrabold leading-tight text-foreground md:text-5xl">
-                List Your Business <span className="text-[#16a34a]">for FREE</span>
+                List Your Business <span className="text-[#ff6a00]">for FREE</span>
               </h1>
               <p className="mt-3 text-lg text-muted-foreground">
                 with Kutchi Hub — Your Local Kutchi Search Engine
               </p>
 
-              <div className="mt-6 rounded-xl border border-[#16a34a]/40 bg-green-50/70 px-4 py-3 text-sm font-medium text-foreground">
+              <div className="mt-6 rounded-xl border border-[#ff6a00]/40 bg-orange-50/70 px-4 py-3 text-sm font-medium text-foreground">
                 🔥 1,200+ Kutchi businesses listed in the last 30 days
               </div>
 
