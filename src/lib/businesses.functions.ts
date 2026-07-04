@@ -161,6 +161,46 @@ export const getCategories = createServerFn({ method: "GET" }).handler(async () 
   return data ?? [];
 });
 
+const createCategorySchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
+});
+
+export const createCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => createCategorySchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const name = data.name.trim();
+    const baseSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "category";
+
+    // Reuse if a category with the same slug or case-insensitive name already exists.
+    const { data: existing } = await supabase
+      .from("categories")
+      .select("*")
+      .or(`slug.eq.${baseSlug},name.ilike.${name}`)
+      .maybeSingle();
+    if (existing) return existing;
+
+    let slug = baseSlug;
+    for (let i = 2; i < 20; i++) {
+      const { data: hit } = await supabase.from("categories").select("id").eq("slug", slug).maybeSingle();
+      if (!hit) break;
+      slug = `${baseSlug}-${i}`;
+    }
+
+    const { data: inserted, error } = await supabase
+      .from("categories")
+      .insert({ name, slug })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return inserted;
+  });
+
 export const getHomeData = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = createServerSupabaseClient();
   const [{ data: categories }, { data: featured }] = await Promise.all([
