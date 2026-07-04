@@ -8,10 +8,10 @@ export function SiteFooter() {
     <footer className="border-t border-border bg-card">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <Link to="/" className="flex items-center gap-1 text-xl font-bold text-foreground">
+          <Link to="/" className="flex items-center gap-1 font-montserrat text-xl font-bold">
             <img src={logoUrl} alt="Kutchi Hub" className="h-10 w-auto object-contain" />
-            <span className="-ml-2 bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">
-              Kutchi Hub
+            <span className="-ml-2">
+              <span className="text-[#ff6a00]">KUTCHI</span> <span className="text-black">HUB</span>
             </span>
           </Link>
           <p className="mt-3 text-sm text-muted-foreground">
