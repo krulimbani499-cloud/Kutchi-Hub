@@ -15,7 +15,7 @@ export function SiteFooter() {
             </span>
           </Link>
           <p className="mt-3 text-sm text-muted-foreground">
-            Discover the best local businesses across India — restaurants, doctors, salons and more.
+            India's local business directory.
           </p>
         </div>
 
