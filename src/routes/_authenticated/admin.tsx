@@ -268,7 +268,7 @@ function CategoriesAdmin() {
                         <Input
                           value={form.color}
                           onChange={(e) => setForm({ ...form, color: e.target.value })}
-                          placeholder="#f26c22"
+                          placeholder="#ff6a00"
                         />
                       </div>
                       <div>
