@@ -10,6 +10,10 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
+import tileB2B from "@/assets/tile-b2b.jpg";
+import tileRepairs from "@/assets/tile-repairs.jpg";
+import tileRealEstate from "@/assets/tile-realestate.jpg";
+import tileDoctors from "@/assets/tile-doctors.jpg";
 import { useCity } from "@/hooks/useCity";
 
 const homeQueryOptions = queryOptions({
@@ -46,10 +50,10 @@ function HomePage() {
   };
 
   const featureTiles = [
-    { title: "B2B", subtitle: "Quick Quotes", bg: "from-blue-500 to-blue-600" },
-    { title: "Repairs & Services", subtitle: "Get Nearest Vendor", bg: "from-slate-700 to-slate-900" },
-    { title: "Real Estate", subtitle: "Finest Agents", bg: "from-indigo-500 to-indigo-700" },
-    { title: "Doctors", subtitle: "Book Now", bg: "from-emerald-500 to-emerald-700" },
+    { title: "B2B", subtitle: "Quick Quotes", bg: "from-blue-500 to-blue-600", img: tileB2B },
+    { title: "Repairs & Services", subtitle: "Get Nearest Vendor", bg: "from-slate-700 to-slate-900", img: tileRepairs },
+    { title: "Real Estate", subtitle: "Finest Agents", bg: "from-indigo-500 to-indigo-700", img: tileRealEstate },
+    { title: "Doctors", subtitle: "Book Now", bg: "from-emerald-500 to-emerald-700", img: tileDoctors },
   ];
 
   return (
@@ -125,9 +129,19 @@ function HomePage() {
                 to="/categories"
                 className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${t.bg} p-4 text-white transition-transform hover:-translate-y-0.5`}
               >
-                <p className="text-sm font-extrabold uppercase leading-tight">{t.title}</p>
-                <p className="mt-1 text-xs opacity-90">{t.subtitle}</p>
-                <ArrowRight className="mt-6 h-4 w-4" />
+                <div className="relative z-10">
+                  <p className="text-sm font-extrabold uppercase leading-tight">{t.title}</p>
+                  <p className="mt-1 text-xs opacity-90">{t.subtitle}</p>
+                  <ArrowRight className="mt-6 h-4 w-4" />
+                </div>
+                <img
+                  src={t.img}
+                  alt={t.title}
+                  loading="lazy"
+                  width={1024}
+                  height={1024}
+                  className="pointer-events-none absolute -bottom-2 -right-2 h-24 w-24 object-contain opacity-90 mix-blend-luminosity sm:h-28 sm:w-28"
+                />
               </Link>
             ))}
           </div>
