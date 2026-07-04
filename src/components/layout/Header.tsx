@@ -14,7 +14,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         <Link to="/" className="flex shrink-0 items-center gap-2 text-lg font-bold text-foreground">
-          <img src={logoUrl} alt="Kutchi Hub" width={32} height={32} className="h-8 w-8 rounded-lg" />
+          <img src={logoUrl} alt="Kutchi Hub" className="h-11 w-auto object-contain" />
           <span className="hidden bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent sm:inline">Kutchi Hub</span>
         </Link>
 
