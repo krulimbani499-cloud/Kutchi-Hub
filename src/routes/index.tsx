@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
+import { MarketingBanner } from "@/components/home/MarketingBanner";
 import tileB2B from "@/assets/tile-b2b.jpg";
 import tileRepairs from "@/assets/tile-repairs.jpg";
 import tileRealEstate from "@/assets/tile-realestate.jpg";
@@ -98,6 +99,9 @@ function HomePage() {
           </form>
         </div>
       </section>
+
+      {/* Location-aware sponsored banner */}
+      <MarketingBanner />
 
       {/* Promo banner + feature tiles row */}
       <section className="mx-auto w-full max-w-7xl px-4 py-6">
