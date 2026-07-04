@@ -18,8 +18,8 @@ const editBusinessQueryOptions = (slug: string) =>
 export const Route = createFileRoute("/_authenticated/business/$slug/edit")({
   head: () => ({
     meta: [
-      { title: "Edit Business — NearMe" },
-      { name: "description", content: "Update your business information on NearMe." },
+      { title: "Edit Business — Kutchi Hub" },
+      { name: "description", content: "Update your business information on Kutchi Hub." },
     ],
   }),
   loader: async ({ context, params }) => {

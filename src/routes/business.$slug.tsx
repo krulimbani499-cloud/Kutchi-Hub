@@ -13,8 +13,8 @@ const businessQueryOptions = (slug: string) =>
 export const Route = createFileRoute("/business/$slug")({
   head: ({ params }) => ({
     meta: [
-      { title: `${params.slug.replace(/-/g, " ")} — NearMe` },
-      { name: "description", content: "View business details, reviews, and contact information on NearMe." },
+      { title: `${params.slug.replace(/-/g, " ")} — Kutchi Hub` },
+      { name: "description", content: "View business details, reviews, and contact information on Kutchi Hub." },
     ],
   }),
   loader: ({ context, params }) =>

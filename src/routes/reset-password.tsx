@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Reset Password — NearMe" },
-      { name: "description", content: "Set a new password for your NearMe account." },
+      { title: "Reset Password — Kutchi Hub" },
+      { name: "description", content: "Set a new password for your Kutchi Hub account." },
     ],
   }),
   component: ResetPasswordPage,

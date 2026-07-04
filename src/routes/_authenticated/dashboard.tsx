@@ -16,7 +16,7 @@ const dashboardQueryOptions = queryOptions({
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — NearMe" },
+      { title: "Dashboard — Kutchi Hub" },
       { name: "description", content: "Manage your business listings and claims." },
     ],
   }),

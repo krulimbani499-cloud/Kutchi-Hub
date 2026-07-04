@@ -31,7 +31,7 @@ const categoriesQueryOptions = queryOptions({
 export const Route = createFileRoute("/search")({
   head: () => ({
     meta: [
-      { title: "Search Businesses — NearMe" },
+      { title: "Search Businesses — Kutchi Hub" },
       { name: "description", content: "Search for local businesses, read reviews, and find contact details." },
     ],
   }),
