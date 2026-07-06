@@ -13,6 +13,7 @@ import { CitySelector } from "@/components/layout/CitySelector";
 import { MarketingBanner } from "@/components/home/MarketingBanner";
 import { CollectionsSection } from "@/components/home/CollectionsSection";
 import { TravelBookingsSection } from "@/components/home/TravelBookingsSection";
+import { PopularSearches } from "@/components/home/PopularSearches";
 import tileB2B from "@/assets/tile-b2b.jpg";
 import tileRepairs from "@/assets/tile-repairs.jpg";
 import tileRealEstate from "@/assets/tile-realestate.jpg";
@@ -196,6 +197,9 @@ function HomePage() {
 
       {/* Curated collections */}
       <CollectionsSection />
+
+      {/* Popular Searches — auto-populated from categories */}
+      <PopularSearches categories={home.categories} />
 
       {/* Travel bookings */}
       <TravelBookingsSection />
