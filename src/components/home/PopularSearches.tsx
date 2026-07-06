@@ -8,6 +8,20 @@ type Category = {
   slug: string;
 };
 
+// Manual image overrides for specific category slugs. Everything else falls
+// back to a keyword-based loremflickr photo.
+const IMAGE_OVERRIDES: Record<string, string> = {
+  hotels:
+    "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
+};
+
+function imageFor(cat: Category) {
+  return (
+    IMAGE_OVERRIDES[cat.slug] ??
+    `https://loremflickr.com/480/320/${encodeURIComponent(cat.name)}?lock=${cat.id.slice(0, 8)}`
+  );
+}
+
 export function PopularSearches({ categories }: { categories: Category[] }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const items = categories.slice(0, 10);
@@ -36,7 +50,7 @@ export function PopularSearches({ categories }: { categories: Category[] }) {
             >
               <div className="relative h-40 w-full overflow-hidden bg-muted">
                 <img
-                  src={`https://loremflickr.com/480/320/${encodeURIComponent(cat.name)}?lock=${cat.id.slice(0, 8)}`}
+                  src={imageFor(cat)}
                   alt={cat.name}
                   loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
