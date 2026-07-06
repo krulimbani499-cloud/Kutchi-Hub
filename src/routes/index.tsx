@@ -11,6 +11,7 @@ import { useState } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
 import { MarketingBanner } from "@/components/home/MarketingBanner";
+import { CollectionsSection } from "@/components/home/CollectionsSection";
 import tileB2B from "@/assets/tile-b2b.jpg";
 import tileRepairs from "@/assets/tile-repairs.jpg";
 import tileRealEstate from "@/assets/tile-realestate.jpg";
@@ -191,6 +192,9 @@ function HomePage() {
         )}
         </div>
       </section>
+
+      {/* Curated collections */}
+      <CollectionsSection />
 
       {/* Bottom CTA — subtle */}
       <section className="mx-auto w-full max-w-7xl px-4 py-8">
