@@ -65,11 +65,26 @@ function HomePage() {
       {/* Search header — JustDial-style, clean white */}
       <section className="bg-background border-b border-border">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
-          <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
-            Search across{" "}
-            <span className="text-[#ff6a00]">10,000+</span>{" "}
-            <span className="text-[#ff6a00]">Kutchi Businesses</span>
-          </h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
+              Search across{" "}
+              <span className="text-[#ff6a00]">10,000+</span>{" "}
+              <span className="text-[#ff6a00]">Kutchi Businesses</span>
+            </h1>
+            <button
+              type="button"
+              onClick={() =>
+                alert("Download app coming soon! The application link will be added once the app is ready.")
+              }
+              className="hidden shrink-0 items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 shadow-sm transition hover:shadow-md sm:inline-flex"
+              aria-label="Download App"
+            >
+              <span className="text-xs font-semibold text-foreground">Download App</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#ff6a00] text-[11px] font-extrabold text-white">
+                KH
+              </span>
+            </button>
+          </div>
 
           <form
             className="mt-5 flex flex-col gap-3 sm:flex-row"
