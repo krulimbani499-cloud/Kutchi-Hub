@@ -16,6 +16,7 @@ import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TravelFlightBookingRouteImport } from './routes/travel.flight-booking'
 import { Route as BusinessSlugRouteImport } from './routes/business.$slug'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -55,6 +56,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TravelFlightBookingRoute = TravelFlightBookingRouteImport.update({
+  id: '/travel/flight-booking',
+  path: '/travel/flight-booking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BusinessSlugRoute = BusinessSlugRouteImport.update({
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/business/$slug': typeof BusinessSlugRoute
+  '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
   '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
   '/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/business/$slug': typeof BusinessSlugRoute
+  '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
   '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
   '/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/business/$slug': typeof BusinessSlugRoute
+  '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/_authenticated/business/new': typeof AuthenticatedBusinessNewRoute
   '/_authenticated/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
   '/_authenticated/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/business/$slug'
+    | '/travel/flight-booking'
     | '/business/new'
     | '/business/$slug/claim'
     | '/business/$slug/edit'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/business/$slug'
+    | '/travel/flight-booking'
     | '/business/new'
     | '/business/$slug/claim'
     | '/business/$slug/edit'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/business/$slug'
+    | '/travel/flight-booking'
     | '/_authenticated/business/new'
     | '/_authenticated/business/$slug/claim'
     | '/_authenticated/business/$slug/edit'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   BusinessSlugRoute: typeof BusinessSlugRoute
+  TravelFlightBookingRoute: typeof TravelFlightBookingRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -241,6 +254,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/travel/flight-booking': {
+      id: '/travel/flight-booking'
+      path: '/travel/flight-booking'
+      fullPath: '/travel/flight-booking'
+      preLoaderRoute: typeof TravelFlightBookingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/business/$slug': {
@@ -316,6 +336,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   BusinessSlugRoute: BusinessSlugRoute,
+  TravelFlightBookingRoute: TravelFlightBookingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
