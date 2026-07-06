@@ -13,6 +13,24 @@ type Category = {
 const IMAGE_OVERRIDES: Record<string, string> = {
   hotels:
     "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
+  restaurants:
+    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+  hospitals:
+    "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?auto=format&fit=crop&w=800&q=80",
+  schools:
+    "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=800&q=80",
+  grocery:
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80",
+  "grocery-stores":
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80",
+  supermarkets:
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80",
+  gyms:
+    "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80",
+  doctors:
+    "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80",
+  "beauty-parlour":
+    "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80",
 };
 
 function imageFor(cat: Category) {
@@ -24,7 +42,13 @@ function imageFor(cat: Category) {
 
 export function PopularSearches({ categories }: { categories: Category[] }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const items = categories.slice(0, 10);
+  const items = categories
+    .filter((c) => {
+      const s = c.slug.toLowerCase();
+      const n = c.name.toLowerCase();
+      return !s.includes("salon") && !n.includes("salon") && !s.includes("saloon") && !n.includes("saloon");
+    })
+    .slice(0, 10);
 
   if (items.length === 0) return null;
 
