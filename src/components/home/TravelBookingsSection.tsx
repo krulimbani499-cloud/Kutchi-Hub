@@ -1,13 +1,19 @@
 import { Link } from "@tanstack/react-router";
 
-type Item = { label: string; emoji: string; tag: string; slug: string };
+type Item = {
+  label: string;
+  emoji: string;
+  tag: string;
+  to: string;
+  search?: Record<string, string>;
+};
 
 const ITEMS: Item[] = [
-  { label: "Flight", emoji: "✈️", tag: "", slug: "flights" },
-  { label: "Bus", emoji: "🚌", tag: "Affordable Rides", slug: "bus" },
-  { label: "Train", emoji: "🚆", tag: "", slug: "train" },
-  { label: "Hotel", emoji: "🏨", tag: "Budget-friendly Stay", slug: "hotels" },
-  { label: "Car Rentals", emoji: "🚗", tag: "Drive Easy Anywhere", slug: "car-rentals" },
+  { label: "Flight", emoji: "✈️", tag: "", to: "/travel/flight-booking" },
+  { label: "Bus", emoji: "🚌", tag: "Affordable Rides", to: "/search", search: { category: "bus" } },
+  { label: "Train", emoji: "🚆", tag: "", to: "/search", search: { category: "train" } },
+  { label: "Hotel", emoji: "🏨", tag: "Budget-friendly Stay", to: "/search", search: { category: "hotels" } },
+  { label: "Car Rentals", emoji: "🚗", tag: "Drive Easy Anywhere", to: "/search", search: { category: "car-rentals" } },
 ];
 
 export function TravelBookingsSection() {
@@ -31,9 +37,9 @@ export function TravelBookingsSection() {
           <div className="grid grid-cols-3 gap-4 sm:grid-cols-5">
             {ITEMS.map((item) => (
               <Link
-                key={item.slug}
-                to="/search"
-                search={{ category: item.slug }}
+                key={item.label}
+                to={item.to}
+                search={item.search}
                 className="group flex flex-col items-center text-center"
               >
                 <div className="flex aspect-square w-full max-w-[92px] items-center justify-center rounded-2xl border border-border bg-background text-4xl shadow-sm transition-transform group-hover:-translate-y-0.5 sm:text-5xl">
