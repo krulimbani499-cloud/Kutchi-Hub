@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 type Item = { label: string; emoji: string; tag: string; slug: string };
 
 const ITEMS: Item[] = [
-  { label: "Flight", emoji: "✈️", tag: "Powered By Easemytrip.com", slug: "flights" },
+  { label: "Flight", emoji: "✈️", tag: "", slug: "flights" },
   { label: "Bus", emoji: "🚌", tag: "Affordable Rides", slug: "bus" },
   { label: "Train", emoji: "🚆", tag: "", slug: "train" },
   { label: "Hotel", emoji: "🏨", tag: "Budget-friendly Stay", slug: "hotels" },
