@@ -4,6 +4,7 @@ import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
+import { isOpenNow, hasAnyHours } from "@/lib/business-hours";
 
 interface BusinessCardProps {
   business: {
@@ -26,14 +27,9 @@ interface BusinessCardProps {
 
 export function BusinessCard({ business }: BusinessCardProps) {
   const imageSrc = business.featured_image_url ?? business.featured_image;
-  const hours =
-    business.hours && typeof business.hours === "object" && !Array.isArray(business.hours)
-      ? (business.hours as Record<string, string>)
-      : null;
-  const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
-  const todayHours = hours?.[today];
-  const hasHours = hours && Object.keys(hours).length > 0;
-  const isOpen = !!todayHours && todayHours.toLowerCase() !== "closed";
+  const hasHours = hasAnyHours(business.hours);
+  const openState = isOpenNow(business.hours);
+  const isOpen = openState === true;
   const cleanPhone = business.phone?.replace(/[^\d+]/g, "") ?? "";
   const waHref = cleanPhone
     ? `https://wa.me/${cleanPhone.replace(/^\+/, "")}?text=${encodeURIComponent(
