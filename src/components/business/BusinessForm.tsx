@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { MapPin, Loader2, Plus } from "lucide-react";
+import { MapPin, Loader2, Plus, Upload, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
@@ -58,6 +59,8 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     lat: initial?.latitude ?? null,
     lng: initial?.longitude ?? null,
   });
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: initial?.name ?? "",
@@ -101,6 +104,24 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         setFormMessage("Business updated successfully.");
       } else {
         const result = await createFn({ data: { ...payload, latitude: coords.lat, longitude: coords.lng } });
+        // Upload pending image (if any) into the newly created business folder
+        if (pendingFile) {
+          try {
+            const ext = pendingFile.name.split(".").pop() ?? "jpg";
+            const key = `${result.id}/${crypto.randomUUID()}.${ext}`;
+            const { error: upErr } = await supabase.storage
+              .from("business-photos")
+              .upload(key, pendingFile, { cacheControl: "3600", upsert: false });
+            if (upErr) throw new Error(upErr.message);
+            const { data: urlData } = supabase.storage.from("business-photos").getPublicUrl(key);
+            const url = urlData.publicUrl;
+            await supabase.from("business_photos").insert({ business_id: result.id, url, display_order: 0 });
+            await supabase.from("businesses").update({ featured_image: url }).eq("id", result.id);
+          } catch (uploadErr) {
+            // Don't block navigation on photo upload failure; surface a soft message
+            console.error("Photo upload failed after create:", uploadErr);
+          }
+        }
         void navigate({ to: "/business/$slug", params: { slug: result.slug } });
       }
     } catch (err) {
@@ -118,6 +139,25 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handlePickFile = (file: File | null) => {
+    if (!file) {
+      setPendingFile(null);
+      setPendingPreview(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setFormMessage("Please select an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setFormMessage("Image must be smaller than 5MB.");
+      return;
+    }
+    setPendingFile(file);
+    setPendingPreview(URL.createObjectURL(file));
+    setFormMessage("");
   };
 
   const handleGeocode = async () => {
@@ -293,10 +333,43 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="featured_image">Featured image URL (or use uploads below)</Label>
-        <Input id="featured_image" value={form.featured_image} onChange={(e) => setForm((f) => ({ ...f, featured_image: e.target.value }))} />
-      </div>
+      {!initial && (
+        <div className="space-y-2">
+          <Label>Featured image</Label>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border bg-muted px-4 py-2 text-sm font-medium text-foreground hover:bg-accent">
+              <Upload className="h-4 w-4" />
+              <span>{pendingFile ? "Change image" : "Upload image"}</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handlePickFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            {pendingPreview && (
+              <div className="relative">
+                <img src={pendingPreview} alt="Preview" className="h-20 w-20 rounded-md object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handlePickFile(null)}
+                  className="absolute -right-2 -top-2 rounded-full bg-destructive p-1 text-white shadow"
+                  aria-label="Remove image"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">JPG, PNG or WebP. Up to 5MB.</p>
+          </div>
+        </div>
+      )}
+      {initial && (
+        <div className="space-y-2">
+          <Label htmlFor="featured_image">Featured image URL (or use uploads below)</Label>
+          <Input id="featured_image" value={form.featured_image} onChange={(e) => setForm((f) => ({ ...f, featured_image: e.target.value }))} />
+        </div>
+      )}
 
       {initial && (
         <div className="space-y-2">
