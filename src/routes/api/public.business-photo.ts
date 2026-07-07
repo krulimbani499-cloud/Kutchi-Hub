@@ -17,10 +17,10 @@ function isValidStorageKey(key: string) {
 
 function getContentType(key: string, fallback: string) {
   const ext = key.split(".").pop()?.toLowerCase() ?? "";
-  return imageTypes[ext] ?? fallback || "application/octet-stream";
+  return imageTypes[ext] ?? (fallback || "application/octet-stream");
 }
 
-export const Route = createFileRoute("/api/public/business-photo")({
+export const Route = createFileRoute("/api/public/business-photo" as never)({
   server: {
     handlers: {
       GET: async ({ request }) => {
