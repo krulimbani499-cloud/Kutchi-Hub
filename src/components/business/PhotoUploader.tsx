@@ -26,13 +26,24 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
     setFeatured(featuredImage);
   }, [featuredImage, initialPhotos]);
 
+  const MAX_PHOTOS = 10;
+
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setError("");
+    if (photos.length >= MAX_PHOTOS) {
+      setError(`Photo limit reached (max ${MAX_PHOTOS}). Delete some photos first.`);
+      return;
+    }
+    const remaining = MAX_PHOTOS - photos.length;
+    const toUpload = Array.from(files).slice(0, remaining);
+    if (files.length > remaining) {
+      setError(`Only ${remaining} more photo${remaining === 1 ? "" : "s"} allowed. Uploading first ${remaining}.`);
+    }
     setUploading(true);
     try {
       let displayOrder = photos.length;
-      for (const file of Array.from(files)) {
+      for (const file of toUpload) {
         if (!file.type.startsWith("image/")) continue;
         if (file.size > 10 * 1024 * 1024) {
           setError(`${file.name} is larger than 10MB`);
@@ -86,8 +97,12 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border bg-muted px-4 py-2 text-sm font-medium text-foreground hover:bg-accent">
+      <div className="flex flex-wrap items-center gap-3">
+        <label
+          className={`inline-flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted px-4 py-2 text-sm font-medium text-foreground ${
+            photos.length >= MAX_PHOTOS ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-accent"
+          }`}
+        >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           <span>{uploading ? "Uploading..." : "Upload photos"}</span>
           <input
@@ -96,10 +111,12 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
             accept="image/*"
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
-            disabled={uploading}
+            disabled={uploading || photos.length >= MAX_PHOTOS}
           />
         </label>
-        <p className="text-xs text-muted-foreground">JPG, PNG, WebP up to 10MB each</p>
+        <p className="text-xs text-muted-foreground">
+          JPG, PNG, WebP up to 10MB each · {photos.length}/{MAX_PHOTOS} photos
+        </p>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
       {photos.length > 0 && (

@@ -544,6 +544,52 @@ export const reviewBusinessSubmission = createServerFn({ method: "POST" })
     return { success: true, status: newStatus };
   });
 
+// -------- Admin: verified toggle --------
+
+export const adminListPublishedBusinesses = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const supabase = context.supabase;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { data, error } = await supabase
+      .from("businesses")
+      .select("id, name, slug, city, verified, created_at, categories:category_id(name)")
+      .eq("status", "published")
+      .order("verified", { ascending: true })
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((b) => ({
+      id: b.id,
+      name: b.name,
+      slug: b.slug,
+      city: b.city,
+      verified: b.verified,
+      created_at: b.created_at,
+      categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
+    }));
+  });
+
+export const adminSetVerified = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ id: z.string().uuid(), verified: z.boolean() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { error } = await supabase
+      .from("businesses")
+      .update({ verified: data.verified })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
 const reviewSchema = z.object({
   businessId: z.string().uuid(),
   rating: z.coerce.number().min(1).max(5),
