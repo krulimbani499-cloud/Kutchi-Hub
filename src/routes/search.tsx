@@ -34,6 +34,11 @@ export const Route = createFileRoute("/search")({
     meta: [
       { title: "Search Businesses — Kutchi Hub" },
       { name: "description", content: "Search for local businesses, read reviews, and find contact details." },
+      { property: "og:title", content: "Search Businesses — Kutchi Hub" },
+      { property: "og:description", content: "Search Kutchi businesses across categories and cities. Verified listings, reviews and direct contact." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "robots", content: "index,follow" },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions),
