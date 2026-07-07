@@ -1,57 +1,89 @@
-## Goal
+# JustDial-Match Backend Plan
 
-Aapke ZIP wale complete Kutchi Hub project ki features current Lovable project (jismein hum already NearMe → Kutchi Hub rebrand kar chuke hain) mein port karna. Poora ek shot mein karna risky hai — 8800+ lines aur 11 migrations hain — isliye 4 phases mein karenge. Har phase ke baad aap preview verify karke aage jaao.
+Aapki site me listings, reviews, favorites, claims, photos, banners already hain. Ye 6 core JustDial features backend me add karunga. Sirf schema + RLS + fetchers — UI baad me alag turn me.
 
-## Difference snapshot
+## 1. Enquiries (Leads) — JustDial ka core
 
-Current project already has: categories, businesses, reviews, claims, business photos, auth (email + Google + Apple), business detail with Google Maps, photo uploader, dashboard.
+Users ko "Send Enquiry" button milega har business pe. Business owner ko lead dikhega dashboard me.
 
-Missing (from ZIP): submission → admin approval flow, admin panel, marketing banners + carousel, advertise page, owner-editable "My Business" page, geolocation + city search + India cities list, mobile app shell (Capacitor), site footer.
+**Table `business_enquiries`**: business_id, user_id (nullable — guest allowed), name, phone, email, message, service_needed, city, status (new/contacted/closed), created_at.
 
-## Phase 1 — Home page + city selector + footer + header split
+- Anyone (anon+auth) can INSERT (rate-limit at app layer)
+- Only business owner + admin can SELECT/UPDATE their enquiries
+- User khud ki enquiries dekh sakta hai
 
-Scope:
-- Split `Header.tsx` into `TopRibbon` (city selector + login), `DesktopHeader`, `MobileHeader`, `SearchBar`, `UserMenu` (matching ZIP structure).
-- Add `src/lib/cities.ts` (India cities list) and `src/lib/geolocation.ts` (browser geolocation + reverse geocode via existing Google Maps connector).
-- Add `SiteFooter.tsx` with links/socials.
-- Rebuild home (`index.tsx`) to match ZIP layout: hero + city detector, featured businesses row, category grid, "list your business" CTA.
+## 2. Business Services / Menu
 
-No DB changes in this phase.
+Har business ke andar services list (JustDial "Services offered").
 
-## Phase 2 — Business submission + admin approval flow
+**Table `business_services`**: business_id, name, description, price, price_unit (per hour/fixed/starts at), image_url, display_order.
 
-Scope:
-- Migration: new tables `business_submissions` (pending user submissions), `admin_settings`; add `owner_id` column to `businesses`; RLS policies + GRANTs; helper policy so owners can see own hidden rows.
-- Routes: `/list-business` (public submission form), `/admin` (admin-only, list + approve/reject), `/my-business` (owner edit).
-- Server functions: `createSubmission`, `listPendingSubmissions` (admin), `approveSubmission`, `rejectSubmission`, `updateMyBusiness`.
-- Header updates: signed-in user sees "My Business" / "Submission Pending" / "List Business" based on status.
+- Public SELECT
+- Owner + admin manage
 
-## Phase 3 — Marketing banners + advertise page
+## 3. Business Analytics (Views + Call clicks)
 
-Scope:
-- Migration: `banners` table (image_url, link, position, active, sort_order) + admin-only write RLS + public read.
-- Storage bucket `banner-images` (public).
-- `MarketingBannerCarousel.tsx` component using embla-carousel (already installed).
-- `BannerManager.tsx` in admin panel — upload, reorder, toggle active.
-- `/advertise` public route explaining ad packages with a lead form.
+JustDial dashboard me "profile views" and "call clicks" dikhata hai.
 
-## Phase 4 — Category pages polish + mobile app (Capacitor)
+**Table `business_events`**: business_id, event_type (view/call_click/whatsapp_click/website_click/direction_click), user_id (nullable), ip_hash, created_at.
 
-Scope:
-- `/category/$slug` route with SEO metadata per category (currently only `/search?category=`).
-- Optional (ask before doing): Capacitor Android shell — `capacitor.config.ts`, `android/` folder, build scripts. This adds a native mobile app wrapper.
+- Anyone INSERT (log event)
+- Owner + admin SELECT (analytics)
+- Aggregation via SQL view `business_stats` (last 7d / 30d counts)
 
-## Technical details
+## 4. Review Replies
 
-- Stack stays TanStack Start + Supabase (as current). ZIP uses same stack.
-- ZIP's schema is compatible with current one — will map their `reviews` → our existing `business_reviews`, add missing columns like `owner_id`, `whatsapp`, `pincode`, `hours` where absent.
-- Admin gate uses existing `user_roles` table + `has_role('admin')` RPC (already in DB).
-- All new tables get GRANTs + RLS in the same migration.
-- OAuth stays same (Google + Apple already configured).
-- Google Maps connector already linked — geolocation uses it via server fn.
+Owner reply karega reviews pe (JustDial feature).
 
-## Confirm before starting
+**`business_reviews` me column add**: `owner_reply text`, `owner_reply_at timestamptz`.
 
-1. Kya **Phase 1 se shuru karu** (safe, no DB changes)?
-2. Phase 4 mein **Capacitor / Android app shell** chahiye ya skip karu? (Mobile app builds Lovable preview ke bahar hote hain — repo download karke Android Studio mein compile karna padta hai.)
-3. Koi phase priority change karna hai — jaise banners pehle chahiye?
+- Only business owner can UPDATE those two columns
+
+## 5. Notifications
+
+Owner ko new review / enquiry / claim update pe notification.
+
+**Table `notifications`**: user_id, type, title, body, link_url, read, entity_type, entity_id, created_at.
+
+- User apni notifications dekh/update kar sakta hai
+- Service role INSERT (triggers)
+
+**Triggers**:
+- New review → notify business owner
+- New enquiry → notify business owner
+- Claim approved/rejected → notify claimant
+
+## 6. Reports / Flags
+
+Fake listing / abusive review report karne ke liye.
+
+**Table `reports`**: reporter_id, entity_type (business/review), entity_id, reason, details, status (open/reviewed/dismissed), created_at.
+
+- Authenticated INSERT
+- Admin SELECT/UPDATE all
+- Reporter khud ki reports dekh sakta hai
+
+---
+
+## Migration order (single migration file)
+
+```
+CREATE TABLE business_enquiries + GRANTs + RLS + policies
+CREATE TABLE business_services + GRANTs + RLS + policies
+CREATE TABLE business_events + GRANTs + RLS + policies
+ALTER business_reviews ADD owner_reply columns + policy update
+CREATE TABLE notifications + GRANTs + RLS + policies
+CREATE TABLE reports + GRANTs + RLS + policies
+Triggers for notifications
+Indexes on hot paths (business_id, created_at, user_id)
+```
+
+## Out of scope (this turn)
+
+- UI components (forms, dashboards) — next turn ke liye
+- Server functions / TanStack Query hooks — schema approve hone ke baad
+- Payment/subscription for premium listings — pehle bataya, baad me
+
+---
+
+**Approve karo to migration file bhejta hoon. Agar koi feature nahi chahiye ya extra chahiye (e.g. chat/messaging, coupons, job listings, appointments booking), abhi batao.**
