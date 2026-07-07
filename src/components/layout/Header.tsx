@@ -102,7 +102,7 @@ export function Header() {
                         My Listings
                       </Link>
                     ) : (
-                      <Link to="/business/new">
+                      <Link to="/list-your-business">
                         <User className="mr-1 h-4 w-4" />
                         List Your Business
                       </Link>
@@ -118,7 +118,7 @@ export function Header() {
                     Sign out
                   </Button>
                   <Button variant="ghost" size="icon" className="sm:hidden" asChild>
-                    <Link to={isAdmin || hasListings ? "/dashboard" : "/business/new"}>
+                    <Link to={isAdmin || hasListings ? "/dashboard" : "/list-your-business"}>
                       <User className="h-5 w-5" />
                     </Link>
                   </Button>
