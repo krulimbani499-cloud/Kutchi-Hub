@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { getCategories, searchBusinesses } from "@/lib/businesses.functions";
+import { isOpenNow } from "@/lib/business-hours";
 import { CategoryGrid } from "@/components/business/CategoryGrid";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { Input } from "@/components/ui/input";
@@ -61,22 +62,15 @@ function SearchPage() {
   const [chipOpenNow, setChipOpenNow] = useState(false);
   const [chipTopRated, setChipTopRated] = useState(false);
 
-  const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
   const filteredResults = useMemo(() => {
     let list = results ?? [];
     if (chipVerified) list = list.filter((b) => b.verified);
     if (chipTopRated) list = list.filter((b) => (b.avgRating ?? 0) >= 4);
     if (chipOpenNow) {
-      list = list.filter((b) => {
-        const h = b.hours && typeof b.hours === "object" && !Array.isArray(b.hours)
-          ? (b.hours as Record<string, string>)
-          : null;
-        const t = h?.[today];
-        return !!t && t.toLowerCase() !== "closed";
-      });
+      list = list.filter((b) => isOpenNow(b.hours) === true);
     }
     return list;
-  }, [results, chipVerified, chipOpenNow, chipTopRated, today]);
+  }, [results, chipVerified, chipOpenNow, chipTopRated]);
   const anyChip = chipVerified || chipOpenNow || chipTopRated;
 
   const applyFilters = () => {
