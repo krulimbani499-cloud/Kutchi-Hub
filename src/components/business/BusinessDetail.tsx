@@ -26,6 +26,7 @@ import { addReview } from "@/lib/businesses.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
+import { EnquiryDialog } from "./EnquiryDialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
@@ -195,27 +196,33 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   <span className="truncate text-sm">Directions</span>
                 </a>
               </Button>
-              {business.email ? (
-                <Button asChild variant="outline" className="h-11 min-w-0 px-2">
-                  <a href={`mailto:${business.email}`} className="flex items-center justify-center">
-                    <Mail className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-sm">Enquire</span>
-                  </a>
-                </Button>
-              ) : business.website ? (
+              {business.website ? (
                 <Button asChild variant="outline" className="h-11 min-w-0 px-2">
                   <a href={business.website} target="_blank" rel="noreferrer" className="flex items-center justify-center">
                     <Globe className="mr-1 h-4 w-4 shrink-0" />
                     <span className="truncate text-sm">Website</span>
                   </a>
                 </Button>
-              ) : (
-                <Button variant="outline" className="h-11 min-w-0 px-2" disabled>
-                  <Heart className="mr-1 h-4 w-4 shrink-0" />
-                  <span className="truncate text-sm">Save</span>
+              ) : business.email ? (
+                <Button asChild variant="outline" className="h-11 min-w-0 px-2">
+                  <a href={`mailto:${business.email}`} className="flex items-center justify-center">
+                    <Mail className="mr-1 h-4 w-4 shrink-0" />
+                    <span className="truncate text-sm">Email</span>
+                  </a>
                 </Button>
-              )}
+              ) : null}
             </div>
+
+            {!isOwner && (
+              <div className="pt-1">
+                <EnquiryDialog
+                  businessId={business.id}
+                  businessName={business.name}
+                  city={business.city}
+                  defaultName={user ? undefined : ""}
+                />
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
               {business.website && (
