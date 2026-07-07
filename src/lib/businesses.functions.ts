@@ -22,7 +22,7 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     let query = supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, state, phone, verified, featured_image, status, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, state, phone, verified, featured_image, hours, status, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published");
 
@@ -383,7 +383,7 @@ export const getHomeData = createServerFn({ method: "GET" }).handler(async () =>
     supabase.from("categories").select("*").order("display_order", { ascending: true }).limit(12),
     supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, featured_image, categories:category_id(id, name, slug, color)")
+      .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)")
       .eq("status", "published")
       .order("verified", { ascending: false })
       .limit(8),
