@@ -3,6 +3,7 @@ import { MapPin, Phone, Star, BadgeCheck } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
+import { FavoriteButton } from "./FavoriteButton";
 
 interface BusinessCardProps {
   business: {
@@ -47,6 +48,9 @@ export function BusinessCard({ business }: BusinessCardProps) {
             Verified
           </div>
         )}
+        <div className="absolute left-2 top-2 z-20">
+          <FavoriteButton businessId={business.id} size="sm" />
+        </div>
       </div>
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-1 flex items-start justify-between gap-2">

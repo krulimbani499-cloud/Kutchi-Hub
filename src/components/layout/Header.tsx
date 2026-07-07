@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Search, Menu, User, LogOut } from "lucide-react";
+import { Search, Menu, User, LogOut, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth, signOut } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,6 +90,11 @@ export function Header() {
                       <Link to="/admin">Admin</Link>
                     </Button>
                   )}
+                  <Button variant="ghost" size="icon" className="hidden sm:inline-flex" asChild title="Favorites">
+                    <Link to="/favorites" aria-label="Favorites">
+                      <Heart className="h-5 w-5" />
+                    </Link>
+                  </Button>
                   <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
                     {isAdmin ? (
                       <Link to="/dashboard">
