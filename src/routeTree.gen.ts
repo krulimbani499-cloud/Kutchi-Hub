@@ -18,6 +18,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TravelFlightBookingRouteImport } from './routes/travel.flight-booking'
+import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as BusinessSlugRouteImport } from './routes/business.$slug'
 import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -68,6 +69,11 @@ const IndexRoute = IndexRouteImport.update({
 const TravelFlightBookingRoute = TravelFlightBookingRouteImport.update({
   id: '/travel/flight-booking',
   path: '/travel/flight-booking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategorySlugRoute = CategorySlugRouteImport.update({
+  id: '/category/$slug',
+  path: '/category/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BusinessSlugRoute = BusinessSlugRouteImport.update({
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/business/$slug': typeof BusinessSlugRoute
+  '/category/$slug': typeof CategorySlugRoute
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
   '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/business/$slug': typeof BusinessSlugRoute
+  '/category/$slug': typeof CategorySlugRoute
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
   '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
   '/business/$slug': typeof BusinessSlugRoute
+  '/category/$slug': typeof CategorySlugRoute
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/_authenticated/business/new': typeof AuthenticatedBusinessNewRoute
   '/_authenticated/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/favorites'
     | '/business/$slug'
+    | '/category/$slug'
     | '/travel/flight-booking'
     | '/business/new'
     | '/business/$slug/claim'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/favorites'
     | '/business/$slug'
+    | '/category/$slug'
     | '/travel/flight-booking'
     | '/business/new'
     | '/business/$slug/claim'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/favorites'
     | '/business/$slug'
+    | '/category/$slug'
     | '/travel/flight-booking'
     | '/_authenticated/business/new'
     | '/_authenticated/business/$slug/claim'
@@ -227,6 +239,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   BusinessSlugRoute: typeof BusinessSlugRoute
+  CategorySlugRoute: typeof CategorySlugRoute
   TravelFlightBookingRoute: typeof TravelFlightBookingRoute
 }
 
@@ -293,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/travel/flight-booking'
       fullPath: '/travel/flight-booking'
       preLoaderRoute: typeof TravelFlightBookingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/category/$slug': {
+      id: '/category/$slug'
+      path: '/category/$slug'
+      fullPath: '/category/$slug'
+      preLoaderRoute: typeof CategorySlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/business/$slug': {
@@ -378,6 +398,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   BusinessSlugRoute: BusinessSlugRoute,
+  CategorySlugRoute: CategorySlugRoute,
   TravelFlightBookingRoute: TravelFlightBookingRoute,
 }
 export const routeTree = rootRouteImport
