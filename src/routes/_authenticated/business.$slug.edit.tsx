@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
-import { getCategories, getBusinessBySlug } from "@/lib/businesses.functions";
+import { getCategories, getBusinessForEdit } from "@/lib/businesses.functions";
 import { BusinessForm } from "@/components/business/BusinessForm";
 
 const categoriesQueryOptions = queryOptions({
@@ -12,7 +12,7 @@ const categoriesQueryOptions = queryOptions({
 const editBusinessQueryOptions = (slug: string) =>
   queryOptions({
     queryKey: ["edit-business", slug],
-    queryFn: () => getBusinessBySlug({ data: { slug } }),
+    queryFn: () => getBusinessForEdit({ data: { slug } }),
   });
 
 export const Route = createFileRoute("/_authenticated/business/$slug/edit")({
