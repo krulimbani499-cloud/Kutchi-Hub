@@ -39,6 +39,7 @@ import { RelatedBusinesses } from "./RelatedBusinesses";
 import { ShareMenu } from "./ShareMenu";
 import { trackRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import type { Tables } from "@/integrations/supabase/types";
+import { isOpenNow } from "@/lib/business-hours";
 
 interface BusinessDetailProps {
   business: Tables<"businesses"> & {
