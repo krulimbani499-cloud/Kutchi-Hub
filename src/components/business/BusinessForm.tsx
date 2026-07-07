@@ -398,3 +398,78 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     </form>
   );
 }
+
+const DAYS: { key: string; label: string }[] = [
+  { key: "mon", label: "Monday" },
+  { key: "tue", label: "Tuesday" },
+  { key: "wed", label: "Wednesday" },
+  { key: "thu", label: "Thursday" },
+  { key: "fri", label: "Friday" },
+  { key: "sat", label: "Saturday" },
+  { key: "sun", label: "Sunday" },
+];
+
+function HoursEditor({
+  hours,
+  onChange,
+}: {
+  hours: Record<string, string>;
+  onChange: (h: Record<string, string>) => void;
+}) {
+  const setDay = (key: string, value: string) => {
+    const next = { ...hours };
+    if (!value) delete next[key];
+    else next[key] = value;
+    onChange(next);
+  };
+
+  const applyToAll = () => {
+    const first = hours[DAYS[0].key];
+    if (!first) return;
+    const next: Record<string, string> = {};
+    for (const d of DAYS) next[d.key] = first;
+    onChange(next);
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/50 p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div>
+          <Label>Business hours</Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            e.g. <span className="font-mono">9:00 AM - 9:00 PM</span> or leave blank / type <span className="font-mono">Closed</span>.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={applyToAll}>
+          Copy Mon to all
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {DAYS.map((d) => {
+          const val = hours[d.key] ?? "";
+          const closed = val.trim().toLowerCase() === "closed";
+          return (
+            <div key={d.key} className="grid grid-cols-[90px_1fr_auto] items-center gap-2">
+              <span className="text-sm font-medium text-foreground">{d.label}</span>
+              <Input
+                placeholder="9:00 AM - 9:00 PM"
+                value={val}
+                disabled={closed}
+                onChange={(e) => setDay(d.key, e.target.value)}
+                className="h-9"
+              />
+              <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={closed}
+                  onChange={(e) => setDay(d.key, e.target.checked ? "Closed" : "")}
+                />
+                Closed
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
