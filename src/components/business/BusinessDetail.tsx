@@ -265,6 +265,9 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   city={business.city}
                   defaultName={user ? undefined : ""}
                 />
+                <div className="mt-2">
+                  <ReportButton entityType="business" entityId={business.id} label="Report listing" />
+                </div>
               </div>
             )}
 
