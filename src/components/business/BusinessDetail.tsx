@@ -26,11 +26,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { addReview } from "@/lib/businesses.functions";
 import { logBusinessEvent } from "@/lib/leads.functions";
 import { listBusinessServices } from "@/lib/services.functions";
+import { replyToReview } from "@/lib/reviews.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
+import { ReportButton } from "./ReportButton";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
