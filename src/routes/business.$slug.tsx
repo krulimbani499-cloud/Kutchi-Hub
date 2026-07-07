@@ -14,19 +14,35 @@ const businessQueryOptions = (slug: string) =>
 
 export const Route = createFileRoute("/business/$slug")({
   head: ({ params, loaderData }) => {
-    const b = loaderData?.business;
+    const ld = loaderData as
+      | {
+          business?: {
+            name?: string;
+            city?: string;
+            state?: string;
+            pincode?: string;
+            address?: string;
+            phone?: string;
+            description?: string;
+            featured_image?: string;
+            featured_image_url?: string;
+            categories?: { name?: string } | null;
+          };
+          avgRating?: number;
+          reviewCount?: number;
+        }
+      | undefined;
+    const b = ld?.business;
     const name = b?.name ?? params.slug.replace(/-/g, " ");
     const city = b?.city ?? "";
-    const cat = (b as { categories?: { name?: string } } | undefined)?.categories?.name ?? "";
-    const rating = loaderData?.avgRating ?? 0;
-    const reviewCount = loaderData?.reviewCount ?? 0;
+    const cat = b?.categories?.name ?? "";
+    const rating = ld?.avgRating ?? 0;
+    const reviewCount = ld?.reviewCount ?? 0;
     const title = city ? `${name} — ${cat || "Business"} in ${city} | Kutchi Hub` : `${name} — Kutchi Hub`;
     const desc = b?.description
       ? String(b.description).slice(0, 155)
       : `${name}${cat ? ` · ${cat}` : ""}${city ? ` in ${city}` : ""}. View reviews, hours, phone and directions on Kutchi Hub.`;
-    const image = (b as { featured_image_url?: string; featured_image?: string } | undefined)?.featured_image_url
-      || (b as { featured_image?: string } | undefined)?.featured_image
-      || null;
+    const image = b?.featured_image_url || b?.featured_image || null;
     const url = `${BASE_URL}/business/${params.slug}`;
     const meta: Array<Record<string, string>> = [
       { title },
