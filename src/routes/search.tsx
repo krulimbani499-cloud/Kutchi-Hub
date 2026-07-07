@@ -14,8 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal } from "lucide-react";
-import { useState } from "react";
+import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X } from "lucide-react";
+import { useMemo, useState } from "react";
 
 const searchQueryOptions = (q: string, category: string, city: string, sort: string) =>
   queryOptions({
@@ -56,6 +56,28 @@ function SearchPage() {
   const [applied, setApplied] = useState({ q: q ?? "", category: category ?? "", city: city ?? "", sort: sort ?? "relevance" });
 
   const { data: results, isLoading } = useSuspenseQuery(searchQueryOptions(applied.q, applied.category, applied.city, applied.sort));
+
+  const [chipVerified, setChipVerified] = useState(false);
+  const [chipOpenNow, setChipOpenNow] = useState(false);
+  const [chipTopRated, setChipTopRated] = useState(false);
+
+  const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+  const filteredResults = useMemo(() => {
+    let list = results ?? [];
+    if (chipVerified) list = list.filter((b) => b.verified);
+    if (chipTopRated) list = list.filter((b) => (b.avgRating ?? 0) >= 4);
+    if (chipOpenNow) {
+      list = list.filter((b) => {
+        const h = b.hours && typeof b.hours === "object" && !Array.isArray(b.hours)
+          ? (b.hours as Record<string, string>)
+          : null;
+        const t = h?.[today];
+        return !!t && t.toLowerCase() !== "closed";
+      });
+    }
+    return list;
+  }, [results, chipVerified, chipOpenNow, chipTopRated, today]);
+  const anyChip = chipVerified || chipOpenNow || chipTopRated;
 
   const applyFilters = () => {
     const normalized = {
@@ -131,6 +153,42 @@ function SearchPage() {
         </div>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">Quick filters:</span>
+        <FilterChip
+          active={chipVerified}
+          onClick={() => setChipVerified((v) => !v)}
+          icon={<BadgeCheck className="h-3.5 w-3.5" />}
+          label="Verified"
+        />
+        <FilterChip
+          active={chipOpenNow}
+          onClick={() => setChipOpenNow((v) => !v)}
+          icon={<Clock className="h-3.5 w-3.5" />}
+          label="Open now"
+        />
+        <FilterChip
+          active={chipTopRated}
+          onClick={() => setChipTopRated((v) => !v)}
+          icon={<Star className="h-3.5 w-3.5" />}
+          label="4★ & above"
+        />
+        {anyChip && (
+          <button
+            type="button"
+            onClick={() => {
+              setChipVerified(false);
+              setChipOpenNow(false);
+              setChipTopRated(false);
+            }}
+            className="inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3 w-3" />
+            Clear
+          </button>
+        )}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-4">
         <aside className="hidden lg:block">
           <div className="rounded-2xl border border-border bg-card p-4">
@@ -142,22 +200,55 @@ function SearchPage() {
         <div className="lg:col-span-3">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {isLoading ? "Loading..." : `${results?.length ?? 0} results found`}
+              {isLoading
+                ? "Loading..."
+                : `${filteredResults.length} ${filteredResults.length === 1 ? "result" : "results"}${
+                    anyChip && results ? ` of ${results.length}` : ""
+                  }`}
             </p>
           </div>
-          {results && results.length > 0 ? (
+          {filteredResults.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {results.map((business) => (
+              {filteredResults.map((business) => (
                 <BusinessCard key={business.id} business={business} />
               ))}
             </div>
           ) : (
             <div className="rounded-2xl border border-border bg-card p-8 text-center">
-              <p className="text-muted-foreground">No businesses found matching your search.</p>
+              <p className="text-muted-foreground">
+                {anyChip ? "No businesses match these filters. Try clearing some." : "No businesses found matching your search."}
+              </p>
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+        active
+          ? "border-[#ff6a00] bg-[#ff6a00] text-white"
+          : "border-border bg-background text-foreground hover:border-[#ff6a00]/40 hover:text-[#ff6a00]"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
