@@ -16,6 +16,9 @@ import {
   Share2,
   Heart,
   Camera,
+  ChevronLeft,
+  ChevronRight,
+  X,
 } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { BusinessMap } from "./BusinessMap";
@@ -33,6 +36,7 @@ import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
 import { ReportButton } from "./ReportButton";
+import { trackRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
@@ -61,6 +65,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const [replyBusy, setReplyBusy] = useState<string | null>(null);
   const [replySaved, setReplySaved] = useState<Record<string, string>>({});
   const isOwner = !!user && user.id === business.owner_id;
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const handleReply = async (reviewId: string) => {
     const text = (replyDrafts[reviewId] ?? "").trim();
@@ -83,6 +88,18 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
     logEvent({ data: { businessId: business.id, eventType: "view" } }).catch(() => {});
      
   }, [business.id, isOwner]);
+
+  // Track in "Recently viewed" (localStorage) for all users
+  useEffect(() => {
+    trackRecentlyViewed({
+      id: business.id,
+      slug: business.slug,
+      name: business.name,
+      city: business.city ?? null,
+      category: business.categories?.name ?? null,
+      featured_image: business.featured_image ?? null,
+    });
+  }, [business.id, business.slug, business.name, business.city, business.categories?.name, business.featured_image]);
 
   const { data: services = [] } = useQuery({
     queryKey: ["services", business.id],
@@ -139,7 +156,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
           {/* Gallery */}
           <div className="relative bg-muted">
             <div className="grid h-56 grid-cols-2 grid-rows-1 gap-1 sm:h-80 sm:grid-cols-4 sm:grid-rows-2">
-              <div className="relative col-span-2 row-span-1 overflow-hidden bg-muted sm:row-span-2">
+              <button
+                type="button"
+                onClick={() => photos.length > 0 && setLightboxIndex(0)}
+                className="relative col-span-2 row-span-1 overflow-hidden bg-muted sm:row-span-2"
+                aria-label="Open photo gallery"
+                disabled={photos.length === 0 && !featuredImageSrc}
+              >
                 {featuredImageSrc ? (
                   <BusinessPhotoImage src={featuredImageSrc} alt={business.name} className="h-full w-full object-cover" />
                 ) : (
@@ -147,28 +170,55 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     {business.name.charAt(0)}
                   </div>
                 )}
-              </div>
+              </button>
               {[0, 1, 2, 3].map((i) => {
                 const p = galleryPhotos[i];
                 return (
-                  <div key={i} className="relative hidden overflow-hidden bg-muted sm:block">
+                  <button
+                    type="button"
+                    key={i}
+                    onClick={() => p && setLightboxIndex(i)}
+                    disabled={!p}
+                    className="relative hidden overflow-hidden bg-muted sm:block disabled:cursor-default"
+                    aria-label={p ? `View photo ${i + 1}` : "No photo"}
+                  >
                     {p ? (
-                      <BusinessPhotoImage src={p.url} alt={p.caption ?? ""} className="h-full w-full object-cover" loading="lazy" />
+                      <>
+                        <BusinessPhotoImage src={p.url} alt={p.caption ?? ""} className="h-full w-full object-cover transition-transform hover:scale-105" loading="lazy" />
+                        {i === 3 && photos.length > 4 && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white">
+                            +{photos.length - 4} more
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                         <Camera className="h-5 w-5" />
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
             {photos.length > 0 && (
-              <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(0)}
+                className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-black/85"
+              >
                 <Camera className="mr-1 inline h-3.5 w-3.5" /> {photos.length} Photos
-              </div>
+              </button>
             )}
           </div>
+
+          {lightboxIndex !== null && photos.length > 0 && (
+            <PhotoLightbox
+              photos={photos}
+              index={lightboxIndex}
+              onClose={() => setLightboxIndex(null)}
+              onIndexChange={setLightboxIndex}
+            />
+          )}
 
           {/* Summary panel */}
           <div className="flex flex-col justify-between gap-4 p-5 sm:p-6">
@@ -510,6 +560,97 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
             </div>
           </div>
         </aside>
+      </div>
+    </div>
+  );
+}
+
+function PhotoLightbox({
+  photos,
+  index,
+  onClose,
+  onIndexChange,
+}: {
+  photos: Tables<"business_photos">[];
+  index: number;
+  onClose: () => void;
+  onIndexChange: (i: number) => void;
+}) {
+  const total = photos.length;
+  const current = photos[index];
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") onIndexChange((index + 1) % total);
+      if (e.key === "ArrowLeft") onIndexChange((index - 1 + total) % total);
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [index, total, onClose, onIndexChange]);
+
+  if (!current) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      {total > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndexChange((index - 1 + total) % total);
+            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            aria-label="Previous"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndexChange((index + 1) % total);
+            }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            aria-label="Next"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </>
+      )}
+      <div
+        className="relative flex max-h-[90vh] max-w-[92vw] items-center justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <BusinessPhotoImage
+          src={current.url}
+          alt={current.caption ?? `Photo ${index + 1}`}
+          className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+        />
+      </div>
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
+        {index + 1} / {total}
       </div>
     </div>
   );

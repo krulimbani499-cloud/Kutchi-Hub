@@ -14,6 +14,8 @@ import { MarketingBanner } from "@/components/home/MarketingBanner";
 import { CollectionsSection } from "@/components/home/CollectionsSection";
 import { TravelBookingsSection } from "@/components/home/TravelBookingsSection";
 import { PopularSearches } from "@/components/home/PopularSearches";
+import { RecentlyViewed } from "@/components/home/RecentlyViewed";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 import tileB2B from "@/assets/tile-b2b.jpg";
 import tileRepairs from "@/assets/tile-repairs.jpg";
 import tileRealEstate from "@/assets/tile-realestate.jpg";
@@ -96,12 +98,14 @@ function HomePage() {
               <AnimatedCount target={BUSINESS_COUNT} />{" "}
               <span className="text-[#ff6a00]">Kutchi Businesses</span>
             </h1>
-            <button
+            <div className="hidden shrink-0 items-center gap-2 sm:flex">
+              <PWAInstallButton />
+              <button
               type="button"
               onClick={() =>
                 alert("Download app coming soon! The application link will be added once the app is ready.")
               }
-              className="group relative hidden shrink-0 items-center gap-2 overflow-hidden rounded-full border border-border bg-background py-1.5 pl-5 pr-2 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#ff6a00]/40 hover:shadow-md sm:inline-flex"
+              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-border bg-background py-1.5 pl-5 pr-2 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#ff6a00]/40 hover:shadow-md"
               aria-label="Download App"
             >
               <span className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-[#ff6a00]/15 to-transparent animate-shimmer-slide" />
@@ -109,7 +113,8 @@ function HomePage() {
               <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6a00] to-[#e65a00] text-white shadow-sm animate-phone-wiggle transition-transform group-hover:scale-110">
                 <Smartphone className="h-4 w-4" strokeWidth={2.5} />
               </span>
-            </button>
+              </button>
+            </div>
           </div>
 
           <form
@@ -146,6 +151,9 @@ function HomePage() {
 
       {/* Location-aware sponsored banner */}
       <MarketingBanner />
+
+      {/* Recently viewed (localStorage) */}
+      <RecentlyViewed />
 
       {/* Promo banner + feature tiles row */}
       <section className="mx-auto w-full max-w-7xl px-4 py-6">
