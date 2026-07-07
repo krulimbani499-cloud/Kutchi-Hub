@@ -33,6 +33,7 @@ import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
 import { ReportButton } from "./ReportButton";
+import { trackRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
@@ -61,6 +62,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const [replyBusy, setReplyBusy] = useState<string | null>(null);
   const [replySaved, setReplySaved] = useState<Record<string, string>>({});
   const isOwner = !!user && user.id === business.owner_id;
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const handleReply = async (reviewId: string) => {
     const text = (replyDrafts[reviewId] ?? "").trim();
@@ -83,6 +85,18 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
     logEvent({ data: { businessId: business.id, eventType: "view" } }).catch(() => {});
      
   }, [business.id, isOwner]);
+
+  // Track in "Recently viewed" (localStorage) for all users
+  useEffect(() => {
+    trackRecentlyViewed({
+      id: business.id,
+      slug: business.slug,
+      name: business.name,
+      city: business.city ?? null,
+      category: business.categories?.name ?? null,
+      featured_image: business.featured_image ?? null,
+    });
+  }, [business.id, business.slug, business.name, business.city, business.categories?.name, business.featured_image]);
 
   const { data: services = [] } = useQuery({
     queryKey: ["services", business.id],
