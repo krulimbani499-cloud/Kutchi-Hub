@@ -76,11 +76,12 @@ function HomePage() {
               onClick={() =>
                 alert("Download app coming soon! The application link will be added once the app is ready.")
               }
-              className="hidden shrink-0 items-center gap-2 rounded-full border border-border bg-background py-1.5 pl-5 pr-2 shadow-sm transition hover:shadow-md sm:inline-flex"
+              className="group relative hidden shrink-0 items-center gap-2 overflow-hidden rounded-full border border-border bg-background py-1.5 pl-5 pr-2 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#ff6a00]/40 hover:shadow-md sm:inline-flex"
               aria-label="Download App"
             >
-              <span className="text-sm font-semibold text-foreground">Download App</span>
-              <span className="relative flex h-10 w-7 flex-col items-center justify-center rounded-[7px] border-[2.5px] border-foreground bg-background">
+              <span className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-[#ff6a00]/15 to-transparent animate-shimmer-slide" />
+              <span className="relative text-sm font-semibold text-foreground">Download App</span>
+              <span className="relative flex h-10 w-7 flex-col items-center justify-center rounded-[7px] border-[2.5px] border-foreground bg-background animate-phone-wiggle transition-transform group-hover:scale-110">
                 <span className="absolute -top-[4px] left-1/2 h-[4px] w-3 -translate-x-1/2 rounded-b-[2px] bg-foreground" />
                 <span className="text-[10px] font-extrabold leading-none tracking-tight">
                   <span className="text-[#ff6a00]">K</span>
