@@ -431,7 +431,39 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                     <ThumbsUp className="h-3 w-3" />
                     <span>{review.helpful_count} found helpful</span>
+                    {user && user.id !== review.user_id && (
+                      <div className="ml-auto">
+                        <ReportButton entityType="review" entityId={review.id} label="Report" />
+                      </div>
+                    )}
                   </div>
+                  {(replySaved[review.id] ?? review.owner_reply) && (
+                    <div className="mt-3 rounded-lg border-l-2 border-primary bg-muted/40 p-3">
+                      <div className="text-xs font-semibold text-primary">Owner reply</div>
+                      <p className="mt-1 text-sm text-foreground">
+                        {replySaved[review.id] ?? review.owner_reply}
+                      </p>
+                    </div>
+                  )}
+                  {isOwner && !(replySaved[review.id] ?? review.owner_reply) && (
+                    <div className="mt-3 space-y-2">
+                      <Textarea
+                        placeholder="Reply as owner..."
+                        value={replyDrafts[review.id] ?? ""}
+                        onChange={(e) =>
+                          setReplyDrafts((d) => ({ ...d, [review.id]: e.target.value }))
+                        }
+                        className="min-h-[60px]"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleReply(review.id)}
+                        disabled={replyBusy === review.id || !(replyDrafts[review.id] ?? "").trim()}
+                      >
+                        {replyBusy === review.id ? "Posting..." : "Post reply"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
