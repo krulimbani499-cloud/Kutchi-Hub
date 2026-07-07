@@ -13,12 +13,14 @@ import {
   adminCreateBannerAd,
   adminUpdateBannerAd,
   adminDeleteBannerAd,
+  adminListPublishedBusinesses,
+  adminSetVerified,
 } from "@/lib/businesses.functions";
 import { getDashboard } from "@/lib/businesses.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save, Plus, Image as ImageIcon } from "lucide-react";
+import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save, Plus, Image as ImageIcon, BadgeCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +43,11 @@ const bannersAdminQueryOptions = queryOptions({
   queryFn: () => adminListBannerAds(),
 });
 
+const verifyAdminQueryOptions = queryOptions({
+  queryKey: ["admin", "verify-businesses"],
+  queryFn: () => adminListPublishedBusinesses(),
+});
+
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
@@ -56,6 +63,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
       context.queryClient.ensureQueryData(pendingQueryOptions),
       context.queryClient.ensureQueryData(categoriesAdminQueryOptions),
       context.queryClient.ensureQueryData(bannersAdminQueryOptions),
+      context.queryClient.ensureQueryData(verifyAdminQueryOptions),
     ]);
   },
   component: AdminPage,
@@ -179,6 +187,7 @@ function AdminPage() {
 
       <CategoriesAdmin />
       <BannersAdmin />
+      <VerifyBusinessesAdmin />
     </div>
   );
 }
