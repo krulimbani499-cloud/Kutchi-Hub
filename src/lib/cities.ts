@@ -1,5 +1,5 @@
 export const INDIAN_CITIES = [
-  "Ahmedabad","Hanspura","Surat", "Vadodara", "Rajkot", "Bhavnagar", "Jamnagar", "Gandhinagar",
+  "Ahmedabad","Hanspura","Kapadwanj","Kathlal","Dahegam","Surat", "Vadodara", "Rajkot", "Bhavnagar", "Jamnagar", "Gandhinagar",
   "Junagadh", "Anand", "Bhuj", "Gandhidham", "Morbi", "Nadiad", "Mehsana", "Porbandar",
   "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad",
   "Delhi", "New Delhi", "Noida", "Gurgaon", "Faridabad", "Ghaziabad",
