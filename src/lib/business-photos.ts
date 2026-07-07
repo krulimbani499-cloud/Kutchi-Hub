@@ -21,3 +21,10 @@ export function getBusinessPhotoStorageKey(value: string | null | undefined) {
 
   return trimmed.split(/[?#]/)[0] || null;
 }
+
+export function getBusinessPhotoDisplayUrl(value: string | null | undefined) {
+  const key = getBusinessPhotoStorageKey(value);
+  if (!key) return value ?? null;
+
+  return `/api/public/business-photo?key=${encodeURIComponent(key)}`;
+}

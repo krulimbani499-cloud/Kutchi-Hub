@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Star, Upload } from "lucide-react";
-import { BUSINESS_PHOTOS_BUCKET, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, getBusinessPhotoStorageKey } from "@/lib/business-photos";
+import { BUSINESS_PHOTOS_BUCKET, getBusinessPhotoDisplayUrl, getBusinessPhotoStorageKey } from "@/lib/business-photos";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface PhotoUploaderProps {
@@ -14,17 +14,6 @@ interface PhotoUploaderProps {
 
 type PhotoRow = Tables<"business_photos"> & { display_url?: string | null };
 
-async function getSignedBusinessPhotoUrl(reference: string) {
-  const key = getBusinessPhotoStorageKey(reference);
-  if (!key) return reference;
-
-  const { data, error } = await supabase.storage
-    .from(BUSINESS_PHOTOS_BUCKET)
-    .createSignedUrl(key, SIGNED_BUSINESS_PHOTO_TTL_SECONDS);
-
-  return error ? reference : data.signedUrl;
-}
-
 export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeaturedChange }: PhotoUploaderProps) {
   const [photos, setPhotos] = useState<PhotoRow[]>(initialPhotos);
   const [featured, setFeatured] = useState<string | null>(featuredImage);
@@ -34,17 +23,15 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
   useEffect(() => {
     let cancelled = false;
 
-    async function hydratePhotoUrls() {
-      const hydrated = await Promise.all(
-        initialPhotos.map(async (photo) => ({
-          ...photo,
-          display_url: photo.display_url ?? await getSignedBusinessPhotoUrl(photo.url),
-        })),
-      );
+    function hydratePhotoUrls() {
+      const hydrated = initialPhotos.map((photo) => ({
+        ...photo,
+        display_url: photo.display_url ?? getBusinessPhotoDisplayUrl(photo.url),
+      }));
       if (!cancelled) setPhotos(hydrated);
     }
 
-    void hydratePhotoUrls();
+    hydratePhotoUrls();
     setFeatured(featuredImage);
 
     return () => {
@@ -71,7 +58,7 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
           .upload(key, file, { cacheControl: "3600", upsert: false });
         if (upErr) throw new Error(upErr.message);
 
-        const displayUrl = await getSignedBusinessPhotoUrl(key);
+        const displayUrl = getBusinessPhotoDisplayUrl(key);
 
         const { data: row, error: rowErr } = await supabase
           .from("business_photos")
