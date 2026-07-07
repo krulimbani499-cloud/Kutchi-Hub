@@ -452,6 +452,7 @@ export type Database = {
           created_at: string
           display_order: number
           icon: string | null
+          icon_url: string | null
           id: string
           name: string
           parent_id: string | null
@@ -463,6 +464,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           icon?: string | null
+          icon_url?: string | null
           id?: string
           name: string
           parent_id?: string | null
@@ -474,6 +476,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           icon?: string | null
+          icon_url?: string | null
           id?: string
           name?: string
           parent_id?: string | null

@@ -130,6 +130,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
   return (
     <div className={`grid gap-3 ${sizeClasses}`}>
       {categories.map((category) => {
+        const iconUrl = (category as unknown as { icon_url?: string | null }).icon_url;
         const emoji = pickEmoji(category.icon, category.slug, category.name);
         return (
           <Link
@@ -139,7 +140,11 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
             className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
           >
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/60 text-3xl leading-none">
-              <span aria-hidden>{emoji}</span>
+              {iconUrl ? (
+                <img src={iconUrl} alt="" className="h-10 w-10 object-contain" />
+              ) : (
+                <span aria-hidden>{emoji}</span>
+              )}
             </div>
             <span className="text-xs font-medium text-foreground leading-tight">{category.name}</span>
           </Link>

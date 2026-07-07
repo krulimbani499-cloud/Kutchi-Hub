@@ -198,8 +198,8 @@ function CategoriesAdmin() {
   const deleteFn = useServerFn(adminDeleteCategory);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [form, setForm] = useState<{ name: string; slug: string; icon: string; color: string; display_order: number }>(
-    { name: "", slug: "", icon: "", color: "", display_order: 0 },
+  const [form, setForm] = useState<{ name: string; slug: string; icon: string; icon_url: string; color: string; display_order: number }>(
+    { name: "", slug: "", icon: "", icon_url: "", color: "", display_order: 0 },
   );
 
   const startEdit = (c: Tables<"categories">) => {
@@ -208,6 +208,7 @@ function CategoriesAdmin() {
       name: c.name,
       slug: c.slug,
       icon: c.icon ?? "",
+      icon_url: (c as unknown as { icon_url?: string | null }).icon_url ?? "",
       color: c.color ?? "",
       display_order: c.display_order,
     });
@@ -222,6 +223,7 @@ function CategoriesAdmin() {
           name: form.name,
           slug: form.slug,
           icon: form.icon,
+          icon_url: form.icon_url || null,
           color: form.color,
           display_order: Number(form.display_order) || 0,
         },
@@ -234,6 +236,24 @@ function CategoriesAdmin() {
     } finally {
       setBusy(null);
     }
+  };
+
+  const handleIconFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file (PNG/JPG/SVG)");
+      return;
+    }
+    if (file.size > 150 * 1024) {
+      toast.error("Icon too large. Please use an image under 150 KB.");
+      return;
+    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+    setForm((f) => ({ ...f, icon_url: dataUrl }));
   };
 
   const remove = async (id: string, name: string) => {
@@ -285,6 +305,41 @@ function CategoriesAdmin() {
                           placeholder="utensils"
                         />
                       </div>
+                      <div className="sm:col-span-2 lg:col-span-3">
+                        <Label className="text-xs">Custom icon (PNG/SVG, max 150KB)</Label>
+                        <div className="flex items-center gap-3">
+                          {form.icon_url ? (
+                            <img
+                              src={form.icon_url}
+                              alt="icon preview"
+                              className="h-12 w-12 rounded-lg border border-border object-contain bg-white p-1"
+                            />
+                          ) : (
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                              None
+                            </div>
+                          )}
+                          <Input
+                            type="file"
+                            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleIconFile(f);
+                              e.target.value = "";
+                            }}
+                          />
+                          {form.icon_url ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setForm({ ...form, icon_url: "" })}
+                            >
+                              Remove
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
                       <div>
                         <Label className="text-xs">Color</Label>
                         <Input
@@ -314,6 +369,13 @@ function CategoriesAdmin() {
                     </div>
                   ) : (
                     <div className="flex flex-wrap items-center gap-3">
+                      {(c as unknown as { icon_url?: string | null }).icon_url ? (
+                        <img
+                          src={(c as unknown as { icon_url: string }).icon_url}
+                          alt=""
+                          className="h-10 w-10 rounded-lg border border-border object-contain bg-white p-1"
+                        />
+                      ) : null}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium text-foreground">{c.name}</span>
