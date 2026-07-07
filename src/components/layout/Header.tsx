@@ -91,7 +91,12 @@ export function Header() {
                     </Button>
                   )}
                   <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
-                    {hasListings ? (
+                    {isAdmin ? (
+                      <Link to="/dashboard">
+                        <User className="mr-1 h-4 w-4" />
+                        Listings
+                      </Link>
+                    ) : hasListings ? (
                       <Link to="/dashboard">
                         <User className="mr-1 h-4 w-4" />
                         My Listings
@@ -113,7 +118,7 @@ export function Header() {
                     Sign out
                   </Button>
                   <Button variant="ghost" size="icon" className="sm:hidden" asChild>
-                    <Link to={hasListings ? "/dashboard" : "/business/new"}>
+                    <Link to={isAdmin || hasListings ? "/dashboard" : "/business/new"}>
                       <User className="h-5 w-5" />
                     </Link>
                   </Button>
