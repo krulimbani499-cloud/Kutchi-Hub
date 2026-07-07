@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import logoUrl from "@/assets/kutchi-hub-logo.png";
 import { CitySelector } from "@/components/layout/CitySelector";
+import { NotificationsBell } from "@/components/layout/NotificationsBell";
 
 export function Header() {
   const { user, isLoading } = useAuth();
@@ -85,6 +86,7 @@ export function Header() {
             <>
               {user ? (
                 <div className="flex items-center gap-2">
+                  <NotificationsBell />
                   {isAdmin && (
                     <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
                       <Link to="/admin">Admin</Link>
