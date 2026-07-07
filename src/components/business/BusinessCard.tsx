@@ -17,7 +17,7 @@ interface BusinessCardProps {
     verified: boolean;
     featured_image: string | null;
     featured_image_url?: string | null;
-    hours?: Record<string, string> | null;
+    hours?: unknown;
     avgRating?: number;
     reviewCount?: number;
     categories: { id: string; name: string; slug: string; color: string | null } | null;
