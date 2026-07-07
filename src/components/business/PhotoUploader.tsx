@@ -2,17 +2,18 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Star, Upload } from "lucide-react";
-import { BUSINESS_PHOTOS_BUCKET, getBusinessPhotoDisplayUrl, getBusinessPhotoStorageKey } from "@/lib/business-photos";
+import { BUSINESS_PHOTOS_BUCKET, getBusinessPhotoStorageKey } from "@/lib/business-photos";
+import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface PhotoUploaderProps {
   businessId: string;
   featuredImage: string | null;
-  initialPhotos: PhotoRow[];
+  initialPhotos: Tables<"business_photos">[];
   onFeaturedChange?: (url: string) => void;
 }
 
-type PhotoRow = Tables<"business_photos"> & { display_url?: string | null };
+type PhotoRow = Tables<"business_photos">;
 
 export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeaturedChange }: PhotoUploaderProps) {
   const [photos, setPhotos] = useState<PhotoRow[]>(initialPhotos);
@@ -21,22 +22,8 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    let cancelled = false;
-
-    function hydratePhotoUrls() {
-      const hydrated = initialPhotos.map((photo) => ({
-        ...photo,
-        display_url: photo.display_url ?? getBusinessPhotoDisplayUrl(photo.url),
-      }));
-      if (!cancelled) setPhotos(hydrated);
-    }
-
-    hydratePhotoUrls();
+    setPhotos(initialPhotos);
     setFeatured(featuredImage);
-
-    return () => {
-      cancelled = true;
-    };
   }, [featuredImage, initialPhotos]);
 
   const handleFiles = async (files: FileList | null) => {
@@ -58,15 +45,13 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
           .upload(key, file, { cacheControl: "3600", upsert: false });
         if (upErr) throw new Error(upErr.message);
 
-        const displayUrl = getBusinessPhotoDisplayUrl(key);
-
         const { data: row, error: rowErr } = await supabase
           .from("business_photos")
           .insert({ business_id: businessId, url: key, display_order: displayOrder++ })
           .select()
           .single();
         if (rowErr) throw new Error(rowErr.message);
-        setPhotos((p) => [...p, { ...row, display_url: displayUrl }]);
+        setPhotos((p) => [...p, row]);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
@@ -121,7 +106,7 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {photos.map((photo) => (
             <div key={photo.id} className="group relative overflow-hidden rounded-lg border border-border">
-              <img src={photo.display_url ?? photo.url} alt={photo.caption ?? "Business photo"} className="aspect-square w-full object-cover" />
+              <BusinessPhotoImage src={photo.url} alt={photo.caption ?? "Business photo"} className="aspect-square w-full object-cover" />
               <div className="absolute inset-0 flex items-end justify-between bg-gradient-to-t from-black/70 via-transparent to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
                 <Button
                   type="button"

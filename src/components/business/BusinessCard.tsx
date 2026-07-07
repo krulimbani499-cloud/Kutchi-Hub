@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { MapPin, Phone, Star, BadgeCheck } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
+import { BusinessPhotoImage } from "./BusinessPhotoImage";
 
 interface BusinessCardProps {
   business: {
@@ -29,7 +30,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
       <Link to="/business/$slug" params={{ slug: business.slug }} className="absolute inset-0 z-10" />
       <div className="relative h-40 overflow-hidden bg-muted">
         {imageSrc ? (
-          <img
+          <BusinessPhotoImage
             src={imageSrc}
             alt={business.name}
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
