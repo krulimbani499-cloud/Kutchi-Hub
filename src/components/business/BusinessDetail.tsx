@@ -52,11 +52,30 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const { user } = useAuth();
   const submitReview = useServerFn(addReview);
   const logEvent = useServerFn(logBusinessEvent);
+  const replyFn = useServerFn(replyToReview);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyBusy, setReplyBusy] = useState<string | null>(null);
+  const [replySaved, setReplySaved] = useState<Record<string, string>>({});
   const isOwner = !!user && user.id === business.owner_id;
+
+  const handleReply = async (reviewId: string) => {
+    const text = (replyDrafts[reviewId] ?? "").trim();
+    if (!text) return;
+    setReplyBusy(reviewId);
+    try {
+      await replyFn({ data: { reviewId, reply: text } });
+      setReplySaved((s) => ({ ...s, [reviewId]: text }));
+      setReplyDrafts((d) => ({ ...d, [reviewId]: "" }));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setReplyBusy(null);
+    }
+  };
 
   // Track profile view (once per mount)
   useEffect(() => {
