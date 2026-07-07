@@ -7,7 +7,7 @@ import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2, Mic, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
 import { MarketingBanner } from "@/components/home/MarketingBanner";
@@ -40,6 +40,31 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
+// Update this number as the directory grows month over month.
+const BUSINESS_COUNT = 500;
+
+function AnimatedCount({ target }: { target: number }) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    const duration = 1400;
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setValue(Math.round(eased * target));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  return (
+    <span className="inline-block text-[#ff6a00] tabular-nums [font-variant-numeric:tabular-nums] animate-scale-in">
+      {value.toLocaleString()}+
+    </span>
+  );
+}
+
 function HomePage() {
   const { data: home } = useSuspenseQuery(homeQueryOptions);
   const [search, setSearch] = useState("");
@@ -68,7 +93,7 @@ function HomePage() {
           <div className="flex items-start justify-between gap-4">
             <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
               Search across{" "}
-              <span className="text-[#ff6a00]">10,000+</span>{" "}
+              <AnimatedCount target={BUSINESS_COUNT} />{" "}
               <span className="text-[#ff6a00]">Kutchi Businesses</span>
             </h1>
             <button
