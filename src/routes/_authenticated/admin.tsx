@@ -596,3 +596,100 @@ function BannersAdmin() {
     </div>
   );
 }
+function VerifyBusinessesAdmin() {
+  const { data: businesses, refetch } = useSuspenseQuery(verifyAdminQueryOptions);
+  const setVerifiedFn = useServerFn(adminSetVerified);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [showAll, setShowAll] = useState(false);
+
+  const toggle = async (id: string, current: boolean) => {
+    setBusy(id);
+    try {
+      await setVerifiedFn({ data: { id, verified: !current } });
+      toast.success(!current ? "Marked verified" : "Verification removed");
+      await refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const filtered = businesses.filter((b) => {
+    if (!showAll && b.verified) return false;
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (
+      b.name.toLowerCase().includes(q) ||
+      (b.city ?? "").toLowerCase().includes(q) ||
+      (b.categoryName ?? "").toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="mt-10">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Verified Businesses</h2>
+          <p className="text-sm text-muted-foreground">Toggle the blue tick badge on published businesses.</p>
+        </div>
+        <Badge variant="secondary">{businesses.filter((b) => b.verified).length} verified · {businesses.length} total</Badge>
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by name, city, category"
+          className="max-w-sm"
+        />
+        <Button size="sm" variant={showAll ? "default" : "outline"} onClick={() => setShowAll((v) => !v)}>
+          {showAll ? "Showing all" : "Hiding verified"}
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {filtered.length === 0 ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">No businesses match.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {filtered.slice(0, 100).map((b) => (
+                <li key={b.id} className="flex flex-wrap items-center gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate font-medium text-foreground">{b.name}</span>
+                      {b.verified && (
+                        <Badge className="bg-blue-600 text-white hover:bg-blue-600">
+                          <BadgeCheck className="mr-1 h-3 w-3" /> Verified
+                        </Badge>
+                      )}
+                      {b.categoryName ? <Badge variant="outline" className="text-xs">{b.categoryName}</Badge> : null}
+                      {b.city ? <span className="text-xs text-muted-foreground">· {b.city}</span> : null}
+                    </div>
+                  </div>
+                  <Link
+                    to="/business/$slug"
+                    params={{ slug: b.slug }}
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    View <ExternalLink className="h-3 w-3" />
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={b.verified}
+                      disabled={busy === b.id}
+                      onCheckedChange={() => toggle(b.id, b.verified)}
+                    />
+                    <Label className="text-xs text-muted-foreground">Verified</Label>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
