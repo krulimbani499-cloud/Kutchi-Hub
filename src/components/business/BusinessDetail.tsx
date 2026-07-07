@@ -13,7 +13,6 @@ import {
   ExternalLink,
   MessageSquare,
   Navigation,
-  Share2,
   Heart,
   Camera,
   ChevronLeft,
@@ -37,6 +36,7 @@ import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
 import { ReportButton } from "./ReportButton";
 import { RelatedBusinesses } from "./RelatedBusinesses";
+import { ShareMenu } from "./ShareMenu";
 import { trackRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -349,18 +349,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   <Globe className="h-3.5 w-3.5" /> Website <ExternalLink className="h-3 w-3" />
                 </a>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  trackClick("share_click");
-                  if (typeof navigator !== "undefined" && "share" in navigator) {
-                    navigator.share({ title: business.name, url: window.location.href }).catch(() => {});
-                  }
-                }}
-                className="ml-auto inline-flex items-center gap-1 hover:text-foreground"
-              >
-                <Share2 className="h-3.5 w-3.5" /> Share
-              </button>
+              <div className="ml-auto">
+                <ShareMenu
+                  title={business.name}
+                  text={`${business.name} — ${business.categories?.name ?? "Business"}${business.city ? " in " + business.city : ""} on Kutchi Hub`}
+                  onShare={() => trackClick("share_click")}
+                />
+              </div>
             </div>
           </div>
         </div>
