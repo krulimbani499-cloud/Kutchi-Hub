@@ -16,6 +16,9 @@ import {
   Share2,
   Heart,
   Camera,
+  ChevronLeft,
+  ChevronRight,
+  X,
 } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { BusinessMap } from "./BusinessMap";
