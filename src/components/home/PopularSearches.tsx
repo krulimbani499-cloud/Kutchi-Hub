@@ -31,6 +31,8 @@ const IMAGE_OVERRIDES: Record<string, string> = {
     "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80",
   "beauty-parlour":
     "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80",
+  trading:
+    "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=800&q=80",
 };
 
 function imageFor(cat: Category) {
