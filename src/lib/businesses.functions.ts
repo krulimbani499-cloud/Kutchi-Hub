@@ -684,3 +684,28 @@ export const deleteBusiness = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
+export const getBusinessForEdit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const { data: business, error } = await supabase
+      .from("businesses")
+      .select("*, categories:category_id(id, name, slug, color, icon)")
+      .eq("slug", data.slug)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!business) throw new Error("Business not found");
+
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (business.owner_id !== context.userId && !isAdmin) throw new Error("Unauthorized");
+
+    const { data: photos } = await supabase
+      .from("business_photos")
+      .select("*")
+      .eq("business_id", business.id)
+      .order("display_order", { ascending: true });
+
+    return { business, photos: photos ?? [] };
+  });
