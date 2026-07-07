@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   MapPin,
   Phone,
@@ -23,10 +24,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import { addReview } from "@/lib/businesses.functions";
+import { logBusinessEvent } from "@/lib/leads.functions";
+import { listBusinessServices } from "@/lib/services.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
+import { ServicesManager, ServicesDisplay } from "./ServicesManager";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
@@ -45,11 +49,29 @@ interface BusinessDetailProps {
 export function BusinessDetail({ business, reviews, photos, avgRating, reviewCount }: BusinessDetailProps) {
   const { user } = useAuth();
   const submitReview = useServerFn(addReview);
+  const logEvent = useServerFn(logBusinessEvent);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const isOwner = !!user && user.id === business.owner_id;
+
+  // Track profile view (once per mount)
+  useEffect(() => {
+    if (isOwner) return;
+    logEvent({ data: { businessId: business.id, eventType: "view" } }).catch(() => {});
+     
+  }, [business.id, isOwner]);
+
+  const { data: services = [] } = useQuery({
+    queryKey: ["services", business.id],
+    queryFn: () => listBusinessServices({ data: { businessId: business.id } }),
+  });
+
+  const trackClick = (eventType: "call_click" | "whatsapp_click" | "website_click" | "direction_click" | "share_click") => {
+    if (isOwner) return;
+    logEvent({ data: { businessId: business.id, eventType } }).catch(() => {});
+  };
 
   const hours = (business.hours as Record<string, string> | null) ?? {};
   const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
