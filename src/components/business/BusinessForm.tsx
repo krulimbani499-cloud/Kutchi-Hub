@@ -151,8 +151,8 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
       setFormMessage("Please select an image file.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setFormMessage("Image must be smaller than 5MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setFormMessage("Image must be smaller than 10MB.");
       return;
     }
     setPendingFile(file);
@@ -360,7 +360,7 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
                 </button>
               </div>
             )}
-            <p className="text-xs text-muted-foreground">JPG, PNG or WebP. Up to 5MB.</p>
+            <p className="text-xs text-muted-foreground">JPG, PNG or WebP. Up to 10MB.</p>
           </div>
         </div>
       )}
