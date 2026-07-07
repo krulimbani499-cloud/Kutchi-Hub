@@ -36,6 +36,7 @@ import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
 import { ReportButton } from "./ReportButton";
+import { RelatedBusinesses } from "./RelatedBusinesses";
 import { trackRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -561,6 +562,11 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
           </div>
         </aside>
       </div>
+      <RelatedBusinesses
+        businessId={business.id}
+        categoryId={business.categories?.id ?? null}
+        city={business.city ?? null}
+      />
     </div>
   );
 }
