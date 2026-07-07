@@ -5,7 +5,7 @@ import { getHomeData } from "@/lib/businesses.functions";
 import { CategoryGrid } from "@/components/business/CategoryGrid";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Building2, Mic, ArrowRight } from "lucide-react";
+import { Search, MapPin, Building2, Mic, ArrowRight, Smartphone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
@@ -106,13 +106,8 @@ function HomePage() {
             >
               <span className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-[#ff6a00]/15 to-transparent animate-shimmer-slide" />
               <span className="relative text-sm font-semibold text-foreground">Download App</span>
-              <span className="relative flex h-10 w-7 flex-col items-center justify-center rounded-[7px] border-[2.5px] border-foreground bg-background animate-phone-wiggle transition-transform group-hover:scale-110">
-                <span className="absolute -top-[4px] left-1/2 h-[4px] w-3 -translate-x-1/2 rounded-b-[2px] bg-foreground" />
-                <span className="text-[10px] font-extrabold leading-none tracking-tight">
-                  <span className="text-[#ff6a00]">K</span>
-                  <span className="text-[#1a73e8]">h</span>
-                </span>
-                <span className="mt-[3px] h-[3px] w-[3px] rounded-full bg-foreground" />
+              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6a00] to-[#e65a00] text-white shadow-sm animate-phone-wiggle transition-transform group-hover:scale-110">
+                <Smartphone className="h-4 w-4" strokeWidth={2.5} />
               </span>
             </button>
           </div>
