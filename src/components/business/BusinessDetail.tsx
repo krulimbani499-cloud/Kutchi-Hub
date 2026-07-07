@@ -584,6 +584,29 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
         categoryId={business.categories?.id ?? null}
         city={business.city ?? null}
       />
+      {business.phone && (
+        <div
+          className="fixed inset-x-0 bottom-16 z-30 border-t border-border bg-background/95 px-3 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] backdrop-blur sm:hidden"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+        >
+          <div className="flex gap-2">
+            <a
+              href={`tel:${business.phone}`}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-[#ff6a00] px-3 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-[#e65a00]"
+            >
+              <Phone className="h-4 w-4" /> Call now
+            </a>
+            <a
+              href={`https://wa.me/${business.phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(`Hi, I found ${business.name} on Kutchi Hub.`)}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700 active:bg-emerald-100"
+            >
+              <MessageSquare className="h-4 w-4" /> WhatsApp
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
