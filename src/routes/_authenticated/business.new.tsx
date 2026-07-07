@@ -37,7 +37,7 @@ function NewBusinessPage() {
           <div className="grid items-center gap-10 md:grid-cols-2">
             <div>
               <h1 className="text-4xl font-extrabold leading-tight text-foreground md:text-5xl">
-                List Your Business <span className="text-[#ff6a00]">for FREE</span>
+                List Your Business <span className="text-[#ff6a00]">Only in ₹500</span>
               </h1>
               <p className="mt-3 text-lg text-muted-foreground">
                 with Kutchi Hub — Your Local Kutchi Search Engine
