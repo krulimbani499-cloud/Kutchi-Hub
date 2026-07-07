@@ -710,3 +710,163 @@ export const getBusinessForEdit = createServerFn({ method: "GET" })
 
     return { business, photos: photos ?? [] };
   });
+
+// -------- Category / City landing page data --------
+
+export const getCategoryPageData = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    const { data: category, error: catErr } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("slug", data.slug)
+      .maybeSingle();
+    if (catErr) throw new Error(catErr.message);
+    if (!category) throw new Error("Category not found");
+
+    const { data: businesses, error } = await supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
+      )
+      .eq("status", "published")
+      .eq("category_id", category.id)
+      .order("verified", { ascending: false })
+      .order("name", { ascending: true })
+      .limit(60);
+    if (error) throw new Error(error.message);
+
+    const ids = (businesses ?? []).map((b) => b.id);
+    const ratings = new Map<string, { count: number; sum: number }>();
+    if (ids.length > 0) {
+      const { data: rs } = await supabase
+        .from("business_reviews")
+        .select("business_id, rating")
+        .in("business_id", ids);
+      for (const r of rs ?? []) {
+        const e = ratings.get(r.business_id) ?? { count: 0, sum: 0 };
+        e.count += 1;
+        e.sum += r.rating;
+        ratings.set(r.business_id, e);
+      }
+    }
+    const listings = (businesses ?? []).map((b) => {
+      const r = ratings.get(b.id);
+      return {
+        ...b,
+        avgRating: r ? Number((r.sum / r.count).toFixed(1)) : 0,
+        reviewCount: r?.count ?? 0,
+      };
+    });
+    const cities = Array.from(new Set(listings.map((b) => b.city).filter(Boolean))) as string[];
+    return { category, businesses: listings, cities };
+  });
+
+export const getCityPageData = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    // Slug -> pretty city name: match case-insensitive by comparing slug of stored city
+    const cityName = data.slug
+      .split("-")
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .join(" ");
+
+    const { data: businesses, error } = await supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
+      )
+      .eq("status", "published")
+      .ilike("city", cityName)
+      .order("verified", { ascending: false })
+      .order("name", { ascending: true })
+      .limit(80);
+    if (error) throw new Error(error.message);
+
+    const ids = (businesses ?? []).map((b) => b.id);
+    const ratings = new Map<string, { count: number; sum: number }>();
+    if (ids.length > 0) {
+      const { data: rs } = await supabase
+        .from("business_reviews")
+        .select("business_id, rating")
+        .in("business_id", ids);
+      for (const r of rs ?? []) {
+        const e = ratings.get(r.business_id) ?? { count: 0, sum: 0 };
+        e.count += 1;
+        e.sum += r.rating;
+        ratings.set(r.business_id, e);
+      }
+    }
+    const listings = (businesses ?? []).map((b) => {
+      const r = ratings.get(b.id);
+      return {
+        ...b,
+        avgRating: r ? Number((r.sum / r.count).toFixed(1)) : 0,
+        reviewCount: r?.count ?? 0,
+      };
+    });
+
+    // Group by category for the "browse by category" section
+    const byCategory = new Map<string, { name: string; slug: string; count: number }>();
+    for (const b of listings) {
+      const c = b.categories;
+      if (!c) continue;
+      const cur = byCategory.get(c.slug) ?? { name: c.name, slug: c.slug, count: 0 };
+      cur.count += 1;
+      byCategory.set(c.slug, cur);
+    }
+    return {
+      cityName,
+      businesses: listings,
+      categories: Array.from(byCategory.values()).sort((a, b) => b.count - a.count),
+    };
+  });
+
+export const getRelatedBusinesses = createServerFn({ method: "GET" })
+  .inputValidator((input) =>
+    z.object({
+      businessId: z.string().uuid(),
+      categoryId: z.string().uuid().nullable().optional(),
+      city: z.string().nullable().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    let query = supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
+      )
+      .eq("status", "published")
+      .neq("id", data.businessId)
+      .limit(6);
+    if (data.categoryId) query = query.eq("category_id", data.categoryId);
+    if (data.city) query = query.ilike("city", data.city);
+    const { data: businesses, error } = await query
+      .order("verified", { ascending: false })
+      .order("name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return businesses ?? [];
+  });
+
+export const getSitemapData = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = createServerSupabaseClient();
+  const [{ data: businesses }, { data: categories }] = await Promise.all([
+    supabase
+      .from("businesses")
+      .select("slug, city, updated_at")
+      .eq("status", "published")
+      .limit(5000),
+    supabase.from("categories").select("slug"),
+  ]);
+  const cities = Array.from(
+    new Set((businesses ?? []).map((b) => b.city).filter(Boolean)),
+  ) as string[];
+  return {
+    businesses: businesses ?? [],
+    categories: categories ?? [],
+    cities,
+  };
+});

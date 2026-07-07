@@ -36,6 +36,7 @@ import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
 import { ReportButton } from "./ReportButton";
+import { RelatedBusinesses } from "./RelatedBusinesses";
 import { trackRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -143,9 +144,30 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
       <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
         <Link to="/" className="hover:text-foreground">Home</Link>
         <span>›</span>
-        <Link to="/search" search={{ category: business.categories?.slug }} className="hover:text-foreground">
-          {business.categories?.name}
-        </Link>
+        {business.categories?.slug && (
+          <>
+            <Link to="/category/$slug" params={{ slug: business.categories.slug }} className="hover:text-foreground">
+              {business.categories.name}
+            </Link>
+            <span>›</span>
+          </>
+        )}
+        {business.city && (
+          <>
+            <Link
+              to="/city/$slug"
+              params={{ slug: business.city.toLowerCase().replace(/[^a-z0-9]+/g, "-") }}
+              className="hover:text-foreground"
+            >
+              {business.city}
+            </Link>
+            <span>›</span>
+          </>
+        )}
+        <span className="text-foreground">{business.name}</span>
+      </div>
+      {/* legacy breadcrumb tail replaced above */}
+      <div className="hidden">
         <span>›</span>
         <span className="text-foreground">{business.name}</span>
       </div>
@@ -561,6 +583,11 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
           </div>
         </aside>
       </div>
+      <RelatedBusinesses
+        businessId={business.id}
+        categoryId={business.categories?.id ?? null}
+        city={business.city ?? null}
+      />
     </div>
   );
 }
