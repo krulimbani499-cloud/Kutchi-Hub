@@ -26,8 +26,8 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
     try {
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/")) continue;
-        if (file.size > 5 * 1024 * 1024) {
-          setError(`${file.name} is larger than 5MB`);
+        if (file.size > 10 * 1024 * 1024) {
+          setError(`${file.name} is larger than 10MB`);
           continue;
         }
         const ext = file.name.split(".").pop() ?? "jpg";
@@ -97,7 +97,7 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
             disabled={uploading}
           />
         </label>
-        <p className="text-xs text-muted-foreground">JPG, PNG, WebP up to 5MB each</p>
+        <p className="text-xs text-muted-foreground">JPG, PNG, WebP up to 10MB each</p>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
       {photos.length > 0 && (
