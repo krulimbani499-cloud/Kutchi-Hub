@@ -2,6 +2,36 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
+import { BUSINESS_PHOTOS_BUCKET, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, getBusinessPhotoStorageKey } from "./business-photos";
+
+type ServerSupabaseClient = ReturnType<typeof createServerSupabaseClient>;
+
+async function getSignedBusinessPhotoUrl(supabase: ServerSupabaseClient, reference: string | null) {
+  const key = getBusinessPhotoStorageKey(reference);
+  if (!key) return reference;
+
+  const { data, error } = await supabase.storage
+    .from(BUSINESS_PHOTOS_BUCKET)
+    .createSignedUrl(key, SIGNED_BUSINESS_PHOTO_TTL_SECONDS);
+
+  return error ? reference : data.signedUrl;
+}
+
+async function addSignedFeaturedImage<T extends { featured_image: string | null }>(supabase: ServerSupabaseClient, business: T) {
+  return {
+    ...business,
+    featured_image_url: await getSignedBusinessPhotoUrl(supabase, business.featured_image),
+  };
+}
+
+async function addSignedPhotoUrls<T extends { url: string }>(supabase: ServerSupabaseClient, photos: T[]) {
+  return Promise.all(
+    photos.map(async (photo) => ({
+      ...photo,
+      display_url: await getSignedBusinessPhotoUrl(supabase, photo.url),
+    })),
+  );
+}
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -71,21 +101,22 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       };
     });
 
+    let filteredResults = results;
     if (data.minRating && data.minRating > 0) {
-      return results.filter((b) => b.avgRating >= data.minRating!);
+      filteredResults = filteredResults.filter((b) => b.avgRating >= data.minRating!);
     }
 
     if (data.sort === "rating") {
-      results.sort((a, b) => b.avgRating - a.avgRating);
+      filteredResults.sort((a, b) => b.avgRating - a.avgRating);
     } else if (data.sort === "newest") {
-      results.sort(
+      filteredResults.sort(
         (a, b) =>
           new Date((b as unknown as { created_at: string }).created_at).getTime() -
           new Date((a as unknown as { created_at: string }).created_at).getTime(),
       );
     }
 
-    return results;
+    return Promise.all(filteredResults.map((business) => addSignedFeaturedImage(supabase, business)));
   });
 
 export const getBusinessBySlug = createServerFn({ method: "GET" })
@@ -143,9 +174,9 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
         : 0;
 
     return {
-      business,
+      business: await addSignedFeaturedImage(supabase, business),
       reviews: reviewsWithProfiles,
-      photos: photos ?? [],
+      photos: await addSignedPhotoUrls(supabase, photos ?? []),
       avgRating,
       reviewCount: reviews?.length ?? 0,
     };
@@ -403,14 +434,14 @@ export const getHomeData = createServerFn({ method: "GET" }).handler(async () =>
     }
   }
 
-  const listings = (featured ?? []).map((b) => {
+  const listings = await Promise.all((featured ?? []).map(async (b) => {
     const rating = ratings.get(b.id);
-    return {
+    return addSignedFeaturedImage(supabase, {
       ...b,
       avgRating: rating ? Number((rating.sum / rating.count).toFixed(1)) : 0,
       reviewCount: rating?.count ?? 0,
-    };
-  });
+    });
+  }));
 
   return { categories: categories ?? [], featured: listings };
 });
@@ -707,5 +738,5 @@ export const getBusinessForEdit = createServerFn({ method: "GET" })
       .eq("business_id", business.id)
       .order("display_order", { ascending: true });
 
-    return { business, photos: photos ?? [] };
+    return { business, photos: await addSignedPhotoUrls(supabase, photos ?? []) };
   });

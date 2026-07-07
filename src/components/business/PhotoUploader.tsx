@@ -1,17 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Star, Upload } from "lucide-react";
+import { BUSINESS_PHOTOS_BUCKET, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, getBusinessPhotoStorageKey } from "@/lib/business-photos";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface PhotoUploaderProps {
   businessId: string;
   featuredImage: string | null;
-  initialPhotos: Tables<"business_photos">[];
+  initialPhotos: PhotoRow[];
   onFeaturedChange?: (url: string) => void;
 }
 
-type PhotoRow = Tables<"business_photos">;
+type PhotoRow = Tables<"business_photos"> & { display_url?: string | null };
+
+async function getSignedBusinessPhotoUrl(reference: string) {
+  const key = getBusinessPhotoStorageKey(reference);
+  if (!key) return reference;
+
+  const { data, error } = await supabase.storage
+    .from(BUSINESS_PHOTOS_BUCKET)
+    .createSignedUrl(key, SIGNED_BUSINESS_PHOTO_TTL_SECONDS);
+
+  return error ? reference : data.signedUrl;
+}
 
 export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeaturedChange }: PhotoUploaderProps) {
   const [photos, setPhotos] = useState<PhotoRow[]>(initialPhotos);
@@ -19,11 +31,33 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string>("");
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydratePhotoUrls() {
+      const hydrated = await Promise.all(
+        initialPhotos.map(async (photo) => ({
+          ...photo,
+          display_url: photo.display_url ?? await getSignedBusinessPhotoUrl(photo.url),
+        })),
+      );
+      if (!cancelled) setPhotos(hydrated);
+    }
+
+    void hydratePhotoUrls();
+    setFeatured(featuredImage);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [featuredImage, initialPhotos]);
+
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setError("");
     setUploading(true);
     try {
+      let displayOrder = photos.length;
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/")) continue;
         if (file.size > 10 * 1024 * 1024) {
@@ -33,20 +67,19 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
         const ext = file.name.split(".").pop() ?? "jpg";
         const key = `${businessId}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
-          .from("business-photos")
+          .from(BUSINESS_PHOTOS_BUCKET)
           .upload(key, file, { cacheControl: "3600", upsert: false });
         if (upErr) throw new Error(upErr.message);
 
-        const { data: urlData } = supabase.storage.from("business-photos").getPublicUrl(key);
-        const url = urlData.publicUrl;
+        const displayUrl = await getSignedBusinessPhotoUrl(key);
 
         const { data: row, error: rowErr } = await supabase
           .from("business_photos")
-          .insert({ business_id: businessId, url, display_order: photos.length })
+          .insert({ business_id: businessId, url: key, display_order: displayOrder++ })
           .select()
           .single();
         if (rowErr) throw new Error(rowErr.message);
-        setPhotos((p) => [...p, row]);
+        setPhotos((p) => [...p, { ...row, display_url: displayUrl }]);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
@@ -58,12 +91,9 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
   const deletePhoto = async (photo: PhotoRow) => {
     setError("");
     try {
-      // Extract storage key from public URL
-      const marker = "/business-photos/";
-      const idx = photo.url.indexOf(marker);
-      if (idx !== -1) {
-        const key = photo.url.substring(idx + marker.length);
-        await supabase.storage.from("business-photos").remove([key]);
+      const key = getBusinessPhotoStorageKey(photo.url);
+      if (key) {
+        await supabase.storage.from(BUSINESS_PHOTOS_BUCKET).remove([key]);
       }
       await supabase.from("business_photos").delete().eq("id", photo.id);
       setPhotos((p) => p.filter((x) => x.id !== photo.id));
@@ -104,7 +134,7 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {photos.map((photo) => (
             <div key={photo.id} className="group relative overflow-hidden rounded-lg border border-border">
-              <img src={photo.url} alt={photo.caption ?? "Business photo"} className="aspect-square w-full object-cover" />
+              <img src={photo.display_url ?? photo.url} alt={photo.caption ?? "Business photo"} className="aspect-square w-full object-cover" />
               <div className="absolute inset-0 flex items-end justify-between bg-gradient-to-t from-black/70 via-transparent to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
                 <Button
                   type="button"

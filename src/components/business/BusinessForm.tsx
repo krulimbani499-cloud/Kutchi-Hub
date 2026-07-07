@@ -113,10 +113,8 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
               .from("business-photos")
               .upload(key, pendingFile, { cacheControl: "3600", upsert: false });
             if (upErr) throw new Error(upErr.message);
-            const { data: urlData } = supabase.storage.from("business-photos").getPublicUrl(key);
-            const url = urlData.publicUrl;
-            await supabase.from("business_photos").insert({ business_id: result.id, url, display_order: 0 });
-            await supabase.from("businesses").update({ featured_image: url }).eq("id", result.id);
+            await supabase.from("business_photos").insert({ business_id: result.id, url: key, display_order: 0 });
+            await supabase.from("businesses").update({ featured_image: key }).eq("id", result.id);
           } catch (uploadErr) {
             // Don't block navigation on photo upload failure; surface a soft message
             console.error("Photo upload failed after create:", uploadErr);

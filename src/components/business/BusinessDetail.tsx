@@ -29,11 +29,12 @@ import type { Tables } from "@/integrations/supabase/types";
 interface BusinessDetailProps {
   business: Tables<"businesses"> & {
     categories: { id: string; name: string; slug: string; color: string | null; icon: string | null } | null;
+    featured_image_url?: string | null;
   };
   reviews: (Tables<"business_reviews"> & {
     profiles: { display_name: string | null; avatar_url: string | null } | null;
   })[];
-  photos: Tables<"business_photos">[];
+  photos: (Tables<"business_photos"> & { display_url?: string | null })[];
   avgRating: number;
   reviewCount: number;
 }
@@ -56,6 +57,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
     ? `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + " " + addressLine)}`;
   const galleryPhotos = photos.slice(0, 4);
+  const featuredImageSrc = business.featured_image_url ?? business.featured_image;
 
   const handleReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,8 +94,8 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
           <div className="relative bg-muted">
             <div className="grid h-56 grid-cols-2 grid-rows-1 gap-1 sm:h-80 sm:grid-cols-4 sm:grid-rows-2">
               <div className="relative col-span-2 row-span-1 overflow-hidden bg-muted sm:row-span-2">
-                {business.featured_image ? (
-                  <img src={business.featured_image} alt={business.name} className="h-full w-full object-cover" />
+                {featuredImageSrc ? (
+                  <img src={featuredImageSrc} alt={business.name} className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 text-2xl font-bold text-primary">
                     {business.name.charAt(0)}
@@ -102,10 +104,11 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               </div>
               {[0, 1, 2, 3].map((i) => {
                 const p = galleryPhotos[i];
+                const photoSrc = p?.display_url ?? p?.url;
                 return (
                   <div key={i} className="relative hidden overflow-hidden bg-muted sm:block">
-                    {p ? (
-                      <img src={p.url} alt={p.caption ?? ""} className="h-full w-full object-cover" loading="lazy" />
+                    {photoSrc ? (
+                      <img src={photoSrc} alt={p?.caption ?? ""} className="h-full w-full object-cover" loading="lazy" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                         <Camera className="h-5 w-5" />
@@ -294,13 +297,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 {photos.map((photo) => (
                   <a
                     key={photo.id}
-                    href={photo.url}
+                    href={photo.display_url ?? photo.url}
                     target="_blank"
                     rel="noreferrer"
                     className="overflow-hidden rounded-lg border border-border"
                   >
                     <img
-                      src={photo.url}
+                      src={photo.display_url ?? photo.url}
                       alt={photo.caption ?? "Business photo"}
                       loading="lazy"
                       className="aspect-square w-full object-cover transition-transform hover:scale-105"
