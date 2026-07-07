@@ -135,7 +135,7 @@ function HomePage() {
                 Get discovered by thousands of Kutchi customers every day.
               </p>
               <Button size="sm" className="mt-4 rounded-full bg-[#ff6a00] text-white hover:bg-[#e65a00]" asChild>
-                <Link to="/business/new">
+                <Link to="/list-your-business">
                   Get Started <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
