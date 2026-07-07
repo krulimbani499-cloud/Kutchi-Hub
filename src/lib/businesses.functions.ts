@@ -207,6 +207,7 @@ const updateCategorySchema = z.object({
   name: z.string().trim().min(2).max(80),
   slug: z.string().trim().min(2).max(80).regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and dashes only"),
   icon: z.string().trim().max(60).nullable().optional(),
+  icon_url: z.string().trim().max(200000).nullable().optional(),
   color: z.string().trim().max(30).nullable().optional(),
   display_order: z.coerce.number().int().min(0).max(9999).optional(),
 });
@@ -226,6 +227,7 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
       name: string;
       slug: string;
       icon?: string | null;
+      icon_url?: string | null;
       color?: string | null;
       display_order?: number;
     } = {
@@ -233,6 +235,7 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
       slug: data.slug.trim(),
     };
     if (data.icon !== undefined) patch.icon = data.icon?.trim() || null;
+    if (data.icon_url !== undefined) patch.icon_url = data.icon_url?.trim() || null;
     if (data.color !== undefined) patch.color = data.color?.trim() || null;
     if (data.display_order !== undefined) patch.display_order = data.display_order;
 
