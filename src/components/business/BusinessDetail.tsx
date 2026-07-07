@@ -26,6 +26,7 @@ import { addReview } from "@/lib/businesses.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
+import { EnquiryDialog } from "./EnquiryDialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
