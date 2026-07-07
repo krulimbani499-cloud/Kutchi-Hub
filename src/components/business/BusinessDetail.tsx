@@ -143,6 +143,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
+                  <FavoriteButton businessId={business.id} />
                   <span className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-1 text-sm font-bold text-white">
                     {avgRating.toFixed(1)} <Star className="h-3.5 w-3.5 fill-white" />
                   </span>
