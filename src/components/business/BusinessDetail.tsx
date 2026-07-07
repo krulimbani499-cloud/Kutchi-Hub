@@ -279,6 +279,17 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
             </section>
 
             <section>
+              <h2 className="mb-2 text-lg font-semibold text-foreground">Services</h2>
+              {isOwner ? (
+                <ServicesManager businessId={business.id} />
+              ) : services.length > 0 ? (
+                <ServicesDisplay services={services} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No services listed.</p>
+              )}
+            </section>
+
+            <section>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Location & Hours</h2>
               <div className="mb-4">
                 <BusinessMap
