@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   MapPin,
   Phone,
@@ -23,10 +24,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import { addReview } from "@/lib/businesses.functions";
+import { logBusinessEvent } from "@/lib/leads.functions";
+import { listBusinessServices } from "@/lib/services.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
+import { ServicesManager, ServicesDisplay } from "./ServicesManager";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
@@ -45,11 +49,29 @@ interface BusinessDetailProps {
 export function BusinessDetail({ business, reviews, photos, avgRating, reviewCount }: BusinessDetailProps) {
   const { user } = useAuth();
   const submitReview = useServerFn(addReview);
+  const logEvent = useServerFn(logBusinessEvent);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const isOwner = !!user && user.id === business.owner_id;
+
+  // Track profile view (once per mount)
+  useEffect(() => {
+    if (isOwner) return;
+    logEvent({ data: { businessId: business.id, eventType: "view" } }).catch(() => {});
+     
+  }, [business.id, isOwner]);
+
+  const { data: services = [] } = useQuery({
+    queryKey: ["services", business.id],
+    queryFn: () => listBusinessServices({ data: { businessId: business.id } }),
+  });
+
+  const trackClick = (eventType: "call_click" | "whatsapp_click" | "website_click" | "direction_click" | "share_click") => {
+    if (isOwner) return;
+    logEvent({ data: { businessId: business.id, eventType } }).catch(() => {});
+  };
 
   const hours = (business.hours as Record<string, string> | null) ?? {};
   const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
@@ -171,7 +193,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {business.phone && (
                 <Button asChild className="h-11 min-w-0 bg-[#ff6a00] px-2 text-white hover:bg-[#e65a00]">
-                  <a href={`tel:${business.phone}`} className="flex items-center justify-center">
+                  <a href={`tel:${business.phone}`} onClick={() => trackClick("call_click")} className="flex items-center justify-center">
                     <Phone className="mr-1 h-4 w-4 shrink-0" />
                     <span className="truncate text-sm">Call</span>
                   </a>
@@ -183,6 +205,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     href={`https://wa.me/${business.phone.replace(/[^0-9]/g, "")}`}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={() => trackClick("whatsapp_click")}
                     className="flex items-center justify-center"
                   >
                     <MessageSquare className="mr-1 h-4 w-4 shrink-0" />
@@ -191,14 +214,14 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 </Button>
               )}
               <Button asChild variant="outline" className="h-11 min-w-0 px-2">
-                <a href={mapsHref} target="_blank" rel="noreferrer" className="flex items-center justify-center">
+                <a href={mapsHref} target="_blank" rel="noreferrer" onClick={() => trackClick("direction_click")} className="flex items-center justify-center">
                   <Navigation className="mr-1 h-4 w-4 shrink-0" />
                   <span className="truncate text-sm">Directions</span>
                 </a>
               </Button>
               {business.website ? (
                 <Button asChild variant="outline" className="h-11 min-w-0 px-2">
-                  <a href={business.website} target="_blank" rel="noreferrer" className="flex items-center justify-center">
+                  <a href={business.website} target="_blank" rel="noreferrer" onClick={() => trackClick("website_click")} className="flex items-center justify-center">
                     <Globe className="mr-1 h-4 w-4 shrink-0" />
                     <span className="truncate text-sm">Website</span>
                   </a>
@@ -233,6 +256,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               <button
                 type="button"
                 onClick={() => {
+                  trackClick("share_click");
                   if (typeof navigator !== "undefined" && "share" in navigator) {
                     navigator.share({ title: business.name, url: window.location.href }).catch(() => {});
                   }
@@ -252,6 +276,17 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
             <section>
               <h2 className="mb-2 text-lg font-semibold text-foreground">About</h2>
               <p className="text-sm leading-relaxed text-muted-foreground">{business.description || "No description available."}</p>
+            </section>
+
+            <section>
+              <h2 className="mb-2 text-lg font-semibold text-foreground">Services</h2>
+              {isOwner ? (
+                <ServicesManager businessId={business.id} />
+              ) : services.length > 0 ? (
+                <ServicesDisplay services={services} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No services listed.</p>
+              )}
             </section>
 
             <section>

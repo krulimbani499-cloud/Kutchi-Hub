@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbox } from "lucide-react";
+import { BarChart3 } from "lucide-react";
+import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCard";
 
 const dashboardQueryOptions = queryOptions({
   queryKey: ["dashboard"],
@@ -123,6 +125,24 @@ function DashboardPage() {
               )}
             </CardContent>
           </Card>
+
+          {data.businesses.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Analytics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {data.businesses.map((b) => (
+                    <BusinessAnalyticsCard key={b.id} businessId={b.id} businessName={b.name} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="mt-6">
             <CardHeader>
