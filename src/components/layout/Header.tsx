@@ -41,7 +41,7 @@ export function Header() {
       <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0">
         <Link to="/" className="flex shrink-0 items-center gap-0 font-bold -ml-1">
           <img src={logoUrl} alt="Kutchi Hub" className="h-8 w-auto object-contain sm:h-12" />
-          <span className="-ml-4 sm:-ml-5 text-base sm:text-2xl tracking-tight uppercase font-['Baloo_2',system-ui,sans-serif] font-extrabold whitespace-nowrap">
+          <span className="-ml-6 sm:-ml-8 text-base sm:text-2xl tracking-tight uppercase font-['Baloo_2',system-ui,sans-serif] font-extrabold whitespace-nowrap">
             <span className="text-[#ff6a00]">KUTCHI</span> <span className="text-black">HUB</span>
           </span>
         </Link>
