@@ -25,6 +25,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { addReview } from "@/lib/businesses.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
+import { FavoriteButton } from "./FavoriteButton";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
