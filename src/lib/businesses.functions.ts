@@ -71,21 +71,22 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       };
     });
 
+    let filteredResults = results;
     if (data.minRating && data.minRating > 0) {
-      return results.filter((b) => b.avgRating >= data.minRating!);
+      filteredResults = filteredResults.filter((b) => b.avgRating >= data.minRating!);
     }
 
     if (data.sort === "rating") {
-      results.sort((a, b) => b.avgRating - a.avgRating);
+      filteredResults.sort((a, b) => b.avgRating - a.avgRating);
     } else if (data.sort === "newest") {
-      results.sort(
+      filteredResults.sort(
         (a, b) =>
           new Date((b as unknown as { created_at: string }).created_at).getTime() -
           new Date((a as unknown as { created_at: string }).created_at).getTime(),
       );
     }
 
-    return results;
+    return filteredResults;
   });
 
 export const getBusinessBySlug = createServerFn({ method: "GET" })

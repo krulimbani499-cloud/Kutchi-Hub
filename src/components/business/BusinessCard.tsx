@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { MapPin, Phone, Star, BadgeCheck } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
+import { BusinessPhotoImage } from "./BusinessPhotoImage";
 
 interface BusinessCardProps {
   business: {
@@ -14,6 +15,7 @@ interface BusinessCardProps {
     phone: string | null;
     verified: boolean;
     featured_image: string | null;
+    featured_image_url?: string | null;
     avgRating?: number;
     reviewCount?: number;
     categories: { id: string; name: string; slug: string; color: string | null } | null;
@@ -21,13 +23,15 @@ interface BusinessCardProps {
 }
 
 export function BusinessCard({ business }: BusinessCardProps) {
+  const imageSrc = business.featured_image_url ?? business.featured_image;
+
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
       <Link to="/business/$slug" params={{ slug: business.slug }} className="absolute inset-0 z-10" />
       <div className="relative h-40 overflow-hidden bg-muted">
-        {business.featured_image ? (
-          <img
-            src={business.featured_image}
+        {imageSrc ? (
+          <BusinessPhotoImage
+            src={imageSrc}
             alt={business.name}
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
             loading="lazy"
