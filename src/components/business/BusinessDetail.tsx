@@ -153,7 +153,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
           {/* Gallery */}
           <div className="relative bg-muted">
             <div className="grid h-56 grid-cols-2 grid-rows-1 gap-1 sm:h-80 sm:grid-cols-4 sm:grid-rows-2">
-              <div className="relative col-span-2 row-span-1 overflow-hidden bg-muted sm:row-span-2">
+              <button
+                type="button"
+                onClick={() => photos.length > 0 && setLightboxIndex(0)}
+                className="relative col-span-2 row-span-1 overflow-hidden bg-muted sm:row-span-2"
+                aria-label="Open photo gallery"
+                disabled={photos.length === 0 && !featuredImageSrc}
+              >
                 {featuredImageSrc ? (
                   <BusinessPhotoImage src={featuredImageSrc} alt={business.name} className="h-full w-full object-cover" />
                 ) : (
@@ -161,28 +167,55 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     {business.name.charAt(0)}
                   </div>
                 )}
-              </div>
+              </button>
               {[0, 1, 2, 3].map((i) => {
                 const p = galleryPhotos[i];
                 return (
-                  <div key={i} className="relative hidden overflow-hidden bg-muted sm:block">
+                  <button
+                    type="button"
+                    key={i}
+                    onClick={() => p && setLightboxIndex(i)}
+                    disabled={!p}
+                    className="relative hidden overflow-hidden bg-muted sm:block disabled:cursor-default"
+                    aria-label={p ? `View photo ${i + 1}` : "No photo"}
+                  >
                     {p ? (
-                      <BusinessPhotoImage src={p.url} alt={p.caption ?? ""} className="h-full w-full object-cover" loading="lazy" />
+                      <>
+                        <BusinessPhotoImage src={p.url} alt={p.caption ?? ""} className="h-full w-full object-cover transition-transform hover:scale-105" loading="lazy" />
+                        {i === 3 && photos.length > 4 && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white">
+                            +{photos.length - 4} more
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                         <Camera className="h-5 w-5" />
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
             {photos.length > 0 && (
-              <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(0)}
+                className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-black/85"
+              >
                 <Camera className="mr-1 inline h-3.5 w-3.5" /> {photos.length} Photos
-              </div>
+              </button>
             )}
           </div>
+
+          {lightboxIndex !== null && photos.length > 0 && (
+            <PhotoLightbox
+              photos={photos}
+              index={lightboxIndex}
+              onClose={() => setLightboxIndex(null)}
+              onIndexChange={setLightboxIndex}
+            />
+          )}
 
           {/* Summary panel */}
           <div className="flex flex-col justify-between gap-4 p-5 sm:p-6">
