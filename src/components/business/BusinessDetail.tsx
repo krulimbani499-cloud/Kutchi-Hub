@@ -564,3 +564,94 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
     </div>
   );
 }
+
+function PhotoLightbox({
+  photos,
+  index,
+  onClose,
+  onIndexChange,
+}: {
+  photos: Tables<"business_photos">[];
+  index: number;
+  onClose: () => void;
+  onIndexChange: (i: number) => void;
+}) {
+  const total = photos.length;
+  const current = photos[index];
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") onIndexChange((index + 1) % total);
+      if (e.key === "ArrowLeft") onIndexChange((index - 1 + total) % total);
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [index, total, onClose, onIndexChange]);
+
+  if (!current) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      {total > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndexChange((index - 1 + total) % total);
+            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            aria-label="Previous"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndexChange((index + 1) % total);
+            }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            aria-label="Next"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </>
+      )}
+      <div
+        className="relative flex max-h-[90vh] max-w-[92vw] items-center justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <BusinessPhotoImage
+          src={current.url}
+          alt={current.caption ?? `Photo ${index + 1}`}
+          className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+        />
+      </div>
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
+        {index + 1} / {total}
+      </div>
+    </div>
+  );
+}
