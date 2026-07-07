@@ -305,6 +305,41 @@ function CategoriesAdmin() {
                           placeholder="utensils"
                         />
                       </div>
+                      <div className="sm:col-span-2 lg:col-span-3">
+                        <Label className="text-xs">Custom icon (PNG/SVG, max 150KB)</Label>
+                        <div className="flex items-center gap-3">
+                          {form.icon_url ? (
+                            <img
+                              src={form.icon_url}
+                              alt="icon preview"
+                              className="h-12 w-12 rounded-lg border border-border object-contain bg-white p-1"
+                            />
+                          ) : (
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                              None
+                            </div>
+                          )}
+                          <Input
+                            type="file"
+                            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleIconFile(f);
+                              e.target.value = "";
+                            }}
+                          />
+                          {form.icon_url ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setForm({ ...form, icon_url: "" })}
+                            >
+                              Remove
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
                       <div>
                         <Label className="text-xs">Color</Label>
                         <Input
@@ -334,6 +369,13 @@ function CategoriesAdmin() {
                     </div>
                   ) : (
                     <div className="flex flex-wrap items-center gap-3">
+                      {(c as unknown as { icon_url?: string | null }).icon_url ? (
+                        <img
+                          src={(c as unknown as { icon_url: string }).icon_url}
+                          alt=""
+                          className="h-10 w-10 rounded-lg border border-border object-contain bg-white p-1"
+                        />
+                      ) : null}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium text-foreground">{c.name}</span>
