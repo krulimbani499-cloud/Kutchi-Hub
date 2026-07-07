@@ -76,16 +76,17 @@ function HomePage() {
               onClick={() =>
                 alert("Download app coming soon! The application link will be added once the app is ready.")
               }
-              className="hidden shrink-0 items-center gap-2 rounded-full border border-border bg-background py-1 pl-4 pr-1 shadow-sm transition hover:shadow-md sm:inline-flex"
+              className="hidden shrink-0 items-center gap-2 rounded-full border border-border bg-background py-1.5 pl-5 pr-2 shadow-sm transition hover:shadow-md sm:inline-flex"
               aria-label="Download App"
             >
-              <span className="text-sm font-medium text-foreground">Download App</span>
-              <span className="relative flex h-8 w-6 items-center justify-center rounded-[6px] border-2 border-foreground bg-background">
-                <span className="absolute -top-[3px] left-1/2 h-[3px] w-2 -translate-x-1/2 rounded-b-sm bg-foreground" />
-                <span className="text-[9px] font-extrabold leading-none">
+              <span className="text-sm font-semibold text-foreground">Download App</span>
+              <span className="relative flex h-10 w-7 flex-col items-center justify-center rounded-[7px] border-[2.5px] border-foreground bg-background">
+                <span className="absolute -top-[4px] left-1/2 h-[4px] w-3 -translate-x-1/2 rounded-b-[2px] bg-foreground" />
+                <span className="text-[10px] font-extrabold leading-none tracking-tight">
                   <span className="text-[#ff6a00]">K</span>
                   <span className="text-[#1a73e8]">h</span>
                 </span>
+                <span className="mt-[3px] h-[3px] w-[3px] rounded-full bg-foreground" />
               </span>
             </button>
           </div>
