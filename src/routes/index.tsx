@@ -92,13 +92,13 @@ function HomePage() {
       {/* Search header — JustDial-style, clean white */}
       <section className="bg-background border-b border-border">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
             <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
               Search across{" "}
               <AnimatedCount target={BUSINESS_COUNT} />{" "}
               <span className="text-[#ff6a00]">Kutchi Businesses</span>
             </h1>
-            <div className="hidden shrink-0 items-center gap-2 sm:flex">
+            <div className="flex shrink-0 items-center gap-2">
               <PWAInstallButton />
               <button
               type="button"
