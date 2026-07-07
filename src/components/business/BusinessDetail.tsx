@@ -115,7 +115,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const hours = (business.hours as Record<string, string> | null) ?? {};
   const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
   const todayHours = hours[today];
-  const isOpen = !!todayHours && todayHours.toLowerCase() !== "closed";
+  const isOpen = isOpenNow(business.hours) === true;
   const addressLine = [business.address, business.city, business.state, business.pincode].filter(Boolean).join(", ");
   const mapsHref = business.latitude != null && business.longitude != null
     ? `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`
