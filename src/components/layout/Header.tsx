@@ -12,6 +12,7 @@ export function Header() {
   const { user, isLoading } = useAuth();
   const [search, setSearch] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasListings, setHasListings] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -22,6 +23,13 @@ export function Header() {
     supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
       if (!cancelled) setIsAdmin(!!data);
     });
+    supabase
+      .from("businesses")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", user.id)
+      .then(({ count }) => {
+        if (!cancelled) setHasListings((count ?? 0) > 0);
+      });
     return () => {
       cancelled = true;
     };
@@ -83,10 +91,17 @@ export function Header() {
                     </Button>
                   )}
                   <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
-                    <Link to="/dashboard">
-                      <User className="mr-1 h-4 w-4" />
-                      My Listings
-                    </Link>
+                    {hasListings ? (
+                      <Link to="/dashboard">
+                        <User className="mr-1 h-4 w-4" />
+                        My Listings
+                      </Link>
+                    ) : (
+                      <Link to="/business/new">
+                        <User className="mr-1 h-4 w-4" />
+                        List Your Business
+                      </Link>
+                    )}
                   </Button>
                   <Button
                     variant="outline"
@@ -98,7 +113,7 @@ export function Header() {
                     Sign out
                   </Button>
                   <Button variant="ghost" size="icon" className="sm:hidden" asChild>
-                    <Link to="/dashboard">
+                    <Link to={hasListings ? "/dashboard" : "/business/new"}>
                       <User className="h-5 w-5" />
                     </Link>
                   </Button>
