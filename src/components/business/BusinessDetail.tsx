@@ -26,11 +26,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { addReview } from "@/lib/businesses.functions";
 import { logBusinessEvent } from "@/lib/leads.functions";
 import { listBusinessServices } from "@/lib/services.functions";
+import { replyToReview } from "@/lib/reviews.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
+import { ReportButton } from "./ReportButton";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface BusinessDetailProps {
@@ -50,11 +52,30 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const { user } = useAuth();
   const submitReview = useServerFn(addReview);
   const logEvent = useServerFn(logBusinessEvent);
+  const replyFn = useServerFn(replyToReview);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyBusy, setReplyBusy] = useState<string | null>(null);
+  const [replySaved, setReplySaved] = useState<Record<string, string>>({});
   const isOwner = !!user && user.id === business.owner_id;
+
+  const handleReply = async (reviewId: string) => {
+    const text = (replyDrafts[reviewId] ?? "").trim();
+    if (!text) return;
+    setReplyBusy(reviewId);
+    try {
+      await replyFn({ data: { reviewId, reply: text } });
+      setReplySaved((s) => ({ ...s, [reviewId]: text }));
+      setReplyDrafts((d) => ({ ...d, [reviewId]: "" }));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setReplyBusy(null);
+    }
+  };
 
   // Track profile view (once per mount)
   useEffect(() => {
@@ -244,6 +265,9 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   city={business.city}
                   defaultName={user ? undefined : ""}
                 />
+                <div className="mt-2">
+                  <ReportButton entityType="business" entityId={business.id} label="Report listing" />
+                </div>
               </div>
             )}
 
@@ -410,7 +434,39 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                     <ThumbsUp className="h-3 w-3" />
                     <span>{review.helpful_count} found helpful</span>
+                    {user && user.id !== review.user_id && (
+                      <div className="ml-auto">
+                        <ReportButton entityType="review" entityId={review.id} label="Report" />
+                      </div>
+                    )}
                   </div>
+                  {(replySaved[review.id] ?? review.owner_reply) && (
+                    <div className="mt-3 rounded-lg border-l-2 border-primary bg-muted/40 p-3">
+                      <div className="text-xs font-semibold text-primary">Owner reply</div>
+                      <p className="mt-1 text-sm text-foreground">
+                        {replySaved[review.id] ?? review.owner_reply}
+                      </p>
+                    </div>
+                  )}
+                  {isOwner && !(replySaved[review.id] ?? review.owner_reply) && (
+                    <div className="mt-3 space-y-2">
+                      <Textarea
+                        placeholder="Reply as owner..."
+                        value={replyDrafts[review.id] ?? ""}
+                        onChange={(e) =>
+                          setReplyDrafts((d) => ({ ...d, [review.id]: e.target.value }))
+                        }
+                        className="min-h-[60px]"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleReply(review.id)}
+                        disabled={replyBusy === review.id || !(replyDrafts[review.id] ?? "").trim()}
+                      >
+                        {replyBusy === review.id ? "Posting..." : "Post reply"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
