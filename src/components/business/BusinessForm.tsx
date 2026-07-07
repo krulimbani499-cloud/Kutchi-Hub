@@ -33,6 +33,7 @@ const businessFormSchema = z.object({
   email: z.union([z.string().email().max(255), z.literal("")]).optional(),
   website: z.union([z.string().url().max(500), z.literal("")]).optional(),
   featured_image: z.string().max(1000).optional(),
+  hours: z.record(z.string()).optional(),
 });
 
 interface BusinessFormProps {
@@ -77,6 +78,14 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     featured_image: initial?.featured_image ?? "",
   });
 
+  const [hours, setHours] = useState<Record<string, string>>(() => {
+    const h = initial?.hours;
+    if (h && typeof h === "object" && !Array.isArray(h)) {
+      return h as Record<string, string>;
+    }
+    return {};
+  });
+
   const slugify = (value: string) =>
     value
       .toLowerCase()
@@ -98,7 +107,7 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     setSubmitting(true);
 
     try {
-      const payload = businessFormSchema.parse(form);
+      const payload = businessFormSchema.parse({ ...form, hours });
       if (initial) {
         await updateFn({ data: { ...payload, id: initial.id, latitude: coords.lat, longitude: coords.lng } });
         setFormMessage("Business updated successfully.");
