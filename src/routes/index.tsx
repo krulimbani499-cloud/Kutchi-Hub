@@ -7,7 +7,7 @@ import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2, Mic, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
 import { MarketingBanner } from "@/components/home/MarketingBanner";
@@ -68,7 +68,7 @@ function HomePage() {
           <div className="flex items-start justify-between gap-4">
             <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
               Search across{" "}
-              <span className="text-[#ff6a00]">10,000+</span>{" "}
+              <AnimatedCount target={BUSINESS_COUNT} />{" "}
               <span className="text-[#ff6a00]">Kutchi Businesses</span>
             </h1>
             <button
