@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Phone, Star, BadgeCheck } from "lucide-react";
+import { MapPin, Phone, Star, BadgeCheck, MessageCircle, Clock } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
@@ -17,6 +17,7 @@ interface BusinessCardProps {
     verified: boolean;
     featured_image: string | null;
     featured_image_url?: string | null;
+    hours?: unknown;
     avgRating?: number;
     reviewCount?: number;
     categories: { id: string; name: string; slug: string; color: string | null } | null;
@@ -25,6 +26,20 @@ interface BusinessCardProps {
 
 export function BusinessCard({ business }: BusinessCardProps) {
   const imageSrc = business.featured_image_url ?? business.featured_image;
+  const hours =
+    business.hours && typeof business.hours === "object" && !Array.isArray(business.hours)
+      ? (business.hours as Record<string, string>)
+      : null;
+  const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+  const todayHours = hours?.[today];
+  const hasHours = hours && Object.keys(hours).length > 0;
+  const isOpen = !!todayHours && todayHours.toLowerCase() !== "closed";
+  const cleanPhone = business.phone?.replace(/[^\d+]/g, "") ?? "";
+  const waHref = cleanPhone
+    ? `https://wa.me/${cleanPhone.replace(/^\+/, "")}?text=${encodeURIComponent(
+        `Hi, I found ${business.name} on Kutchi Hub. `,
+      )}`
+    : "";
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
@@ -51,6 +66,18 @@ export function BusinessCard({ business }: BusinessCardProps) {
         <div className="absolute left-2 top-2 z-20">
           <FavoriteButton businessId={business.id} size="sm" />
         </div>
+        {hasHours && (
+          <div
+            className={`absolute bottom-2 left-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold shadow-sm ${
+              isOpen
+                ? "bg-emerald-500/95 text-white"
+                : "bg-red-500/95 text-white"
+            }`}
+          >
+            <Clock className="h-3 w-3" />
+            {isOpen ? "Open now" : "Closed"}
+          </div>
+        )}
       </div>
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-1 flex items-start justify-between gap-2">
@@ -81,7 +108,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
           <Button
             size="sm"
             variant="outline"
-            className="flex-1"
+            className="flex-1 px-2"
             onClick={(e) => {
               e.preventDefault();
               window.location.href = `tel:${business.phone}`;
@@ -91,7 +118,23 @@ export function BusinessCard({ business }: BusinessCardProps) {
             <Phone className="mr-1 h-3.5 w-3.5" />
             Call
           </Button>
-          <Button size="sm" className="flex-1 bg-primary text-primary-foreground" asChild>
+          {business.phone && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 border-emerald-500/30 bg-emerald-50 px-2 text-emerald-700 hover:bg-emerald-100"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(waHref, "_blank", "noopener,noreferrer");
+              }}
+              aria-label="Chat on WhatsApp"
+            >
+              <MessageCircle className="mr-1 h-3.5 w-3.5" />
+              WhatsApp
+            </Button>
+          )}
+          <Button size="sm" className="flex-1 bg-primary px-2 text-primary-foreground" asChild>
             <Link to="/business/$slug" params={{ slug: business.slug }}>
               Details
             </Link>
