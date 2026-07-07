@@ -325,6 +325,8 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
       </div>
 
+      <HoursEditor hours={hours} onChange={setHours} />
+
       <div className="rounded-lg border border-border bg-muted/50 p-4">
         <div className="mb-2 flex items-center justify-between gap-2">
           <Label>Map location</Label>
