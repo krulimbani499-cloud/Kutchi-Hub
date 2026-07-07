@@ -8,6 +8,27 @@
   display: none !important;
 }
 
+@keyframes phone-wiggle {
+  0%, 92%, 100% { transform: rotate(0deg); }
+  94% { transform: rotate(-12deg); }
+  96% { transform: rotate(12deg); }
+  98% { transform: rotate(-6deg); }
+}
+
+@keyframes shimmer-slide {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(220%) skewX(-20deg); }
+}
+
+.animate-phone-wiggle {
+  animation: phone-wiggle 3.2s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+
+.animate-shimmer-slide {
+  animation: shimmer-slide 2.8s ease-in-out infinite;
+}
+
 /*
  * Design system definition.
  *
