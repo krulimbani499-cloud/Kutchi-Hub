@@ -19,6 +19,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TravelFlightBookingRouteImport } from './routes/travel.flight-booking'
 import { Route as BusinessSlugRouteImport } from './routes/business.$slug'
+import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedBusinessNewRouteImport } from './routes/_authenticated/business.new'
@@ -74,6 +75,11 @@ const BusinessSlugRoute = BusinessSlugRouteImport.update({
   path: '/business/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedFavoritesRoute = AuthenticatedFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/favorites': typeof AuthenticatedFavoritesRoute
   '/business/$slug': typeof BusinessSlugRoute
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/favorites': typeof AuthenticatedFavoritesRoute
   '/business/$slug': typeof BusinessSlugRoute
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
   '/business/$slug': typeof BusinessSlugRoute
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/_authenticated/business/new': typeof AuthenticatedBusinessNewRoute
@@ -165,6 +174,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin'
     | '/dashboard'
+    | '/favorites'
     | '/business/$slug'
     | '/travel/flight-booking'
     | '/business/new'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin'
     | '/dashboard'
+    | '/favorites'
     | '/business/$slug'
     | '/travel/flight-booking'
     | '/business/new'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
+    | '/_authenticated/favorites'
     | '/business/$slug'
     | '/travel/flight-booking'
     | '/_authenticated/business/new'
@@ -290,6 +302,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/favorites': {
+      id: '/_authenticated/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof AuthenticatedFavoritesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -331,6 +350,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFavoritesRoute: typeof AuthenticatedFavoritesRoute
   AuthenticatedBusinessNewRoute: typeof AuthenticatedBusinessNewRoute
   AuthenticatedBusinessSlugClaimRoute: typeof AuthenticatedBusinessSlugClaimRoute
   AuthenticatedBusinessSlugEditRoute: typeof AuthenticatedBusinessSlugEditRoute
@@ -339,6 +359,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFavoritesRoute: AuthenticatedFavoritesRoute,
   AuthenticatedBusinessNewRoute: AuthenticatedBusinessNewRoute,
   AuthenticatedBusinessSlugClaimRoute: AuthenticatedBusinessSlugClaimRoute,
   AuthenticatedBusinessSlugEditRoute: AuthenticatedBusinessSlugEditRoute,
