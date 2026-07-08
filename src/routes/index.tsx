@@ -24,6 +24,7 @@ import tileRealEstate from "@/assets/tile-realestate.jpg";
 import tileDoctors from "@/assets/tile-doctors.jpg";
 import { useCity } from "@/hooks/useCity";
 import { Reveal } from "@/components/Reveal";
+import { BASE_URL, ldScript, breadcrumbLd } from "@/lib/seo";
 
 const homeQueryOptions = (city?: string) =>
   queryOptions({
@@ -34,12 +35,17 @@ const homeQueryOptions = (city?: string) =>
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kutchi Hub — Discover Local Businesses" },
-      { name: "description", content: "Find the best restaurants, hospitals, salons, hotels and more near you." },
-      { property: "og:title", content: "Kutchi Hub — Discover Local Businesses" },
-      { property: "og:description", content: "Find the best restaurants, hospitals, salons, hotels and more near you." },
-      { property: "og:image", content: ogImage },
-      { name: "twitter:image", content: ogImage },
+      { title: "Kutchi Hub — Find Local Businesses, Reviews & Contacts" },
+      { name: "description", content: "Find the best restaurants, doctors, salons, shops and services in Kutch. Read verified reviews, view hours and get directions on Kutchi Hub." },
+      { property: "og:title", content: "Kutchi Hub — Find Local Businesses, Reviews & Contacts" },
+      { property: "og:description", content: "Find the best restaurants, doctors, salons, shops and services in Kutch. Read verified reviews, view hours and get directions on Kutchi Hub." },
+      { property: "og:url", content: BASE_URL },
+      { property: "og:image", content: `${BASE_URL}${ogImage}` },
+      { name: "twitter:image", content: `${BASE_URL}${ogImage}` },
+    ],
+    links: [{ rel: "canonical", href: BASE_URL }],
+    scripts: [
+      ldScript(breadcrumbLd([{ name: "Home", url: "/" }])),
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(homeQueryOptions()),
