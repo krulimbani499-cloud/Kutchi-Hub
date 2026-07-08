@@ -228,6 +228,20 @@ export function AuthForms() {
                 </button>
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="referral" className="flex items-center gap-1">
+                <Gift className="h-3.5 w-3.5 text-[#ff6a00]" />
+                Referral code <span className="text-xs text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="referral"
+                value={referral}
+                onChange={(e) => setReferral(e.target.value.toUpperCase())}
+                placeholder="Get +50 bonus points"
+                maxLength={12}
+                className="font-mono uppercase tracking-widest"
+              />
+            </div>
             <Button type="submit" className="w-full bg-primary text-primary-foreground" disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Create account
