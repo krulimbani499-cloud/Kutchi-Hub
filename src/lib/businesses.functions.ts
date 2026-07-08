@@ -486,6 +486,73 @@ export const getHomeData = createServerFn({ method: "GET" })
     return { categories: categories ?? [], featured: listings, topOffers };
   });
 
+// Personalized recommendations based on the user's recently-viewed categories.
+// Client passes category slugs (from localStorage) + business IDs to exclude.
+export const getRecommendations = createServerFn({ method: "GET" })
+  .inputValidator((input) =>
+    z
+      .object({
+        categorySlugs: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
+        excludeIds: z.array(z.string().uuid()).max(24).default([]),
+        city: z.string().trim().max(80).optional(),
+        limit: z.coerce.number().int().min(1).max(12).optional().default(8),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    if (data.categorySlugs.length === 0) return [];
+    const supabase = createServerSupabaseClient();
+
+    const { data: cats } = await supabase
+      .from("categories")
+      .select("id")
+      .in("slug", data.categorySlugs);
+    const categoryIds = (cats ?? []).map((c) => c.id);
+    if (categoryIds.length === 0) return [];
+
+    let query = supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, description, address, city, phone, verified, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)",
+      )
+      .eq("status", "published")
+      .in("category_id", categoryIds)
+      .order("verified", { ascending: false })
+      .limit(data.limit * 2);
+
+    if (data.city) query = query.ilike("city", data.city);
+    if (data.excludeIds.length > 0) {
+      query = query.not("id", "in", `(${data.excludeIds.join(",")})`);
+    }
+
+    const { data: businesses, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const ids = (businesses ?? []).map((b) => b.id);
+    let ratings = new Map<string, { count: number; sum: number }>();
+    if (ids.length > 0) {
+      const { data: counts } = await supabase
+        .from("business_reviews")
+        .select("business_id, rating")
+        .in("business_id", ids);
+      for (const r of counts ?? []) {
+        const e = ratings.get(r.business_id) ?? { count: 0, sum: 0 };
+        e.count += 1;
+        e.sum += r.rating;
+        ratings.set(r.business_id, e);
+      }
+    }
+
+    return (businesses ?? []).slice(0, data.limit).map((b) => {
+      const r = ratings.get(b.id);
+      return {
+        ...b,
+        avgRating: r ? Number((r.sum / r.count).toFixed(1)) : 0,
+        reviewCount: r?.count ?? 0,
+      };
+    });
+  });
+
 const businessFormSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2).max(120),

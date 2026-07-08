@@ -15,6 +15,7 @@ import { CollectionsSection } from "@/components/home/CollectionsSection";
 import { TravelBookingsSection } from "@/components/home/TravelBookingsSection";
 import { PopularSearches } from "@/components/home/PopularSearches";
 import { RecentlyViewed } from "@/components/home/RecentlyViewed";
+import { ForYou } from "@/components/home/ForYou";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import tileB2B from "@/assets/tile-b2b.jpg";
 import tileRepairs from "@/assets/tile-repairs.jpg";
@@ -156,6 +157,9 @@ function HomePage() {
 
       {/* Recently viewed (localStorage) */}
       <RecentlyViewed />
+
+      {/* Personalized recommendations */}
+      <ForYou />
 
       {/* Promo banner + feature tiles row */}
       <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
