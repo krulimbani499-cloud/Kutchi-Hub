@@ -763,3 +763,79 @@ function VerifyBusinessesAdmin() {
     </div>
   );
 }
+
+function AuditLogsAdmin() {
+  const { data: logs } = useSuspenseQuery(auditLogsQueryOptions);
+  const [query, setQuery] = useState("");
+
+  const filtered = logs.filter((l) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (
+      l.event_type.toLowerCase().includes(q) ||
+      (l.actor_id ?? "").toLowerCase().includes(q) ||
+      (l.target_user_id ?? "").toLowerCase().includes(q) ||
+      l.details.toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="mt-10">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Audit Logs</h2>
+          <p className="text-sm text-muted-foreground">
+            Security-sensitive events — role grants and revocations. Latest 200.
+          </p>
+        </div>
+        <Badge variant="secondary">{logs.length} events</Badge>
+      </div>
+
+      <div className="mb-3">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by event, user id, or details"
+          className="max-w-sm"
+        />
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {filtered.length === 0 ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">No audit events yet.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {filtered.map((l) => {
+                const isGrant = l.event_type === "role_granted";
+                return (
+                  <li key={l.id} className="p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className={isGrant ? "bg-emerald-600 text-white hover:bg-emerald-600" : "bg-destructive text-destructive-foreground hover:bg-destructive"}>
+                        {l.event_type}
+                      </Badge>
+                      <code className="text-xs text-muted-foreground">{l.details}</code>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {new Date(l.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="mt-1 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                      <div>
+                        <span className="font-medium">Actor:</span>{" "}
+                        <code>{l.actor_id ?? "system"}</code>
+                      </div>
+                      <div>
+                        <span className="font-medium">Target:</span>{" "}
+                        <code>{l.target_user_id ?? "—"}</code>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
