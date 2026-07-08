@@ -15,14 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X } from "lucide-react";
+import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X, Tag } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCity } from "@/hooks/useCity";
 
-const searchQueryOptions = (q: string, category: string, city: string, sort: string) =>
+const searchQueryOptions = (q: string, category: string, city: string, sort: string, hasDiscount: boolean) =>
   queryOptions({
-    queryKey: ["search", q, category, city, sort],
-    queryFn: () => searchBusinesses({ data: { q, category, city, sort } }),
+    queryKey: ["search", q, category, city, sort, hasDiscount],
+    queryFn: () => searchBusinesses({ data: { q, category, city, sort, hasDiscount } }),
   });
 
 const categoriesQueryOptions = queryOptions({
@@ -92,7 +92,10 @@ function SearchPage() {
     }));
   }, [q, category, city, sort]);
 
-  const { data: results, isLoading } = useSuspenseQuery(searchQueryOptions(applied.q, applied.category, applied.city, applied.sort));
+  const [chipDiscount, setChipDiscount] = useState(false);
+  const { data: results, isLoading } = useSuspenseQuery(
+    searchQueryOptions(applied.q, applied.category, applied.city, applied.sort, chipDiscount),
+  );
 
   const [chipVerified, setChipVerified] = useState(false);
   const [chipOpenNow, setChipOpenNow] = useState(false);
@@ -178,6 +181,7 @@ function SearchPage() {
               <SelectItem value="relevance">Relevance</SelectItem>
               <SelectItem value="rating">Top rated</SelectItem>
               <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="discount">Top discount</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -190,6 +194,12 @@ function SearchPage() {
           onClick={() => setChipVerified((v) => !v)}
           icon={<BadgeCheck className="h-3.5 w-3.5" />}
           label="Verified"
+        />
+        <FilterChip
+          active={chipDiscount}
+          onClick={() => setChipDiscount((v) => !v)}
+          icon={<Tag className="h-3.5 w-3.5" />}
+          label="Has discount"
         />
         <FilterChip
           active={chipOpenNow}
