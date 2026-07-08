@@ -112,7 +112,7 @@ function AdminPage() {
         <Badge variant="secondary">{pending.length} pending</Badge>
       </div>
 
-      <Tabs defaultValue="pending" className="w-full">
+      <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 bg-muted p-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="pending">
