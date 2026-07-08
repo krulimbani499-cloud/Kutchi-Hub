@@ -29,8 +29,13 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     if (data.q) {
       const term = data.q.trim();
       if (term) {
+        // Match against name/description/city AND category name/slug so
+        // typing a category-like term ("restaurants") also finds
+        // businesses tagged with that category even if the word isn't
+        // in their name/description.
+        const like = term.replace(/[,()]/g, " ");
         query = query.or(
-          `name.ilike.%${term}%,description.ilike.%${term}%,city.ilike.%${term}%`,
+          `name.ilike.%${like}%,description.ilike.%${like}%,city.ilike.%${like}%,categories.name.ilike.%${like}%,categories.slug.ilike.%${like}%`,
         );
       }
     }
