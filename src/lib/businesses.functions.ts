@@ -1001,3 +1001,58 @@ export const getSitemapData = createServerFn({ method: "GET" }).handler(async ()
     cities,
   };
 });
+
+// -------- App-exclusive discount claims --------
+
+function generateClaimCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < 6; i++) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return `KH-${out}`;
+}
+
+export const claimDiscount = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    const { data: business, error: bErr } = await supabase
+      .from("businesses")
+      .select("id, app_discount_percent, app_discount_valid_until")
+      .eq("id", data.businessId)
+      .eq("status", "published")
+      .maybeSingle();
+    if (bErr) throw new Error(bErr.message);
+    if (!business || !business.app_discount_percent || business.app_discount_percent <= 0) {
+      throw new Error("No active discount for this business.");
+    }
+    if (business.app_discount_valid_until) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (business.app_discount_valid_until < today) {
+        throw new Error("This discount has expired.");
+      }
+    }
+    const code = generateClaimCode();
+    const { error } = await supabase.from("discount_claims").insert({
+      business_id: business.id,
+      code,
+      discount_percent: business.app_discount_percent,
+    });
+    if (error) throw new Error(error.message);
+    return { code, discountPercent: business.app_discount_percent };
+  });
+
+export const listBusinessDiscountClaims = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("discount_claims")
+      .select("id, code, discount_percent, claimed_at")
+      .eq("business_id", data.businessId)
+      .order("claimed_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
