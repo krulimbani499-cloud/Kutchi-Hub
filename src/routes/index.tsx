@@ -70,7 +70,7 @@ function AnimatedCount({ target }: { target: number }) {
 
 function HomePage() {
   const { city } = useCity();
-  const { data: home } = useSuspenseQuery(homeQueryOptions(city));
+  const { data: home } = useSuspenseQuery(homeQueryOptions(city ?? undefined));
   const [search, setSearch] = useState("");
 
   const submitSearch = (q?: string) => {
