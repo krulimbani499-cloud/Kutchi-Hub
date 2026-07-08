@@ -58,10 +58,13 @@ export const adminUpdateReport = createServerFn({ method: "POST" })
     });
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const update: Record<string, unknown> = { status: data.status };
-    if (typeof data.adminNotes === "string") update.admin_notes = data.adminNotes;
-
-    const { error } = await supabase.from("reports").update(update).eq("id", data.id);
+    const { error } = await supabase
+      .from("reports")
+      .update({
+        status: data.status,
+        ...(typeof data.adminNotes === "string" ? { admin_notes: data.adminNotes } : {}),
+      })
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { success: true };
   });
