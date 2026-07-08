@@ -182,11 +182,11 @@ function HomePage() {
           {/* Feature tiles */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {featureTiles.map((t, i) => (
-              <Reveal key={t.title} delay={i * 80} y={12}>
+              <Reveal key={t.title} delay={i * 80} y={12} className="h-full">
                 <Link
                 key={t.title}
                 to="/categories"
-                className={`group relative block overflow-hidden rounded-2xl bg-gradient-to-br ${t.bg} p-4 text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`}
+                className={`group relative flex h-full flex-col overflow-hidden rounded-2xl bg-gradient-to-br ${t.bg} p-4 text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`}
               >
                 <div className="relative z-10">
                   <p className="text-sm font-extrabold uppercase leading-tight">{t.title}</p>
