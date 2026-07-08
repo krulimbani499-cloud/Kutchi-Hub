@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbox } from "lucide-react";
 import { BarChart3 } from "lucide-react";
 import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCard";
+import { RewardsCard } from "@/components/gamification/RewardsCard";
 
 const dashboardQueryOptions = queryOptions({
   queryKey: ["dashboard"],
@@ -265,6 +266,10 @@ function DashboardPage() {
               )}
             </CardContent>
           </Card>
+
+          <div className="mt-6">
+            <RewardsCard />
+          </div>
         </div>
       </div>
     </div>

@@ -16,6 +16,7 @@ import { TravelBookingsSection } from "@/components/home/TravelBookingsSection";
 import { PopularSearches } from "@/components/home/PopularSearches";
 import { RecentlyViewed } from "@/components/home/RecentlyViewed";
 import { ForYou } from "@/components/home/ForYou";
+import { LeaderboardSection } from "@/components/gamification/LeaderboardSection";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import tileB2B from "@/assets/tile-b2b.jpg";
 import tileRepairs from "@/assets/tile-repairs.jpg";
@@ -291,6 +292,9 @@ function HomePage() {
 
       {/* Travel bookings */}
       <Reveal><TravelBookingsSection /></Reveal>
+
+      {/* Top Contributors leaderboard */}
+      <LeaderboardSection />
 
       {/* Bottom CTA — subtle */}
       <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-8">
