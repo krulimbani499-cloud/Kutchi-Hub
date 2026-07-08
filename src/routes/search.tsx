@@ -39,7 +39,7 @@ export const Route = createFileRoute("/search")({
       { property: "og:description", content: "Search Kutchi businesses across categories and cities. Verified listings, reviews and direct contact." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "robots", content: "index,follow" },
+      { name: "robots", content: "noindex,follow" },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions),
