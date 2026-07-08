@@ -6,19 +6,22 @@ import { useAuth } from "@/lib/auth";
 export const Route = createFileRoute("/list-your-business")({
   head: () => ({
     meta: [
-      { title: "List Your Business — Kutchi Hub" },
+      { title: "List Your Business Free — Kutchi Hub" },
       {
         name: "description",
         content:
           "List your Kutchi business on Kutchi Hub only in ₹500 and get discovered by thousands of local customers.",
       },
-      { property: "og:title", content: "List Your Business — Kutchi Hub" },
+      { property: "og:title", content: "List Your Business Free — Kutchi Hub" },
       {
         property: "og:description",
         content:
           "Get discovered by thousands of Kutchi customers. List your business on Kutchi Hub for just ₹500.",
       },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://kutchi-hub.lovable.app/list-your-business" },
     ],
+    links: [{ rel: "canonical", href: "https://kutchi-hub.lovable.app/list-your-business" }],
   }),
   component: ListYourBusinessPage,
 });
