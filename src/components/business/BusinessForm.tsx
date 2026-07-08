@@ -341,6 +341,60 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
       </div>
 
+      <div className="rounded-lg border border-[#ff6a00]/30 bg-[#ff6a00]/5 p-4">
+        <div className="mb-1 flex items-center gap-2">
+          <Label className="text-base">App-exclusive discount</Label>
+          <span className="rounded-full bg-[#ff6a00] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            Optional
+          </span>
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Offer a special % OFF only for customers who show your listing on Kutchi Hub at your shop.
+          Leave blank to skip.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="app_discount_percent">Discount %</Label>
+            <Input
+              id="app_discount_percent"
+              type="number"
+              min={0}
+              max={100}
+              placeholder="e.g. 10"
+              value={form.app_discount_percent}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, app_discount_percent: e.target.value }))
+              }
+            />
+            {errors.app_discount_percent && (
+              <p className="text-xs text-destructive">{errors.app_discount_percent}</p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="app_discount_label">Label (optional)</Label>
+            <Input
+              id="app_discount_label"
+              placeholder="e.g. On total bill"
+              value={form.app_discount_label}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, app_discount_label: e.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="app_discount_valid_until">Valid until (optional)</Label>
+            <Input
+              id="app_discount_valid_until"
+              type="date"
+              value={form.app_discount_valid_until}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, app_discount_valid_until: e.target.value }))
+              }
+            />
+          </div>
+        </div>
+      </div>
+
       <HoursEditor hours={hours} onChange={setHours} />
 
       <div className="rounded-lg border border-border bg-muted/50 p-4">
