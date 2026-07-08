@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getBusinessAnalytics } from "@/lib/leads.functions";
-import { Eye, Phone, MessageSquare, Globe, Navigation, Share2, Inbox } from "lucide-react";
+import { listBusinessDiscountClaims } from "@/lib/businesses.functions";
+import { Eye, Phone, MessageSquare, Globe, Navigation, Share2, Inbox, Tag } from "lucide-react";
 
 interface Props { businessId: string; businessName: string }
 
@@ -8,6 +9,11 @@ export function BusinessAnalyticsCard({ businessId, businessName }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ["analytics", businessId],
     queryFn: () => getBusinessAnalytics({ data: { businessId } }),
+  });
+
+  const { data: claims } = useQuery({
+    queryKey: ["discount-claims", businessId],
+    queryFn: () => listBusinessDiscountClaims({ data: { businessId } }),
   });
 
   const t = data?.totals ?? { view: 0, call_click: 0, whatsapp_click: 0, website_click: 0, direction_click: 0, share_click: 0, enquiry_submit: 0 };
@@ -20,6 +26,7 @@ export function BusinessAnalyticsCard({ businessId, businessName }: Props) {
     { label: "Website", value: t.website_click, icon: Globe, color: "text-cyan-600" },
     { label: "Shares", value: t.share_click, icon: Share2, color: "text-slate-600" },
     { label: "Enquiries", value: t.enquiry_submit, icon: Inbox, color: "text-rose-600" },
+    { label: "Coupon Claims", value: claims?.length ?? 0, icon: Tag, color: "text-[#ff6a00]" },
   ];
 
   return (
@@ -31,7 +38,7 @@ export function BusinessAnalyticsCard({ businessId, businessName }: Props) {
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           {stats.map((s) => (
             <div key={s.label} className="rounded-md bg-muted/40 p-2 text-center">
               <s.icon className={`mx-auto mb-1 h-4 w-4 ${s.color}`} />
