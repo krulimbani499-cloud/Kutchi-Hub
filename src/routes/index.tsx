@@ -22,10 +22,11 @@ import tileRealEstate from "@/assets/tile-realestate.jpg";
 import tileDoctors from "@/assets/tile-doctors.jpg";
 import { useCity } from "@/hooks/useCity";
 
-const homeQueryOptions = queryOptions({
-  queryKey: ["home"],
-  queryFn: () => getHomeData(),
-});
+const homeQueryOptions = (city?: string) =>
+  queryOptions({
+    queryKey: ["home", city ?? null],
+    queryFn: () => getHomeData({ data: { city } }),
+  });
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -38,7 +39,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:image", content: ogImage },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(homeQueryOptions),
+  loader: ({ context }) => context.queryClient.ensureQueryData(homeQueryOptions()),
   component: HomePage,
 });
 
@@ -68,9 +69,9 @@ function AnimatedCount({ target }: { target: number }) {
 }
 
 function HomePage() {
-  const { data: home } = useSuspenseQuery(homeQueryOptions);
-  const [search, setSearch] = useState("");
   const { city } = useCity();
+  const { data: home } = useSuspenseQuery(homeQueryOptions(city));
+  const [search, setSearch] = useState("");
 
   const submitSearch = (q?: string) => {
     const params = new URLSearchParams();
