@@ -22,7 +22,7 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     let query = supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, state, phone, verified, featured_image, hours, status, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, state, phone, verified, featured_image, hours, status, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published");
 
@@ -411,7 +411,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     const city = data?.city?.trim();
     let featuredQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)")
+      .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
       .eq("status", "published")
       .order("verified", { ascending: false })
       .limit(8);
@@ -465,6 +465,9 @@ const businessFormSchema = z.object({
   longitude: z.coerce.number().nullable().optional(),
   hours: z.record(z.string()).optional(),
   featured_image: z.string().max(1000).optional().or(z.literal("")),
+  app_discount_percent: z.coerce.number().int().min(0).max(100).nullable().optional(),
+  app_discount_label: z.string().max(80).optional().or(z.literal("")),
+  app_discount_valid_until: z.string().max(20).optional().or(z.literal("")),
 });
 
 export const createBusiness = createServerFn({ method: "POST" })
