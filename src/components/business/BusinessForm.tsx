@@ -116,7 +116,14 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     setSubmitting(true);
 
     try {
-      const payload = businessFormSchema.parse({ ...form, hours });
+      const normalized = {
+        ...form,
+        app_discount_percent:
+          form.app_discount_percent === "" ? undefined : Number(form.app_discount_percent),
+        app_discount_label: form.app_discount_label || undefined,
+        app_discount_valid_until: form.app_discount_valid_until || undefined,
+      };
+      const payload = businessFormSchema.parse({ ...normalized, hours });
       if (initial) {
         await updateFn({ data: { ...payload, id: initial.id, latitude: coords.lat, longitude: coords.lng } });
         setFormMessage("Business updated successfully.");
