@@ -15,6 +15,7 @@ import {
   adminDeleteBannerAd,
   adminListPublishedBusinesses,
   adminSetVerified,
+  adminListAuditLogs,
 } from "@/lib/businesses.functions";
 import { getDashboard } from "@/lib/businesses.functions";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,11 @@ const verifyAdminQueryOptions = queryOptions({
   queryFn: () => adminListPublishedBusinesses(),
 });
 
+const auditLogsQueryOptions = queryOptions({
+  queryKey: ["admin", "audit-logs"],
+  queryFn: () => adminListAuditLogs(),
+});
+
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
@@ -64,6 +70,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
       context.queryClient.ensureQueryData(categoriesAdminQueryOptions),
       context.queryClient.ensureQueryData(bannersAdminQueryOptions),
       context.queryClient.ensureQueryData(verifyAdminQueryOptions),
+      context.queryClient.ensureQueryData(auditLogsQueryOptions),
     ]);
   },
   component: AdminPage,
@@ -188,6 +195,7 @@ function AdminPage() {
       <CategoriesAdmin />
       <BannersAdmin />
       <VerifyBusinessesAdmin />
+      <AuditLogsAdmin />
     </div>
   );
 }
