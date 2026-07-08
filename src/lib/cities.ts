@@ -24,7 +24,39 @@ export const INDIAN_CITIES = [
   "Keshod", "Manavadar", "Vanthali", "Kodinar", "Una", "Talala", "Sutrapada", "Diu",
   "Chalala", "Damnagar", "Lathi", "Rajula", "Jafrabad",
   // Gujarat — Kutch towns
-  "Nakhatrana", "Abdasa", "Lakhpat", "Bhachau Rural",
+  "Nakhatrana", "Abdasa", "Lakhpat", "Bhachau Rural", "Bhirandiyara", "Khavda", "Naliya", "Dayapar", "Bhuj Rural",
+  // Gujarat — Banaskantha / Patan / Mehsana extra towns
+  "Dhanera", "Vadgam", "Amirgadh", "Danta", "Diyodar", "Kankrej", "Bhabhar", "Suigam", "Vav",
+  "Sami", "Harij", "Chanasma", "Santalpur", "Sarasvati", "Kheralu", "Satlasana", "Becharaji", "Kadi", "Kheda (Meh)",
+  "Ambaji", "Iqbalgadh",
+  // Gujarat — Sabarkantha / Aravalli extra
+  "Prantij", "Talod", "Poshina", "Vijaynagar", "Dhansura", "Bhiloda",
+  // Gujarat — Ahmedabad district extra
+  "Bagodara", "Rekhiyal", "Chaloda", "Nal Sarovar", "Vatva", "Naroda", "Bopal", "Ghatlodia", "Chandkheda",
+  // Gujarat — Kheda / Anand / Mahisagar extra
+  "Vaso", "Matar", "Galteshwar", "Dakor", "Sojitra", "Tarapur", "Ode", "Sarsa", "Anklav", "Khambholaj",
+  "Virpur", "Khanpur",
+  // Gujarat — Panchmahal / Dahod extra
+  "Kalol (Panchmahal)", "Ghoghamba", "Morva Hadaf", "Devgadh Baria", "Limkheda", "Zalod", "Fatepura",
+  "Sanjeli", "Garbada", "Dhanpur",
+  // Gujarat — Vadodara / Chhota Udepur extra
+  "Padra", "Karjan", "Savli", "Waghodia", "Dabhoi", "Sinor", "Chhota Udepur", "Kavant", "Bodeli",
+  "Sankheda", "Pavi Jetpur", "Naswadi", "Tilakwada", "Garudeshwar", "Nandod",
+  // Gujarat — Bharuch / Narmada / Surat extra
+  "Hansot", "Valia", "Netrang", "Jambusar", "Palej", "Kim", "Kosamba", "Mangrol (Surat)",
+  "Bardoli", "Mandvi (Surat)", "Vyara Rural", "Kamrej", "Olpad", "Choryasi", "Umarpada", "Mahuva (Surat)",
+  // Gujarat — Tapi / Dang / Navsari / Valsad extra
+  "Nizar", "Kukarmunda", "Valod", "Dolvan", "Subir", "Chikhli", "Gandevi", "Jalalpore",
+  "Khergam", "Vansda", "Dharampur", "Kaprada", "Umbergaon", "Pardi", "Nargol", "Tithal",
+  // Gujarat — Saurashtra extra
+  "Ranavav", "Kutiyana", "Bhanvad", "Jodiya", "Kalavad", "Dhrol", "Lalpur", "Khambhalia",
+  "Bhesan", "Visavadar", "Mendarda", "Malia Hatina", "Mangrol (Junagadh)", "Chorwad",
+  "Ghoghavadar", "Kotda Sangani", "Jasdan", "Vinchhiya", "Paddhari", "Lodhika", "Jamkandorna",
+  "Babra", "Lilia", "Bagasara", "Kunkavav", "Vadia", "Gariadhar", "Umrala", "Vallabhipur",
+  "Ghogha", "Talaja", "Gadhada", "Ranpur (Botad)", "Barwala (Botad)", "Limbdi", "Sayla",
+  "Chuda", "Lakhtar", "Thangadh", "Patdi", "Dasada", "Bajana", "Tikar",
+  // Gujarat — Diu / Daman / Silvassa (UT nearby, commonly used)
+  "Daman", "Silvassa",
   // Rest of India — kept from before
   "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad",
   "Delhi", "New Delhi", "Noida", "Gurgaon", "Faridabad", "Ghaziabad",
