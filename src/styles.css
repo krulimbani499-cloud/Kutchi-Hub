@@ -40,6 +40,17 @@
   100% { background-position: 0% 50%; }
 }
 
+@keyframes text-shine {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0.9); opacity: 0; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
 .animate-phone-wiggle {
   animation: phone-wiggle 3.2s ease-in-out infinite;
   transform-origin: 50% 90%;
@@ -62,12 +73,27 @@
   animation: gradient-pan 8s ease infinite;
 }
 
+.animate-text-shine {
+  background: linear-gradient(90deg, #ff6a00 0%, #ffb26b 25%, #ff6a00 50%, #e65a00 75%, #ff6a00 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shine 4.5s linear infinite;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-phone-wiggle,
   .animate-shimmer-slide,
   .animate-float-y,
   .animate-pulse-glow,
-  .animate-gradient-pan { animation: none !important; }
+  .animate-gradient-pan,
+  .animate-text-shine,
+  .animate-bounce-in { animation: none !important; }
 }
 
 /*
