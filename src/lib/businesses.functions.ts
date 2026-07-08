@@ -682,31 +682,20 @@ export const adminListAuditLogs = createServerFn({ method: "GET" })
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const { data, error } = await (supabase as unknown as {
-      from: (t: string) => {
-        select: (s: string) => {
-          order: (c: string, o: { ascending: boolean }) => {
-            limit: (n: number) => Promise<{
-              data: Array<{
-                id: string;
-                event_type: string;
-                actor_id: string | null;
-                target_user_id: string | null;
-                details: Record<string, unknown>;
-                created_at: string;
-              }> | null;
-              error: { message: string } | null;
-            }>;
-          };
-        };
-      };
-    })
+    const { data, error } = await supabase
       .from("audit_logs")
       .select("id, event_type, actor_id, target_user_id, details, created_at")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      event_type: row.event_type,
+      actor_id: row.actor_id,
+      target_user_id: row.target_user_id,
+      details: JSON.stringify(row.details ?? {}),
+      created_at: row.created_at,
+    }));
   });
 
 const reviewSchema = z.object({
