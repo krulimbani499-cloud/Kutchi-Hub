@@ -98,8 +98,8 @@ function CityPage() {
             {categories.slice(0, 12).map((c) => (
               <Link
                 key={c.slug}
-                to="/search"
-                search={{ category: c.slug, city: cityName }}
+                to="/city/$slug/category/$category"
+                params={{ slug, category: c.slug }}
                 className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
               >
                 {c.name} <span className="text-muted-foreground">({c.count})</span>
