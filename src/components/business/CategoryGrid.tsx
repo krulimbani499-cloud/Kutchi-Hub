@@ -125,7 +125,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
   const sizeClasses =
     size === "sm"
       ? "grid-cols-2 sm:grid-cols-3"
-      : "grid-cols-4 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10";
+      : "grid-cols-3 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10";
 
   return (
     <div className={`grid gap-3 ${sizeClasses}`}>
@@ -146,7 +146,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
                 <span aria-hidden>{emoji}</span>
               )}
             </div>
-            <span className="text-[11px] sm:text-xs font-medium text-foreground leading-tight break-words hyphens-auto w-full">{category.name}</span>
+            <span className="text-xs font-medium text-foreground leading-tight whitespace-nowrap">{category.name}</span>
           </Link>
         );
       })}
