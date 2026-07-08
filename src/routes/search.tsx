@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useCity } from "@/hooks/useCity";
 
 const searchQueryOptions = (q: string, category: string, city: string, sort: string) =>
   queryOptions({
@@ -53,13 +54,23 @@ function SearchPage() {
     sort?: string;
   };
   const { data: categories } = useSuspenseQuery(categoriesQueryOptions);
+  const { city: selectedCity } = useCity();
+  const initialCity = city ?? selectedCity ?? "";
   const [filters, setFilters] = useState({
     q: q ?? "",
     category: category ?? "",
-    city: city ?? "",
+    city: initialCity,
     sort: sort ?? "relevance",
   });
-  const [applied, setApplied] = useState({ q: q ?? "", category: category ?? "", city: city ?? "", sort: sort ?? "relevance" });
+  const [applied, setApplied] = useState({ q: q ?? "", category: category ?? "", city: initialCity, sort: sort ?? "relevance" });
+
+  // When the header city changes and user hasn't typed a city filter yet, sync it.
+  useEffect(() => {
+    if (city) return; // URL param wins
+    if (!selectedCity) return;
+    setFilters((f) => (f.city ? f : { ...f, city: selectedCity }));
+    setApplied((a) => (a.city ? a : { ...a, city: selectedCity }));
+  }, [selectedCity, city]);
 
   const { data: results, isLoading } = useSuspenseQuery(searchQueryOptions(applied.q, applied.category, applied.city, applied.sort));
 
