@@ -495,6 +495,12 @@ export const createBusiness = createServerFn({ method: "POST" })
         website: data.website || null,
         email: data.email || null,
         featured_image: data.featured_image || null,
+        app_discount_percent:
+          data.app_discount_percent == null || Number.isNaN(data.app_discount_percent)
+            ? null
+            : data.app_discount_percent,
+        app_discount_label: data.app_discount_label ? data.app_discount_label : null,
+        app_discount_valid_until: data.app_discount_valid_until ? data.app_discount_valid_until : null,
       })
       .select("id, slug")
       .single();
@@ -536,6 +542,12 @@ export const updateBusiness = createServerFn({ method: "POST" })
         website: rest.website || null,
         email: rest.email || null,
         featured_image: rest.featured_image || null,
+        app_discount_percent:
+          rest.app_discount_percent == null || Number.isNaN(rest.app_discount_percent)
+            ? null
+            : rest.app_discount_percent,
+        app_discount_label: rest.app_discount_label ? rest.app_discount_label : null,
+        app_discount_valid_until: rest.app_discount_valid_until ? rest.app_discount_valid_until : null,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);
