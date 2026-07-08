@@ -381,17 +381,24 @@ export const adminDeleteBannerAd = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const getHomeData = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = createServerSupabaseClient();
-  const [{ data: categories }, { data: featured }] = await Promise.all([
-    supabase.from("categories").select("*").order("display_order", { ascending: true }).limit(12),
-    supabase
+export const getHomeData = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) =>
+    z.object({ city: z.string().optional() }).optional().parse(input) ?? {},
+  )
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    const city = data?.city?.trim();
+    let featuredQuery = supabase
       .from("businesses")
       .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)")
       .eq("status", "published")
       .order("verified", { ascending: false })
-      .limit(8),
-  ]);
+      .limit(8);
+    if (city) featuredQuery = featuredQuery.ilike("city", city);
+    const [{ data: categories }, { data: featured }] = await Promise.all([
+      supabase.from("categories").select("*").order("display_order", { ascending: true }).limit(12),
+      featuredQuery,
+    ]);
 
   const businessIds = (featured ?? []).map((b) => b.id);
   let ratings = new Map<string, { count: number; sum: number }>();
@@ -417,8 +424,8 @@ export const getHomeData = createServerFn({ method: "GET" }).handler(async () =>
     };
   });
 
-  return { categories: categories ?? [], featured: listings };
-});
+    return { categories: categories ?? [], featured: listings };
+  });
 
 const businessFormSchema = z.object({
   id: z.string().optional(),
