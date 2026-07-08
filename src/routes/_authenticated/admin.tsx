@@ -16,6 +16,7 @@ import {
   adminListPublishedBusinesses,
   adminSetVerified,
   adminListAuditLogs,
+  adminGetStats,
 } from "@/lib/businesses.functions";
 import { getDashboard } from "@/lib/businesses.functions";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,11 @@ const auditLogsQueryOptions = queryOptions({
   queryFn: () => adminListAuditLogs(),
 });
 
+const statsQueryOptions = queryOptions({
+  queryKey: ["admin", "stats"],
+  queryFn: () => adminGetStats(),
+});
+
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
@@ -72,6 +78,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
       context.queryClient.ensureQueryData(bannersAdminQueryOptions),
       context.queryClient.ensureQueryData(verifyAdminQueryOptions),
       context.queryClient.ensureQueryData(auditLogsQueryOptions),
+      context.queryClient.ensureQueryData(statsQueryOptions),
     ]);
   },
   component: AdminPage,
@@ -105,8 +112,9 @@ function AdminPage() {
         <Badge variant="secondary">{pending.length} pending</Badge>
       </div>
 
-      <Tabs defaultValue="pending" className="w-full">
+      <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 bg-muted p-1">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="pending">
             Pending Reviews
             {pending.length > 0 && (
@@ -118,6 +126,10 @@ function AdminPage() {
           <TabsTrigger value="banners">Banner Ads</TabsTrigger>
           <TabsTrigger value="audit">Audit Logs</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="overview" className="mt-0">
+          <OverviewAdmin />
+        </TabsContent>
 
         <TabsContent value="pending" className="mt-0">
           {pending.length === 0 ? (
@@ -862,6 +874,41 @@ function AuditLogsAdmin() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function OverviewAdmin() {
+  const { data: stats } = useSuspenseQuery(statsQueryOptions);
+  const items = [
+    { label: "Total Businesses", value: stats.totalBusinesses, color: "text-foreground" },
+    { label: "Published", value: stats.publishedBusinesses, color: "text-emerald-600" },
+    { label: "Pending Review", value: stats.pendingBusinesses, color: "text-amber-600" },
+    { label: "Verified", value: stats.verifiedBusinesses, color: "text-blue-600" },
+    { label: "Categories", value: stats.totalCategories, color: "text-foreground" },
+    { label: "Reviews", value: stats.totalReviews, color: "text-foreground" },
+    { label: "Discount Claims", value: stats.totalClaims, color: "text-[#ff6a00]" },
+    { label: "Active Banners", value: stats.activeBanners, color: "text-foreground" },
+    { label: "Assigned Roles", value: stats.totalRoles, color: "text-purple-600" },
+  ];
+  return (
+    <div>
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-foreground">Overview</h2>
+        <p className="text-sm text-muted-foreground">Quick snapshot of the platform.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {items.map((s) => (
+          <Card key={s.label}>
+            <CardContent className="p-4">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">{s.label}</p>
+              <p className={`mt-1 text-2xl font-extrabold tabular-nums ${s.color}`}>
+                {s.value.toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

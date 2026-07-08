@@ -98,7 +98,7 @@ function HomePage() {
             <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
               Search across{" "}
               <AnimatedCount target={BUSINESS_COUNT} />{" "}
-              <span className="text-[#ff6a00]">Kutchi Businesses</span>
+              <span className="animate-text-shine font-extrabold">Kutchi Businesses</span>
             </h1>
             <div className="flex shrink-0 items-center gap-2">
               <PWAInstallButton />
@@ -129,7 +129,7 @@ function HomePage() {
             <div className="flex h-12 w-full items-center rounded-md border border-border bg-background px-1 sm:w-48">
               <CitySelector compact className="w-full justify-start bg-transparent px-2 text-foreground hover:bg-transparent" />
             </div>
-            <div className="relative flex h-12 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3">
+            <div className="relative flex h-12 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3 transition-all duration-300 focus-within:border-[#ff6a00] focus-within:shadow-[0_0_0_4px_rgba(255,106,0,0.15)]">
               <Input
                 type="search"
                 placeholder="Search for restaurants, doctors, salons..."
@@ -137,11 +137,11 @@ function HomePage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <Mic className="h-5 w-5 shrink-0 text-primary" />
+              <Mic className="h-5 w-5 shrink-0 text-primary transition-transform hover:scale-110" />
               <Button
                 type="submit"
                 size="icon"
-                className="h-9 w-10 rounded bg-primary text-primary-foreground hover:bg-primary/90"
+                className="h-9 w-10 rounded bg-primary text-primary-foreground transition-transform hover:bg-primary/90 hover:scale-105 active:scale-95"
                 aria-label="Search"
               >
                 <Search className="h-4 w-4" />
@@ -280,16 +280,16 @@ function HomePage() {
       )}
 
       {/* Curated collections */}
-      <CollectionsSection />
+      <Reveal><CollectionsSection /></Reveal>
 
       {/* Popular Searches — auto-populated from categories */}
-      <PopularSearches categories={home.categories} />
+      <Reveal><PopularSearches categories={home.categories} /></Reveal>
 
       {/* Travel bookings */}
-      <TravelBookingsSection />
+      <Reveal><TravelBookingsSection /></Reveal>
 
       {/* Bottom CTA — subtle */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-8">
+      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-8">
         <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-background p-6 sm:flex-row sm:items-center">
           <div>
             <h2 className="text-lg font-extrabold text-foreground">Own a business?</h2>
@@ -297,11 +297,11 @@ function HomePage() {
               List free on Kutchi Hub and reach local customers.
             </p>
           </div>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
+          <Button className="bg-primary text-primary-foreground animate-pulse-glow transition-transform hover:bg-primary/90 hover:scale-105" asChild>
             <Link to="/business/new">Add Your Business</Link>
           </Button>
         </div>
-      </section>
+      </Reveal>
     </div>
   );
 }
