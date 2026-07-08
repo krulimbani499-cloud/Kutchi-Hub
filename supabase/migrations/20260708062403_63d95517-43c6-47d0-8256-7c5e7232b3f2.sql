@@ -1,0 +1,1 @@
+REVOKE SELECT (phone, email) ON public.businesses FROM anon;
