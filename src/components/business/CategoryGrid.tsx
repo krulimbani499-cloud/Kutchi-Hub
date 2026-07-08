@@ -146,7 +146,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
                 <span aria-hidden>{emoji}</span>
               )}
             </div>
-            <span className="text-xs font-medium text-foreground leading-tight">{category.name}</span>
+            <span className="text-[11px] sm:text-xs font-medium text-foreground leading-tight break-words hyphens-auto w-full">{category.name}</span>
           </Link>
         );
       })}
