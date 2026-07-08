@@ -1095,6 +1095,24 @@ export const getRelatedBusinesses = createServerFn({ method: "GET" })
       city: z.string().nullable().optional(),
     }).parse(input),
   )
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    let query = supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
+      )
+      .eq("status", "published")
+      .neq("id", data.businessId)
+      .limit(6);
+    if (data.categoryId) query = query.eq("category_id", data.categoryId);
+    if (data.city) query = query.ilike("city", data.city);
+    const { data: businesses, error } = await query
+      .order("verified", { ascending: false })
+      .order("name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return businesses ?? [];
+  });
 
 export const getCityCategoryPageData = createServerFn({ method: "GET" })
   .inputValidator((input) =>
@@ -1151,33 +1169,6 @@ export const getCityCategoryPageData = createServerFn({ method: "GET" })
       };
     });
     return { cityName, category, businesses: listings };
-  });
-
-const _getRelatedBusinesses_marker = createServerFn({ method: "GET" })
-  .inputValidator((input) =>
-    z.object({
-      businessId: z.string().uuid(),
-      categoryId: z.string().uuid().nullable().optional(),
-      city: z.string().nullable().optional(),
-    }).parse(input),
-  )
-  .handler(async ({ data }) => {
-    const supabase = createServerSupabaseClient();
-    let query = supabase
-      .from("businesses")
-      .select(
-        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
-      )
-      .eq("status", "published")
-      .neq("id", data.businessId)
-      .limit(6);
-    if (data.categoryId) query = query.eq("category_id", data.categoryId);
-    if (data.city) query = query.ilike("city", data.city);
-    const { data: businesses, error } = await query
-      .order("verified", { ascending: false })
-      .order("name", { ascending: true });
-    if (error) throw new Error(error.message);
-    return businesses ?? [];
   });
 
 export const getSitemapData = createServerFn({ method: "GET" }).handler(async () => {
