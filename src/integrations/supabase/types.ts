@@ -637,6 +637,7 @@ export type Database = {
           display_name: string | null
           id: string
           phone: string | null
+          referral_code: string | null
           updated_at: string
           user_id: string
         }
@@ -646,6 +647,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id: string
         }
@@ -655,8 +657,36 @@ export type Database = {
           display_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          code_used: string
+          created_at: string
+          id: string
+          referred_id: string
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          code_used: string
+          created_at?: string
+          id?: string
+          referred_id: string
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          code_used?: string
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+          status?: string
         }
         Relationships: []
       }
@@ -734,6 +764,7 @@ export type Database = {
       }
     }
     Functions: {
+      apply_referral_code: { Args: { _code: string }; Returns: Json }
       award_points: {
         Args: {
           _action: string
@@ -743,6 +774,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      generate_referral_code: { Args: never; Returns: string }
       get_leaderboard: {
         Args: { _limit?: number }
         Returns: {
