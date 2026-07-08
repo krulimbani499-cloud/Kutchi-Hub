@@ -448,7 +448,9 @@ export const getHomeData = createServerFn({ method: "GET" })
       offersQuery,
     ]);
 
-  const businessIds = (featured ?? []).map((b) => b.id);
+  const businessIds = Array.from(
+    new Set([...(featured ?? []).map((b) => b.id), ...(offers ?? []).map((b) => b.id)]),
+  );
   let ratings = new Map<string, { count: number; sum: number }>();
   if (businessIds.length > 0) {
     const { data: counts } = await supabase
