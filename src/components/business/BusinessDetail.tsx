@@ -124,6 +124,11 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + " " + addressLine)}`;
   const galleryPhotos = photos.slice(0, 4);
   const featuredImageSrc = business.featured_image_url ?? business.featured_image;
+  const discountActive =
+    typeof business.app_discount_percent === "number" &&
+    business.app_discount_percent > 0 &&
+    (!business.app_discount_valid_until ||
+      new Date(business.app_discount_valid_until) >= new Date(new Date().toDateString()));
 
   const handleReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,6 +184,15 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
         <div className="grid gap-0 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
           {/* Gallery */}
           <div className="relative bg-muted">
+            {discountActive && (
+              <div className="pointer-events-none absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full bg-[#ff6a00] px-3 py-1.5 text-xs font-extrabold text-white shadow-lg ring-2 ring-white">
+                <Tag className="h-3.5 w-3.5" />
+                {business.app_discount_percent}% OFF
+                <span className="hidden text-[10px] font-semibold opacity-90 sm:inline">
+                  · App only
+                </span>
+              </div>
+            )}
             <div className="grid h-56 grid-cols-2 grid-rows-1 gap-1 sm:h-80 sm:grid-cols-4 sm:grid-rows-2">
               <button
                 type="button"
