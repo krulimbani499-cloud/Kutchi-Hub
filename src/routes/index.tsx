@@ -256,13 +256,12 @@ function HomePage() {
                 </span>
                 Top Offers{city ? ` in ${city}` : ""}
               </h2>
-              <Link
-                to="/search"
-                search={{ sort: "discount" }}
+              <a
+                href={`/search?sort=discount${city ? `&city=${encodeURIComponent(city)}` : ""}`}
                 className="text-sm font-medium text-primary hover:underline"
               >
                 View all →
-              </Link>
+              </a>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {home.topOffers.map((business) => (
