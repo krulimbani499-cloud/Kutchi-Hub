@@ -1176,7 +1176,7 @@ export const getSitemapData = createServerFn({ method: "GET" }).handler(async ()
   const [{ data: businesses }, { data: categories }] = await Promise.all([
     supabase
       .from("businesses")
-      .select("slug, city, updated_at")
+      .select("slug, city, updated_at, category_id")
       .eq("status", "published")
       .limit(5000),
     supabase.from("categories").select("slug"),
@@ -1184,10 +1184,31 @@ export const getSitemapData = createServerFn({ method: "GET" }).handler(async ()
   const cities = Array.from(
     new Set((businesses ?? []).map((b) => b.city).filter(Boolean)),
   ) as string[];
+  const catById = new Map<string, string>();
+  for (const c of categories ?? []) {
+    // categories query only selected slug; refetch id+slug
+  }
+  const { data: catRows } = await supabase.from("categories").select("id, slug");
+  for (const c of catRows ?? []) catById.set(c.id, c.slug);
+  const combos = new Set<string>();
+  for (const b of businesses ?? []) {
+    if (!b.city || !b.category_id) continue;
+    const catSlug = catById.get(b.category_id);
+    if (!catSlug) continue;
+    const citySlug = String(b.city)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (citySlug) combos.add(`${citySlug}|${catSlug}`);
+  }
   return {
     businesses: businesses ?? [],
     categories: categories ?? [],
     cities,
+    combos: Array.from(combos).map((s) => {
+      const [city, category] = s.split("|");
+      return { city, category };
+    }),
   };
 });
 
