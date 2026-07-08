@@ -603,6 +603,33 @@ export type Database = {
         }
         Relationships: []
       }
+      point_events: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          points: number
+          ref_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          points: number
+          ref_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          points?: number
+          ref_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -695,9 +722,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leaderboard_v: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          events_count: number | null
+          total_points: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      award_points: {
+        Args: {
+          _action: string
+          _points: number
+          _ref_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
