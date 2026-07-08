@@ -923,3 +923,104 @@ function OverviewAdmin() {
     </div>
   );
 }
+
+function ReportsAdmin() {
+  const { data: reports, refetch } = useSuspenseQuery(reportsQueryOptions);
+  const updateFn = useServerFn(adminUpdateReport);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const setStatus = async (id: string, status: "open" | "reviewing" | "resolved" | "dismissed") => {
+    setBusy(id);
+    try {
+      await updateFn({ data: { id, status } });
+      toast.success("Report updated");
+      await refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const statusColor = (s: string) =>
+    s === "open" ? "destructive" : s === "reviewing" ? "default" : s === "resolved" ? "secondary" : "outline";
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
+            <Flag className="h-5 w-5 text-destructive" /> Reports
+          </h2>
+          <p className="text-sm text-muted-foreground">User-submitted reports on businesses and reviews.</p>
+        </div>
+        <Badge variant="secondary">
+          {reports.filter((r) => r.status === "open").length} open
+        </Badge>
+      </div>
+      {reports.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            No reports have been submitted yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {reports.map((r) => (
+            <Card key={r.id}>
+              <CardContent className="p-4">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="uppercase">{r.entity_type}</Badge>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {r.entity_id.slice(0, 8)}…
+                    </span>
+                    <Badge variant={statusColor(r.status) as never}>{r.status}</Badge>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(r.created_at).toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-sm text-foreground">
+                  <span className="font-semibold">Reason: </span>
+                  {r.reason}
+                </p>
+                {r.details && (
+                  <p className="mt-1 text-sm text-muted-foreground">{r.details}</p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {r.status !== "reviewing" && (
+                    <Button size="sm" variant="outline" disabled={busy === r.id}
+                      onClick={() => setStatus(r.id, "reviewing")}>
+                      Mark reviewing
+                    </Button>
+                  )}
+                  {r.status !== "resolved" && (
+                    <Button size="sm" variant="outline" className="text-emerald-600" disabled={busy === r.id}
+                      onClick={() => setStatus(r.id, "resolved")}>
+                      <Check className="mr-1 h-3.5 w-3.5" /> Resolve
+                    </Button>
+                  )}
+                  {r.status !== "dismissed" && (
+                    <Button size="sm" variant="ghost" className="text-muted-foreground" disabled={busy === r.id}
+                      onClick={() => setStatus(r.id, "dismissed")}>
+                      <X className="mr-1 h-3.5 w-3.5" /> Dismiss
+                    </Button>
+                  )}
+                  {r.entity_type === "business" && (
+                    <a
+                      href={`/business/${r.entity_id}`}
+                      className="ml-auto inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                    >
+                      View <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
