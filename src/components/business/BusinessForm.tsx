@@ -34,6 +34,11 @@ const businessFormSchema = z.object({
   website: z.union([z.string().url().max(500), z.literal("")]).optional(),
   featured_image: z.string().max(1000).optional(),
   hours: z.record(z.string()).optional(),
+  app_discount_percent: z
+    .union([z.coerce.number().int().min(0).max(100), z.literal("")])
+    .optional(),
+  app_discount_label: z.string().max(80).optional(),
+  app_discount_valid_until: z.string().max(20).optional(),
 });
 
 interface BusinessFormProps {
@@ -76,6 +81,10 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     email: initial?.email ?? "",
     website: initial?.website ?? "",
     featured_image: initial?.featured_image ?? "",
+    app_discount_percent:
+      initial?.app_discount_percent != null ? String(initial.app_discount_percent) : "",
+    app_discount_label: initial?.app_discount_label ?? "",
+    app_discount_valid_until: initial?.app_discount_valid_until ?? "",
   });
 
   const [hours, setHours] = useState<Record<string, string>>(() => {
