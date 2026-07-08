@@ -31,15 +31,24 @@ export function CitySelector({ className, compact }: CitySelectorProps) {
     try {
       const loc = await getCurrentLocation();
       const rg = await reverseGeocode(loc.latitude, loc.longitude);
-      const detected = extractCity(rg);
+      // Prefer any address field that matches our known cities list (so a
+      // suburb like "Hanspura" wins over the parent city "Ahmedabad").
+      const candidates = [
+        rg.address.suburb,
+        rg.address.village,
+        rg.address.town,
+        rg.address.city,
+      ].filter(Boolean) as string[];
+      const knownMatch = candidates
+        .map((c) => INDIAN_CITIES.find((k) => k.toLowerCase() === c.toLowerCase()))
+        .find(Boolean);
+      const detected = knownMatch ?? extractCity(rg);
       if (!detected) {
         toast.error("Couldn't detect city from your location");
         return;
       }
-      // Match against known list for consistent casing.
-      const match = INDIAN_CITIES.find((c) => c.toLowerCase() === detected.toLowerCase());
-      setCity(match ?? detected);
-      toast.success(`Location set to ${match ?? detected}`);
+      setCity(detected);
+      toast.success(`Location set to ${detected}`);
       setOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to detect location");
