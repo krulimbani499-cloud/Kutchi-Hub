@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Phone, Star, BadgeCheck, MessageCircle, Clock } from "lucide-react";
+import { MapPin, Phone, Star, BadgeCheck, MessageCircle, Clock, Tag } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
@@ -21,6 +21,8 @@ interface BusinessCardProps {
     hours?: unknown;
     avgRating?: number;
     reviewCount?: number;
+    app_discount_percent?: number | null;
+    app_discount_valid_until?: string | null;
     categories: { id: string; name: string; slug: string; color: string | null } | null;
   };
 }
@@ -30,6 +32,11 @@ export function BusinessCard({ business }: BusinessCardProps) {
   const hasHours = hasAnyHours(business.hours);
   const openState = isOpenNow(business.hours);
   const isOpen = openState === true;
+  const discountActive =
+    typeof business.app_discount_percent === "number" &&
+    business.app_discount_percent > 0 &&
+    (!business.app_discount_valid_until ||
+      new Date(business.app_discount_valid_until) >= new Date(new Date().toDateString()));
   const cleanPhone = business.phone?.replace(/[^\d+]/g, "") ?? "";
   const waHref = cleanPhone
     ? `https://wa.me/${cleanPhone.replace(/^\+/, "")}?text=${encodeURIComponent(
@@ -57,6 +64,12 @@ export function BusinessCard({ business }: BusinessCardProps) {
           <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-success px-2 py-0.5 text-xs font-medium text-success-foreground">
             <BadgeCheck className="h-3 w-3" />
             Verified
+          </div>
+        )}
+        {discountActive && (
+          <div className="absolute right-2 bottom-2 z-10 flex items-center gap-1 rounded-full bg-[#ff6a00] px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
+            <Tag className="h-3 w-3" />
+            {business.app_discount_percent}% App Discount
           </div>
         )}
         <div className="absolute left-2 top-2 z-20">
