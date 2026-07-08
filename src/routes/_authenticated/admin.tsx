@@ -877,3 +877,38 @@ function AuditLogsAdmin() {
     </div>
   );
 }
+
+function OverviewAdmin() {
+  const { data: stats } = useSuspenseQuery(statsQueryOptions);
+  const items = [
+    { label: "Total Businesses", value: stats.totalBusinesses, color: "text-foreground" },
+    { label: "Published", value: stats.publishedBusinesses, color: "text-emerald-600" },
+    { label: "Pending Review", value: stats.pendingBusinesses, color: "text-amber-600" },
+    { label: "Verified", value: stats.verifiedBusinesses, color: "text-blue-600" },
+    { label: "Categories", value: stats.totalCategories, color: "text-foreground" },
+    { label: "Reviews", value: stats.totalReviews, color: "text-foreground" },
+    { label: "Discount Claims", value: stats.totalClaims, color: "text-[#ff6a00]" },
+    { label: "Active Banners", value: stats.activeBanners, color: "text-foreground" },
+    { label: "Assigned Roles", value: stats.totalRoles, color: "text-purple-600" },
+  ];
+  return (
+    <div>
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-foreground">Overview</h2>
+        <p className="text-sm text-muted-foreground">Quick snapshot of the platform.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {items.map((s) => (
+          <Card key={s.label}>
+            <CardContent className="p-4">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">{s.label}</p>
+              <p className={`mt-1 text-2xl font-extrabold tabular-nums ${s.color}`}>
+                {s.value.toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
