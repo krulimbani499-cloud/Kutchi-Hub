@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Chrome, Loader2, Apple } from "lucide-react";
+import { Eye, EyeOff, Chrome, Loader2, Apple, Gift } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { applyReferralCode } from "@/lib/referrals.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,9 +18,47 @@ export function AuthForms() {
   const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referral, setReferral] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  // Capture ?ref=CODE from URL and stash for post-signup redemption
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      setReferral(ref.toUpperCase());
+      setMode("signup");
+      try {
+        localStorage.setItem("kh:pending_referral", ref.toUpperCase());
+      } catch {
+        /* ignore */
+      }
+    } else {
+      try {
+        const stored = localStorage.getItem("kh:pending_referral");
+        if (stored) setReferral(stored);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
+  const tryRedeemPending = async () => {
+    if (!referral.trim()) return;
+    try {
+      await applyReferralCode({ data: { code: referral.trim() } });
+      try {
+        localStorage.removeItem("kh:pending_referral");
+      } catch {
+        /* ignore */
+      }
+    } catch {
+      /* silent — user can still redeem from dashboard */
+    }
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,12 +80,20 @@ export function AuthForms() {
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
+        if (referral.trim()) {
+          try {
+            localStorage.setItem("kh:pending_referral", referral.trim().toUpperCase());
+          } catch {
+            /* ignore */
+          }
+        }
         setMessage("Check your email to confirm your account.");
       } else {
         emailSchema.parse(email);
         passwordSchema.parse(password);
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        await tryRedeemPending();
         await navigate({ to: "/" });
       }
     } catch (err) {
@@ -180,6 +227,20 @@ export function AuthForms() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="referral" className="flex items-center gap-1">
+                <Gift className="h-3.5 w-3.5 text-[#ff6a00]" />
+                Referral code <span className="text-xs text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="referral"
+                value={referral}
+                onChange={(e) => setReferral(e.target.value.toUpperCase())}
+                placeholder="Get +50 bonus points"
+                maxLength={12}
+                className="font-mono uppercase tracking-widest"
+              />
             </div>
             <Button type="submit" className="w-full bg-primary text-primary-foreground" disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

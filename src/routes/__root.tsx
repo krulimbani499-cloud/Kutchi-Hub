@@ -12,6 +12,7 @@ import { Header } from "@/components/layout/Header";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 // import { SiteFooter } from "@/components/layout/SiteFooter";
 import { supabase } from "@/integrations/supabase/client";
+import { applyReferralCode } from "@/lib/referrals.functions";
 
 import appCss from "../styles.css?url";
 import logoIcon from "@/assets/kutchi-hub-logo.png";
@@ -141,6 +142,20 @@ function RootComponent() {
         router.invalidate();
         if (event !== "SIGNED_OUT") {
           queryClient.invalidateQueries();
+        }
+        if (event === "SIGNED_IN") {
+          try {
+            const pending = typeof window !== "undefined" ? localStorage.getItem("kh:pending_referral") : null;
+            if (pending) {
+              applyReferralCode({ data: { code: pending } })
+                .then(() => {
+                  try { localStorage.removeItem("kh:pending_referral"); } catch { /* ignore */ }
+                  queryClient.invalidateQueries({ queryKey: ["referral"] });
+                  queryClient.invalidateQueries({ queryKey: ["gamification"] });
+                })
+                .catch(() => { /* silent — user can still redeem from dashboard */ });
+            }
+          } catch { /* ignore */ }
         }
       }
     });
