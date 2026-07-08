@@ -3,8 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { getBusinessBySlug } from "@/lib/businesses.functions";
 import { BusinessDetail } from "@/components/business/BusinessDetail";
-
-const BASE_URL = "https://kutchi-hub.lovable.app";
+import { BASE_URL, breadcrumbLd, ldScript } from "@/lib/seo";
 
 const businessQueryOptions = (slug: string) =>
   queryOptions({
@@ -84,7 +83,17 @@ export const Route = createFileRoute("/business/$slug")({
     return {
       meta,
       links: [{ rel: "canonical", href: url }],
-      scripts: [{ type: "application/ld+json", children: JSON.stringify(jsonLd) }],
+      scripts: [
+        ldScript(jsonLd),
+        ldScript(
+          breadcrumbLd([
+            { name: "Home", url: "/" },
+            ...(cat ? [{ name: cat, url: "/categories" }] : []),
+            ...(city ? [{ name: city, url: `/city/${city.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}` }] : []),
+            { name, url: `/business/${params.slug}` },
+          ]),
+        ),
+      ],
     };
   },
   loader: ({ context, params }) =>

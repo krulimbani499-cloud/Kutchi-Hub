@@ -3,8 +3,7 @@ import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getCategoryPageData } from "@/lib/businesses.functions";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { MapPin } from "lucide-react";
-
-const BASE_URL = "https://kutchi-hub.lovable.app";
+import { BASE_URL, breadcrumbLd, itemListLd, ldScript } from "@/lib/seo";
 
 const categoryPageOptions = (slug: string) =>
   queryOptions({
@@ -16,9 +15,14 @@ export const Route = createFileRoute("/category/$slug")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(categoryPageOptions(params.slug)),
   head: ({ params, loaderData }) => {
     const name = loaderData?.category?.name ?? params.slug.replace(/-/g, " ");
-    const count = loaderData?.businesses.length ?? 0;
-    const title = `${name} Businesses in India — Kutchi Hub`;
-    const desc = `Browse ${count > 0 ? count + "+ " : ""}${name.toLowerCase()} businesses on Kutchi Hub. Verified listings, reviews, contact details and directions.`;
+    const businesses = loaderData?.businesses ?? [];
+    const count = businesses.length;
+    const topCity = loaderData?.cities?.[0];
+    const title = topCity
+      ? `Best ${name} in ${topCity} — Reviews & Contacts | Kutchi Hub`
+      : `Best ${name} — Reviews, Ratings & Contacts | Kutchi Hub`;
+    const desc = `Browse ${count > 0 ? count + "+ " : ""}${name.toLowerCase()} listings${topCity ? ` in ${topCity}` : ""}. Verified reviews, ratings, hours, phone numbers and directions on Kutchi Hub.`;
+    const url = `${BASE_URL}/category/${params.slug}`;
     return {
       meta: [
         { title },
@@ -26,9 +30,26 @@ export const Route = createFileRoute("/category/$slug")({
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "website" },
-        { property: "og:url", content: `${BASE_URL}/category/${params.slug}` },
+        { property: "og:url", content: url },
       ],
-      links: [{ rel: "canonical", href: `${BASE_URL}/category/${params.slug}` }],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        ldScript(
+          breadcrumbLd([
+            { name: "Home", url: "/" },
+            { name: "Categories", url: "/categories" },
+            { name, url: `/category/${params.slug}` },
+          ]),
+        ),
+        ldScript(
+          itemListLd(
+            businesses.slice(0, 20).map((b) => ({
+              name: b.name,
+              url: `/business/${b.slug}`,
+            })),
+          ),
+        ),
+      ],
     };
   },
   component: CategoryPage,

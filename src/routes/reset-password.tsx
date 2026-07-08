@@ -10,6 +10,7 @@ export const Route = createFileRoute("/reset-password")({
     meta: [
       { title: "Reset Password — Kutchi Hub" },
       { name: "description", content: "Set a new password for your Kutchi Hub account." },
+      { name: "robots", content: "noindex,follow" },
     ],
   }),
   component: ResetPasswordPage,

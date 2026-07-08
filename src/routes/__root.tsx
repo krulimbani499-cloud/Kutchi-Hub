@@ -17,6 +17,7 @@ import { applyReferralCode } from "@/lib/referrals.functions";
 import appCss from "../styles.css?url";
 import logoIcon from "@/assets/kutchi-hub-logo.png";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { BASE_URL, SITE_NAME, ldScript, organizationLd, websiteLd } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -83,14 +84,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Kutchi Hub — Local Business Directory" },
-      { name: "description", content: "Discover local businesses, restaurants, hospitals, salons and more. Read reviews and connect with trusted service providers near you." },
+      { title: "Kutchi Hub — Local Business Directory in Kutch" },
+      { name: "description", content: "Discover trusted local businesses in Kutch — restaurants, doctors, salons, shops and services. Read reviews, get contact info and directions on Kutchi Hub." },
       { name: "author", content: "Kutchi Hub" },
-      { property: "og:title", content: "Kutchi Hub — Local Business Directory" },
-      { property: "og:description", content: "Discover local businesses, restaurants, hospitals, salons and more. Read reviews and connect with trusted service providers near you." },
+      { property: "og:site_name", content: SITE_NAME },
+      { property: "og:locale", content: "en_IN" },
+      { property: "og:title", content: "Kutchi Hub — Local Business Directory in Kutch" },
+      { property: "og:description", content: "Discover trusted local businesses in Kutch — restaurants, doctors, salons, shops and services. Read reviews, get contact info and directions on Kutchi Hub." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: BASE_URL },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Kutchi Hub" },
+      { name: "twitter:site", content: "@kutchihub" },
       { name: "theme-color", content: "#ff6a00" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
@@ -111,6 +115,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
     ],
+    scripts: [ldScript(organizationLd()), ldScript(websiteLd())],
   }),
   shellComponent: RootShell,
   component: RootComponent,

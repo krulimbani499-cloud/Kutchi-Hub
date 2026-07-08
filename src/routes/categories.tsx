@@ -12,9 +12,14 @@ const categoriesQueryOptions = queryOptions({
 export const Route = createFileRoute("/categories")({
   head: () => ({
     meta: [
-      { title: "Categories — Kutchi Hub" },
-      { name: "description", content: "Browse businesses by category on Kutchi Hub." },
+      { title: "All Business Categories — Kutchi Hub" },
+      { name: "description", content: "Browse every business category on Kutchi Hub — restaurants, doctors, salons, shops, services and more. Find verified local listings with reviews." },
+      { property: "og:title", content: "All Business Categories — Kutchi Hub" },
+      { property: "og:description", content: "Browse every business category on Kutchi Hub — verified local listings with reviews, contact info and directions." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://kutchi-hub.lovable.app/categories" },
     ],
+    links: [{ rel: "canonical", href: "https://kutchi-hub.lovable.app/categories" }],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions),
   component: CategoriesPage,

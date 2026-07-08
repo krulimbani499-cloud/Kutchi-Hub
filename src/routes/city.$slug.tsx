@@ -2,8 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getCityPageData } from "@/lib/businesses.functions";
 import { BusinessCard } from "@/components/business/BusinessCard";
-
-const BASE_URL = "https://kutchi-hub.lovable.app";
+import { BASE_URL, breadcrumbLd, itemListLd, faqLd, ldScript } from "@/lib/seo";
 
 const cityPageOptions = (slug: string) =>
   queryOptions({
@@ -15,9 +14,11 @@ export const Route = createFileRoute("/city/$slug")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(cityPageOptions(params.slug)),
   head: ({ params, loaderData }) => {
     const name = loaderData?.cityName ?? params.slug.replace(/-/g, " ");
-    const count = loaderData?.businesses.length ?? 0;
-    const title = `Businesses in ${name} — Kutchi Hub`;
-    const desc = `Find ${count > 0 ? count + "+ " : ""}businesses in ${name}. Restaurants, shops, services and more — reviews, contact info and directions.`;
+    const businesses = loaderData?.businesses ?? [];
+    const count = businesses.length;
+    const title = `Top Businesses in ${name} — Reviews & Contacts | Kutchi Hub`;
+    const desc = `Discover ${count > 0 ? count + "+ " : ""}businesses in ${name} — restaurants, doctors, salons, shops and services. Reviews, hours, phone numbers and directions.`;
+    const url = `${BASE_URL}/city/${params.slug}`;
     return {
       meta: [
         { title },
@@ -25,9 +26,37 @@ export const Route = createFileRoute("/city/$slug")({
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "website" },
-        { property: "og:url", content: `${BASE_URL}/city/${params.slug}` },
+        { property: "og:url", content: url },
       ],
-      links: [{ rel: "canonical", href: `${BASE_URL}/city/${params.slug}` }],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        ldScript(
+          breadcrumbLd([
+            { name: "Home", url: "/" },
+            { name, url: `/city/${params.slug}` },
+          ]),
+        ),
+        ldScript(
+          itemListLd(
+            businesses.slice(0, 20).map((b) => ({
+              name: b.name,
+              url: `/business/${b.slug}`,
+            })),
+          ),
+        ),
+        ldScript(
+          faqLd([
+            {
+              q: `How many businesses are listed in ${name} on Kutchi Hub?`,
+              a: `Kutchi Hub currently has ${count} verified business listings in ${name} across multiple categories.`,
+            },
+            {
+              q: `How do I add my business in ${name}?`,
+              a: `Visit the "List Your Business" page on Kutchi Hub to add your ${name} business. Listings include reviews, hours, contact info and directions.`,
+            },
+          ]),
+        ),
+      ],
     };
   },
   component: CityPage,

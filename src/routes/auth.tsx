@@ -6,6 +6,7 @@ export const Route = createFileRoute("/auth")({
     meta: [
       { title: "Sign In — Kutchi Hub" },
       { name: "description", content: "Sign in or create an account on Kutchi Hub to manage business listings and write reviews." },
+      { name: "robots", content: "noindex,follow" },
     ],
   }),
   component: AuthPage,
