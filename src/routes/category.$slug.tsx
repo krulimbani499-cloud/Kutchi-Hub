@@ -93,8 +93,14 @@ function CategoryPage() {
             {cities.slice(0, 10).map((c) => (
               <Link
                 key={c}
-                to="/search"
-                search={{ category: category.slug, city: c }}
+                to="/city/$slug/category/$category"
+                params={{
+                  slug: c
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/^-+|-+$/g, ""),
+                  category: category.slug,
+                }}
                 className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
               >
                 <MapPin className="h-3 w-3" /> {c}

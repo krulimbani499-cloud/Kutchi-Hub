@@ -25,6 +25,7 @@ import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedBusinessNewRouteImport } from './routes/_authenticated/business.new'
+import { Route as CitySlugCategoryCategoryRouteImport } from './routes/city.$slug.category.$category'
 import { Route as AuthenticatedBusinessSlugEditRouteImport } from './routes/_authenticated/business.$slug.edit'
 import { Route as AuthenticatedBusinessSlugClaimRouteImport } from './routes/_authenticated/business.$slug.claim'
 
@@ -108,6 +109,12 @@ const AuthenticatedBusinessNewRoute =
     path: '/business/new',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const CitySlugCategoryCategoryRoute =
+  CitySlugCategoryCategoryRouteImport.update({
+    id: '/category/$category',
+    path: '/category/$category',
+    getParentRoute: () => CitySlugRoute,
+  } as any)
 const AuthenticatedBusinessSlugEditRoute =
   AuthenticatedBusinessSlugEditRouteImport.update({
     id: '/business/$slug/edit',
@@ -134,11 +141,12 @@ export interface FileRoutesByFullPath {
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/business/$slug': typeof BusinessSlugRoute
   '/category/$slug': typeof CategorySlugRoute
-  '/city/$slug': typeof CitySlugRoute
+  '/city/$slug': typeof CitySlugRouteWithChildren
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
   '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
   '/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
+  '/city/$slug/category/$category': typeof CitySlugCategoryCategoryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -153,11 +161,12 @@ export interface FileRoutesByTo {
   '/favorites': typeof AuthenticatedFavoritesRoute
   '/business/$slug': typeof BusinessSlugRoute
   '/category/$slug': typeof CategorySlugRoute
-  '/city/$slug': typeof CitySlugRoute
+  '/city/$slug': typeof CitySlugRouteWithChildren
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
   '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
   '/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
+  '/city/$slug/category/$category': typeof CitySlugCategoryCategoryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -174,11 +183,12 @@ export interface FileRoutesById {
   '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
   '/business/$slug': typeof BusinessSlugRoute
   '/category/$slug': typeof CategorySlugRoute
-  '/city/$slug': typeof CitySlugRoute
+  '/city/$slug': typeof CitySlugRouteWithChildren
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/_authenticated/business/new': typeof AuthenticatedBusinessNewRoute
   '/_authenticated/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
   '/_authenticated/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
+  '/city/$slug/category/$category': typeof CitySlugCategoryCategoryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
     | '/business/new'
     | '/business/$slug/claim'
     | '/business/$slug/edit'
+    | '/city/$slug/category/$category'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/business/new'
     | '/business/$slug/claim'
     | '/business/$slug/edit'
+    | '/city/$slug/category/$category'
   id:
     | '__root__'
     | '/'
@@ -239,6 +251,7 @@ export interface FileRouteTypes {
     | '/_authenticated/business/new'
     | '/_authenticated/business/$slug/claim'
     | '/_authenticated/business/$slug/edit'
+    | '/city/$slug/category/$category'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -252,7 +265,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   BusinessSlugRoute: typeof BusinessSlugRoute
   CategorySlugRoute: typeof CategorySlugRoute
-  CitySlugRoute: typeof CitySlugRoute
+  CitySlugRoute: typeof CitySlugRouteWithChildren
   TravelFlightBookingRoute: typeof TravelFlightBookingRoute
 }
 
@@ -370,6 +383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBusinessNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/city/$slug/category/$category': {
+      id: '/city/$slug/category/$category'
+      path: '/category/$category'
+      fullPath: '/city/$slug/category/$category'
+      preLoaderRoute: typeof CitySlugCategoryCategoryRouteImport
+      parentRoute: typeof CitySlugRoute
+    }
     '/_authenticated/business/$slug/edit': {
       id: '/_authenticated/business/$slug/edit'
       path: '/business/$slug/edit'
@@ -408,6 +428,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface CitySlugRouteChildren {
+  CitySlugCategoryCategoryRoute: typeof CitySlugCategoryCategoryRoute
+}
+
+const CitySlugRouteChildren: CitySlugRouteChildren = {
+  CitySlugCategoryCategoryRoute: CitySlugCategoryCategoryRoute,
+}
+
+const CitySlugRouteWithChildren = CitySlugRoute._addFileChildren(
+  CitySlugRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -419,19 +451,9 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   BusinessSlugRoute: BusinessSlugRoute,
   CategorySlugRoute: CategorySlugRoute,
-  CitySlugRoute: CitySlugRoute,
+  CitySlugRoute: CitySlugRouteWithChildren,
   TravelFlightBookingRoute: TravelFlightBookingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

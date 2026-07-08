@@ -1114,12 +1114,69 @@ export const getRelatedBusinesses = createServerFn({ method: "GET" })
     return businesses ?? [];
   });
 
+export const getCityCategoryPageData = createServerFn({ method: "GET" })
+  .inputValidator((input) =>
+    z.object({ city: z.string(), category: z.string() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    const cityName = data.city
+      .split("-")
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .join(" ");
+
+    const { data: category, error: catErr } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("slug", data.category)
+      .maybeSingle();
+    if (catErr) throw new Error(catErr.message);
+    if (!category) throw new Error("Category not found");
+
+    const { data: businesses, error } = await supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
+      )
+      .eq("status", "published")
+      .eq("category_id", category.id)
+      .ilike("city", cityName)
+      .order("verified", { ascending: false })
+      .order("name", { ascending: true })
+      .limit(80);
+    if (error) throw new Error(error.message);
+
+    const ids = (businesses ?? []).map((b) => b.id);
+    const ratings = new Map<string, { count: number; sum: number }>();
+    if (ids.length > 0) {
+      const { data: rs } = await supabase
+        .from("business_reviews")
+        .select("business_id, rating")
+        .in("business_id", ids);
+      for (const r of rs ?? []) {
+        const e = ratings.get(r.business_id) ?? { count: 0, sum: 0 };
+        e.count += 1;
+        e.sum += r.rating;
+        ratings.set(r.business_id, e);
+      }
+    }
+    const listings = (businesses ?? []).map((b) => {
+      const r = ratings.get(b.id);
+      return {
+        ...b,
+        avgRating: r ? Number((r.sum / r.count).toFixed(1)) : 0,
+        reviewCount: r?.count ?? 0,
+      };
+    });
+    return { cityName, category, businesses: listings };
+  });
+
 export const getSitemapData = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = createServerSupabaseClient();
   const [{ data: businesses }, { data: categories }] = await Promise.all([
     supabase
       .from("businesses")
-      .select("slug, city, updated_at")
+      .select("slug, city, updated_at, category_id")
       .eq("status", "published")
       .limit(5000),
     supabase.from("categories").select("slug"),
@@ -1127,10 +1184,31 @@ export const getSitemapData = createServerFn({ method: "GET" }).handler(async ()
   const cities = Array.from(
     new Set((businesses ?? []).map((b) => b.city).filter(Boolean)),
   ) as string[];
+  const catById = new Map<string, string>();
+  for (const c of categories ?? []) {
+    // categories query only selected slug; refetch id+slug
+  }
+  const { data: catRows } = await supabase.from("categories").select("id, slug");
+  for (const c of catRows ?? []) catById.set(c.id, c.slug);
+  const combos = new Set<string>();
+  for (const b of businesses ?? []) {
+    if (!b.city || !b.category_id) continue;
+    const catSlug = catById.get(b.category_id);
+    if (!catSlug) continue;
+    const citySlug = String(b.city)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (citySlug) combos.add(`${citySlug}|${catSlug}`);
+  }
   return {
     businesses: businesses ?? [],
     categories: categories ?? [],
     cities,
+    combos: Array.from(combos).map((s) => {
+      const [city, category] = s.split("|");
+      return { city, category };
+    }),
   };
 });
 
