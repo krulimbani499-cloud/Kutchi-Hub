@@ -11,6 +11,7 @@ import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbo
 import { BarChart3 } from "lucide-react";
 import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCard";
 import { RewardsCard } from "@/components/gamification/RewardsCard";
+import { ReferralCard } from "@/components/gamification/ReferralCard";
 
 const dashboardQueryOptions = queryOptions({
   queryKey: ["dashboard"],
@@ -269,6 +270,10 @@ function DashboardPage() {
 
           <div className="mt-6">
             <RewardsCard />
+          </div>
+
+          <div className="mt-6">
+            <ReferralCard />
           </div>
         </div>
       </div>
