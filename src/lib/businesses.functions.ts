@@ -698,6 +698,48 @@ export const adminListAuditLogs = createServerFn({ method: "GET" })
     }));
   });
 
+export const adminGetStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const supabase = context.supabase;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const [
+      { count: totalBusinesses },
+      { count: publishedBusinesses },
+      { count: pendingBusinesses },
+      { count: verifiedBusinesses },
+      { count: totalCategories },
+      { count: totalReviews },
+      { count: totalClaims },
+      { count: activeBanners },
+      { count: totalRoles },
+    ] = await Promise.all([
+      supabase.from("businesses").select("id", { count: "exact", head: true }),
+      supabase.from("businesses").select("id", { count: "exact", head: true }).eq("status", "published"),
+      supabase.from("businesses").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("businesses").select("id", { count: "exact", head: true }).eq("verified", true),
+      supabase.from("categories").select("id", { count: "exact", head: true }),
+      supabase.from("business_reviews").select("id", { count: "exact", head: true }),
+      supabase.from("discount_claims").select("id", { count: "exact", head: true }),
+      supabase.from("banner_ads").select("id", { count: "exact", head: true }).eq("active", true),
+      supabase.from("user_roles").select("id", { count: "exact", head: true }),
+    ]);
+
+    return {
+      totalBusinesses: totalBusinesses ?? 0,
+      publishedBusinesses: publishedBusinesses ?? 0,
+      pendingBusinesses: pendingBusinesses ?? 0,
+      verifiedBusinesses: verifiedBusinesses ?? 0,
+      totalCategories: totalCategories ?? 0,
+      totalReviews: totalReviews ?? 0,
+      totalClaims: totalClaims ?? 0,
+      activeBanners: activeBanners ?? 0,
+      totalRoles: totalRoles ?? 0,
+    };
+  });
+
 const reviewSchema = z.object({
   businessId: z.string().uuid(),
   rating: z.coerce.number().min(1).max(5),
