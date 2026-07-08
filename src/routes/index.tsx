@@ -21,6 +21,7 @@ import tileRepairs from "@/assets/tile-repairs.jpg";
 import tileRealEstate from "@/assets/tile-realestate.jpg";
 import tileDoctors from "@/assets/tile-doctors.jpg";
 import { useCity } from "@/hooks/useCity";
+import { Reveal } from "@/components/Reveal";
 
 const homeQueryOptions = (city?: string) =>
   queryOptions({
@@ -157,10 +158,10 @@ function HomePage() {
       <RecentlyViewed />
 
       {/* Promo banner + feature tiles row */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-6">
+      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           {/* Promo banner */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-100 to-orange-50 p-6 sm:p-8">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-100 via-orange-50 to-orange-100 animate-gradient-pan p-6 sm:p-8">
             <div className="max-w-[70%]">
               <p className="text-xs font-bold uppercase tracking-wider text-[#ff6a00]">Featured</p>
               <h3 className="mt-1 text-lg font-extrabold text-foreground sm:text-2xl">
@@ -175,21 +176,22 @@ function HomePage() {
                 </Link>
               </Button>
             </div>
-            <Building2 className="absolute -right-4 -bottom-4 h-40 w-40 text-orange-200" />
+            <Building2 className="absolute -right-4 -bottom-4 h-40 w-40 text-orange-200 animate-float-y" />
           </div>
 
           {/* Feature tiles */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {featureTiles.map((t) => (
-              <Link
+            {featureTiles.map((t, i) => (
+              <Reveal key={t.title} delay={i * 80} y={12}>
+                <Link
                 key={t.title}
                 to="/categories"
-                className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${t.bg} p-4 text-white transition-transform hover:-translate-y-0.5`}
+                className={`group relative block overflow-hidden rounded-2xl bg-gradient-to-br ${t.bg} p-4 text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`}
               >
                 <div className="relative z-10">
                   <p className="text-sm font-extrabold uppercase leading-tight">{t.title}</p>
                   <p className="mt-1 text-xs opacity-90">{t.subtitle}</p>
-                  <ArrowRight className="mt-6 h-4 w-4" />
+                  <ArrowRight className="mt-6 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </div>
                 <img
                   src={t.img}
@@ -197,16 +199,17 @@ function HomePage() {
                   loading="lazy"
                   width={1024}
                   height={1024}
-                  className="pointer-events-none absolute -bottom-2 -right-2 h-24 w-24 object-contain opacity-90 mix-blend-luminosity sm:h-28 sm:w-28"
+                  className="pointer-events-none absolute -bottom-2 -right-2 h-24 w-24 object-contain opacity-90 mix-blend-luminosity transition-transform duration-500 group-hover:scale-110 sm:h-28 sm:w-28"
                 />
-              </Link>
+                </Link>
+              </Reveal>
             ))}
           </div>
         </div>
-      </section>
+      </Reveal>
 
       {/* Categories — clean icon grid, JD style */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-6">
+      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-bold text-foreground sm:text-lg">Popular Categories</h2>
@@ -216,10 +219,10 @@ function HomePage() {
           </div>
           <CategoryGrid categories={home.categories} />
         </div>
-      </section>
+      </Reveal>
 
       {/* Featured Businesses */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-6">
+      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-bold text-foreground sm:text-lg">Featured Businesses{city ? ` in ${city}` : ""}</h2>
@@ -229,8 +232,10 @@ function HomePage() {
         </div>
         {home.featured.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {home.featured.map((business) => (
-              <BusinessCard key={business.id} business={business} />
+            {home.featured.map((business, i) => (
+              <Reveal key={business.id} delay={i * 70} y={12}>
+                <BusinessCard business={business} />
+              </Reveal>
             ))}
           </div>
         ) : (
@@ -243,15 +248,15 @@ function HomePage() {
           </div>
         )}
         </div>
-      </section>
+      </Reveal>
 
       {/* Top Offers */}
       {home.topOffers && home.topOffers.length > 0 && (
-        <section className="mx-auto w-full max-w-7xl px-4 py-6">
+        <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
           <div className="rounded-2xl border-2 border-[#ff6a00]/20 bg-gradient-to-br from-[#fff4ea] to-background p-5 sm:p-6">
             <div className="mb-5 flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-base font-bold text-foreground sm:text-lg">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6a00] text-white">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6a00] text-white animate-pulse-glow">
                   <Tag className="h-4 w-4" />
                 </span>
                 Top Offers{city ? ` in ${city}` : ""}
@@ -264,12 +269,14 @@ function HomePage() {
               </a>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {home.topOffers.map((business) => (
-                <BusinessCard key={business.id} business={business} />
+              {home.topOffers.map((business, i) => (
+                <Reveal key={business.id} delay={i * 70} y={12}>
+                  <BusinessCard business={business} />
+                </Reveal>
               ))}
             </div>
           </div>
-        </section>
+        </Reveal>
       )}
 
       {/* Curated collections */}
