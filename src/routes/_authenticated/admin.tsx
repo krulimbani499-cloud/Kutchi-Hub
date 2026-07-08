@@ -16,6 +16,7 @@ import {
   adminListPublishedBusinesses,
   adminSetVerified,
   adminListAuditLogs,
+  adminGetStats,
 } from "@/lib/businesses.functions";
 import { getDashboard } from "@/lib/businesses.functions";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,11 @@ const auditLogsQueryOptions = queryOptions({
   queryFn: () => adminListAuditLogs(),
 });
 
+const statsQueryOptions = queryOptions({
+  queryKey: ["admin", "stats"],
+  queryFn: () => adminGetStats(),
+});
+
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
@@ -72,6 +78,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
       context.queryClient.ensureQueryData(bannersAdminQueryOptions),
       context.queryClient.ensureQueryData(verifyAdminQueryOptions),
       context.queryClient.ensureQueryData(auditLogsQueryOptions),
+      context.queryClient.ensureQueryData(statsQueryOptions),
     ]);
   },
   component: AdminPage,
@@ -107,6 +114,7 @@ function AdminPage() {
 
       <Tabs defaultValue="pending" className="w-full">
         <TabsList className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 bg-muted p-1">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="pending">
             Pending Reviews
             {pending.length > 0 && (
@@ -118,6 +126,10 @@ function AdminPage() {
           <TabsTrigger value="banners">Banner Ads</TabsTrigger>
           <TabsTrigger value="audit">Audit Logs</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="overview" className="mt-0">
+          <OverviewAdmin />
+        </TabsContent>
 
         <TabsContent value="pending" className="mt-0">
           {pending.length === 0 ? (
