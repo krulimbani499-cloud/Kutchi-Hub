@@ -76,20 +76,21 @@ export function CitySelector({ className, compact }: CitySelectorProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-0" align="start">
+        <div className="border-b border-border p-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={detect}
+            disabled={detecting}
+          >
+            <LocateFixed className={cn("h-4 w-4", detecting && "animate-pulse")} />
+            {detecting ? "Detecting..." : "Use my location"}
+          </Button>
+        </div>
         <Command>
           <CommandInput placeholder="Search city..." />
-          <div className="border-b border-border p-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start gap-2"
-              onClick={detect}
-              disabled={detecting}
-            >
-              <LocateFixed className={cn("h-4 w-4", detecting && "animate-pulse")} />
-              {detecting ? "Detecting..." : "Use my location"}
-            </Button>
-          </div>
           <CommandList>
             <CommandEmpty>No matching city.</CommandEmpty>
             <CommandGroup heading="Cities">
