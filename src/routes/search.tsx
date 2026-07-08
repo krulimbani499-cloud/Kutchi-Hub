@@ -110,7 +110,7 @@ function SearchPage() {
     }
     return list;
   }, [results, chipVerified, chipOpenNow, chipTopRated]);
-  const anyChip = chipVerified || chipOpenNow || chipTopRated;
+  const anyChip = chipVerified || chipOpenNow || chipTopRated || chipDiscount;
 
   const applyFilters = () => {
     const normalized = {
@@ -220,6 +220,7 @@ function SearchPage() {
               setChipVerified(false);
               setChipOpenNow(false);
               setChipTopRated(false);
+              setChipDiscount(false);
             }}
             className="inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
