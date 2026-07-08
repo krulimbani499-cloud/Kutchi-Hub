@@ -30,6 +30,15 @@ export const Route = createFileRoute("/sitemap.xml")({
             const slug = String(city).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
             if (slug) entries.push({ path: `/city/${slug}`, changefreq: "weekly", priority: "0.7" });
           }
+          for (const combo of data.combos ?? []) {
+            if (combo.city && combo.category) {
+              entries.push({
+                path: `/city/${combo.city}/category/${combo.category}`,
+                changefreq: "weekly",
+                priority: "0.7",
+              });
+            }
+          }
           for (const b of data.businesses) {
             entries.push({
               path: `/business/${b.slug}`,
