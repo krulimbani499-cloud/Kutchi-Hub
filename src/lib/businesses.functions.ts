@@ -274,15 +274,16 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ city: z.string().trim().min(1).max(80).optional() }).parse(input ?? {}))
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
+    // Only show banners for the selected city. If no city is selected,
+    // return nothing so city-specific banners don't leak across locations.
+    if (!data.city) return [];
     let query = supabase
       .from("banner_ads")
       .select("id, business_id, title, subtitle, image_url, cta_label, cta_url, city, priority")
       .order("priority", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(10);
-    if (data.city) {
-      query = query.ilike("city", data.city);
-    }
+    query = query.ilike("city", data.city);
     const { data: banners, error } = await query;
     if (error) throw new Error(error.message);
     return banners ?? [];
