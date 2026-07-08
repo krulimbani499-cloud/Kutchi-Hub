@@ -72,6 +72,26 @@ function SearchPage() {
     setApplied((a) => (a.city ? a : { ...a, city: selectedCity }));
   }, [selectedCity, city]);
 
+  // Sync URL search params → filter state so clicking a category link
+  // (or any other in-page navigation that only changes search params)
+  // actually updates the applied query.
+  useEffect(() => {
+    setFilters((f) => ({
+      ...f,
+      q: q ?? "",
+      category: category ?? "",
+      city: city ?? f.city,
+      sort: sort ?? "relevance",
+    }));
+    setApplied((a) => ({
+      ...a,
+      q: q ?? "",
+      category: category ?? "",
+      city: city ?? a.city,
+      sort: sort ?? "relevance",
+    }));
+  }, [q, category, city, sort]);
+
   const { data: results, isLoading } = useSuspenseQuery(searchQueryOptions(applied.q, applied.category, applied.city, applied.sort));
 
   const [chipVerified, setChipVerified] = useState(false);
