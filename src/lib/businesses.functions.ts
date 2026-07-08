@@ -26,12 +26,33 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       )
       .eq("status", "published");
 
+    // If the search term matches any category name/slug, resolve those
+    // category IDs so we can also match businesses tagged with them.
+    let matchingCategoryIds: string[] = [];
     if (data.q) {
       const term = data.q.trim();
       if (term) {
-        query = query.or(
-          `name.ilike.%${term}%,description.ilike.%${term}%,city.ilike.%${term}%`,
-        );
+        const { data: cats } = await supabase
+          .from("categories")
+          .select("id")
+          .or(`name.ilike.%${term}%,slug.ilike.%${term}%`);
+        matchingCategoryIds = (cats ?? []).map((c) => c.id);
+      }
+    }
+
+    if (data.q) {
+      const term = data.q.trim();
+      if (term) {
+        const like = term.replace(/[,()]/g, " ");
+        const parts = [
+          `name.ilike.%${like}%`,
+          `description.ilike.%${like}%`,
+          `city.ilike.%${like}%`,
+        ];
+        if (matchingCategoryIds.length > 0) {
+          parts.push(`category_id.in.(${matchingCategoryIds.join(",")})`);
+        }
+        query = query.or(parts.join(","));
       }
     }
 
