@@ -369,6 +369,9 @@ export type Database = {
       businesses: {
         Row: {
           address: string | null
+          app_discount_label: string | null
+          app_discount_percent: number | null
+          app_discount_valid_until: string | null
           category_id: string
           city: string | null
           created_at: string
@@ -392,6 +395,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          app_discount_label?: string | null
+          app_discount_percent?: number | null
+          app_discount_valid_until?: string | null
           category_id: string
           city?: string | null
           created_at?: string
@@ -415,6 +421,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          app_discount_label?: string | null
+          app_discount_percent?: number | null
+          app_discount_valid_until?: string | null
           category_id?: string
           city?: string | null
           created_at?: string

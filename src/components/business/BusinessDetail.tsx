@@ -40,6 +40,7 @@ import { ShareMenu } from "./ShareMenu";
 import { trackRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import type { Tables } from "@/integrations/supabase/types";
 import { isOpenNow } from "@/lib/business-hours";
+import { AppDiscountCard } from "./AppDiscountCard";
 
 interface BusinessDetailProps {
   business: Tables<"businesses"> & {
@@ -332,6 +333,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
 
             {!isOwner && (
               <div className="pt-1">
+                <AppDiscountCard business={business} />
                 <EnquiryDialog
                   businessId={business.id}
                   businessName={business.name}

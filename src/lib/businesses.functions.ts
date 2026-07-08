@@ -22,7 +22,7 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     let query = supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, state, phone, verified, featured_image, hours, status, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, state, phone, verified, featured_image, hours, status, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published");
 
@@ -411,7 +411,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     const city = data?.city?.trim();
     let featuredQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)")
+      .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
       .eq("status", "published")
       .order("verified", { ascending: false })
       .limit(8);
@@ -465,6 +465,9 @@ const businessFormSchema = z.object({
   longitude: z.coerce.number().nullable().optional(),
   hours: z.record(z.string()).optional(),
   featured_image: z.string().max(1000).optional().or(z.literal("")),
+  app_discount_percent: z.coerce.number().int().min(0).max(100).nullable().optional(),
+  app_discount_label: z.string().max(80).optional().or(z.literal("")),
+  app_discount_valid_until: z.string().max(20).optional().or(z.literal("")),
 });
 
 export const createBusiness = createServerFn({ method: "POST" })
@@ -492,6 +495,12 @@ export const createBusiness = createServerFn({ method: "POST" })
         website: data.website || null,
         email: data.email || null,
         featured_image: data.featured_image || null,
+        app_discount_percent:
+          data.app_discount_percent == null || Number.isNaN(data.app_discount_percent)
+            ? null
+            : data.app_discount_percent,
+        app_discount_label: data.app_discount_label ? data.app_discount_label : null,
+        app_discount_valid_until: data.app_discount_valid_until ? data.app_discount_valid_until : null,
       })
       .select("id, slug")
       .single();
@@ -533,6 +542,12 @@ export const updateBusiness = createServerFn({ method: "POST" })
         website: rest.website || null,
         email: rest.email || null,
         featured_image: rest.featured_image || null,
+        app_discount_percent:
+          rest.app_discount_percent == null || Number.isNaN(rest.app_discount_percent)
+            ? null
+            : rest.app_discount_percent,
+        app_discount_label: rest.app_discount_label ? rest.app_discount_label : null,
+        app_discount_valid_until: rest.app_discount_valid_until ? rest.app_discount_valid_until : null,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);
