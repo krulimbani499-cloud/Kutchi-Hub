@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
 import { isOpenNow, hasAnyHours } from "@/lib/business-hours";
+import { useEffect, useState } from "react";
 
 interface BusinessCardProps {
   business: {
@@ -30,7 +31,9 @@ interface BusinessCardProps {
 export function BusinessCard({ business }: BusinessCardProps) {
   const imageSrc = business.featured_image_url ?? business.featured_image;
   const hasHours = hasAnyHours(business.hours);
-  const openState = isOpenNow(business.hours);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const openState = mounted ? isOpenNow(business.hours) : null;
   const isOpen = openState === true;
   const discountActive =
     typeof business.app_discount_percent === "number" &&
@@ -75,7 +78,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
         <div className="absolute left-2 top-2 z-20">
           <FavoriteButton businessId={business.id} size="sm" />
         </div>
-        {hasHours && (
+        {hasHours && mounted && openState !== null && (
           <div
             className={`absolute bottom-2 left-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold shadow-sm ${
               isOpen
