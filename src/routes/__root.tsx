@@ -87,6 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Kutchi Hub — Local Business Directory in Kutch" },
       { name: "description", content: "Discover trusted local businesses in Kutch — restaurants, doctors, salons, shops and services. Read reviews, get contact info and directions on Kutchi Hub." },
       { name: "author", content: "Kutchi Hub" },
+      { name: "google-site-verification", content: "MQzK7pzfxlreZYVwzU_wgDRGwj70BJ1xBgc6O2aOHds" },
       { property: "og:site_name", content: SITE_NAME },
       { property: "og:locale", content: "en_IN" },
       { property: "og:title", content: "Kutchi Hub — Local Business Directory in Kutch" },
