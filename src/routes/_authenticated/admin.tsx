@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
@@ -99,12 +100,27 @@ function AdminPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
-          <p className="text-sm text-muted-foreground">Review and approve business submissions.</p>
+          <p className="text-sm text-muted-foreground">Manage submissions, catalog, ads and security events.</p>
         </div>
         <Badge variant="secondary">{pending.length} pending</Badge>
       </div>
 
-      {pending.length === 0 ? (
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 bg-muted p-1">
+          <TabsTrigger value="pending">
+            Pending Reviews
+            {pending.length > 0 && (
+              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">{pending.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="verify">Verify Businesses</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="banners">Banner Ads</TabsTrigger>
+          <TabsTrigger value="audit">Audit Logs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pending" className="mt-0">
+          {pending.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             No pending submissions. All caught up!
@@ -191,11 +207,21 @@ function AdminPage() {
           ))}
         </div>
       )}
+        </TabsContent>
 
-      <CategoriesAdmin />
-      <BannersAdmin />
-      <VerifyBusinessesAdmin />
-      <AuditLogsAdmin />
+        <TabsContent value="verify" className="mt-0">
+          <VerifyBusinessesAdmin />
+        </TabsContent>
+        <TabsContent value="categories" className="mt-0">
+          <CategoriesAdmin />
+        </TabsContent>
+        <TabsContent value="banners" className="mt-0">
+          <BannersAdmin />
+        </TabsContent>
+        <TabsContent value="audit" className="mt-0">
+          <AuditLogsAdmin />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
