@@ -8,7 +8,8 @@ const searchSchema = z.object({
   category: z.string().optional(),
   city: z.string().optional(),
   minRating: z.coerce.number().min(0).max(5).optional(),
-  sort: z.enum(["relevance", "rating", "newest"]).optional().default("relevance"),
+  sort: z.enum(["relevance", "rating", "newest", "discount"]).optional().default("relevance"),
+  hasDiscount: z.coerce.boolean().optional().default(false),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(50).optional().default(20),
 });
@@ -64,6 +65,13 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       query = query.ilike("city", `%${data.city}%`);
     }
 
+    if (data.hasDiscount) {
+      const today = new Date().toISOString().slice(0, 10);
+      query = query
+        .gt("app_discount_percent", 0)
+        .or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`);
+    }
+
     const { data: businesses, error } = await query
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
@@ -104,6 +112,12 @@ export const searchBusinesses = createServerFn({ method: "GET" })
         (a, b) =>
           new Date((b as unknown as { created_at: string }).created_at).getTime() -
           new Date((a as unknown as { created_at: string }).created_at).getTime(),
+      );
+    } else if (data.sort === "discount") {
+      filteredResults.sort(
+        (a, b) =>
+          ((b as unknown as { app_discount_percent: number | null }).app_discount_percent ?? 0) -
+          ((a as unknown as { app_discount_percent: number | null }).app_discount_percent ?? 0),
       );
     }
 
@@ -416,12 +430,27 @@ export const getHomeData = createServerFn({ method: "GET" })
       .order("verified", { ascending: false })
       .limit(8);
     if (city) featuredQuery = featuredQuery.ilike("city", city);
-    const [{ data: categories }, { data: featured }] = await Promise.all([
+
+    const today = new Date().toISOString().slice(0, 10);
+    let offersQuery = supabase
+      .from("businesses")
+      .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
+      .eq("status", "published")
+      .gt("app_discount_percent", 0)
+      .or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`)
+      .order("app_discount_percent", { ascending: false })
+      .limit(8);
+    if (city) offersQuery = offersQuery.ilike("city", city);
+
+    const [{ data: categories }, { data: featured }, { data: offers }] = await Promise.all([
       supabase.from("categories").select("*").order("display_order", { ascending: true }).limit(12),
       featuredQuery,
+      offersQuery,
     ]);
 
-  const businessIds = (featured ?? []).map((b) => b.id);
+  const businessIds = Array.from(
+    new Set([...(featured ?? []).map((b) => b.id), ...(offers ?? []).map((b) => b.id)]),
+  );
   let ratings = new Map<string, { count: number; sum: number }>();
   if (businessIds.length > 0) {
     const { data: counts } = await supabase
@@ -445,7 +474,16 @@ export const getHomeData = createServerFn({ method: "GET" })
     };
   });
 
-    return { categories: categories ?? [], featured: listings };
+    const topOffers = (offers ?? []).map((b) => {
+      const rating = ratings.get(b.id);
+      return {
+        ...b,
+        avgRating: rating ? Number((rating.sum / rating.count).toFixed(1)) : 0,
+        reviewCount: rating?.count ?? 0,
+      };
+    });
+
+    return { categories: categories ?? [], featured: listings, topOffers };
   });
 
 const businessFormSchema = z.object({
@@ -963,3 +1001,58 @@ export const getSitemapData = createServerFn({ method: "GET" }).handler(async ()
     cities,
   };
 });
+
+// -------- App-exclusive discount claims --------
+
+function generateClaimCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < 6; i++) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return `KH-${out}`;
+}
+
+export const claimDiscount = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    const { data: business, error: bErr } = await supabase
+      .from("businesses")
+      .select("id, app_discount_percent, app_discount_valid_until")
+      .eq("id", data.businessId)
+      .eq("status", "published")
+      .maybeSingle();
+    if (bErr) throw new Error(bErr.message);
+    if (!business || !business.app_discount_percent || business.app_discount_percent <= 0) {
+      throw new Error("No active discount for this business.");
+    }
+    if (business.app_discount_valid_until) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (business.app_discount_valid_until < today) {
+        throw new Error("This discount has expired.");
+      }
+    }
+    const code = generateClaimCode();
+    const { error } = await supabase.from("discount_claims").insert({
+      business_id: business.id,
+      code,
+      discount_percent: business.app_discount_percent,
+    });
+    if (error) throw new Error(error.message);
+    return { code, discountPercent: business.app_discount_percent };
+  });
+
+export const listBusinessDiscountClaims = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("discount_claims")
+      .select("id, code, discount_percent, claimed_at")
+      .eq("business_id", data.businessId)
+      .order("claimed_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });

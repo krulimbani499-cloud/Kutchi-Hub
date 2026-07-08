@@ -1,13 +1,9 @@
 import { useMemo, useState } from "react";
 import { Tag, Copy, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useServerFn } from "@tanstack/react-start";
+import { claimDiscount } from "@/lib/businesses.functions";
 import type { Tables } from "@/integrations/supabase/types";
-
-function generateCode(businessId: string) {
-  const seed = businessId.replace(/[^a-z0-9]/gi, "").toUpperCase();
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `KH-${seed.slice(0, 2)}${rand}`;
-}
 
 interface Props {
   business: Pick<
@@ -17,9 +13,12 @@ interface Props {
 }
 
 export function AppDiscountCard({ business }: Props) {
+  const claimFn = useServerFn(claimDiscount);
   const [claimed, setClaimed] = useState(false);
   const [code, setCode] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const active = useMemo(() => {
     const pct = business.app_discount_percent;
@@ -30,10 +29,19 @@ export function AppDiscountCard({ business }: Props) {
 
   if (!active) return null;
 
-  const handleClaim = () => {
-    if (claimed) return;
-    setCode(generateCode(business.id));
-    setClaimed(true);
+  const handleClaim = async () => {
+    if (claimed || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await claimFn({ data: { businessId: business.id } });
+      setCode(res.code);
+      setClaimed(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not claim discount.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const copyCode = async () => {
@@ -72,13 +80,17 @@ export function AppDiscountCard({ business }: Props) {
           </p>
 
           {!claimed ? (
-            <Button
-              onClick={handleClaim}
-              size="sm"
-              className="mt-3 bg-[#ff6a00] text-white hover:bg-[#e65a00]"
-            >
-              Claim & show at shop
-            </Button>
+            <>
+              <Button
+                onClick={handleClaim}
+                disabled={busy}
+                size="sm"
+                className="mt-3 bg-[#ff6a00] text-white hover:bg-[#e65a00]"
+              >
+                {busy ? "Claiming..." : "Claim & show at shop"}
+              </Button>
+              {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+            </>
           ) : (
             <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#ff6a00]/40 bg-white px-3 py-2">
               <span className="font-mono text-lg font-bold tracking-wider text-[#ff6a00]">

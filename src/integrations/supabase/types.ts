@@ -502,6 +502,41 @@ export type Database = {
           },
         ]
       }
+      discount_claims: {
+        Row: {
+          business_id: string
+          claimed_at: string
+          code: string
+          discount_percent: number | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          business_id: string
+          claimed_at?: string
+          code: string
+          discount_percent?: number | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          claimed_at?: string
+          code?: string
+          discount_percent?: number | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_claims_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
