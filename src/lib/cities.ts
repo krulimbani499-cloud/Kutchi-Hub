@@ -57,23 +57,4 @@ export const INDIAN_CITIES = [
   "Chuda", "Lakhtar", "Thangadh", "Patdi", "Dasada", "Bajana", "Tikar",
   // Gujarat — Diu / Daman / Silvassa (UT nearby, commonly used)
   "Daman", "Silvassa",
-  // Rest of India — kept from before
-  "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad",
-  "Delhi", "New Delhi", "Noida", "Gurgaon", "Faridabad", "Ghaziabad",
-  "Bengaluru", "Mysuru", "Mangaluru", "Hubli",
-  "Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem",
-  "Hyderabad", "Secunderabad", "Warangal", "Vijayawada", "Visakhapatnam",
-  "Kolkata", "Howrah", "Siliguri", "Durgapur",
-  "Jaipur", "Jodhpur", "Udaipur", "Kota", "Ajmer", "Bikaner",
-  "Lucknow", "Kanpur", "Varanasi", "Agra", "Allahabad", "Meerut",
-  "Bhopal", "Indore", "Gwalior", "Jabalpur", "Ujjain",
-  "Patna", "Gaya", "Muzaffarpur",
-  "Chandigarh", "Ludhiana", "Amritsar", "Jalandhar",
-  "Kochi", "Thiruvananthapuram", "Kozhikode",
-  "Bhubaneswar", "Cuttack", "Rourkela",
-  "Ranchi", "Jamshedpur", "Dhanbad",
-  "Raipur", "Bilaspur",
-  "Guwahati", "Shillong", "Imphal",
-  "Dehradun", "Haridwar", "Rishikesh",
-  "Shimla", "Srinagar", "Jammu", "Panaji",
 ].sort();
