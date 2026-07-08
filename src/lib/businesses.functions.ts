@@ -430,9 +430,22 @@ export const getHomeData = createServerFn({ method: "GET" })
       .order("verified", { ascending: false })
       .limit(8);
     if (city) featuredQuery = featuredQuery.ilike("city", city);
-    const [{ data: categories }, { data: featured }] = await Promise.all([
+
+    const today = new Date().toISOString().slice(0, 10);
+    let offersQuery = supabase
+      .from("businesses")
+      .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
+      .eq("status", "published")
+      .gt("app_discount_percent", 0)
+      .or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`)
+      .order("app_discount_percent", { ascending: false })
+      .limit(8);
+    if (city) offersQuery = offersQuery.ilike("city", city);
+
+    const [{ data: categories }, { data: featured }, { data: offers }] = await Promise.all([
       supabase.from("categories").select("*").order("display_order", { ascending: true }).limit(12),
       featuredQuery,
+      offersQuery,
     ]);
 
   const businessIds = (featured ?? []).map((b) => b.id);
@@ -459,7 +472,16 @@ export const getHomeData = createServerFn({ method: "GET" })
     };
   });
 
-    return { categories: categories ?? [], featured: listings };
+    const topOffers = (offers ?? []).map((b) => {
+      const rating = ratings.get(b.id);
+      return {
+        ...b,
+        avgRating: rating ? Number((rating.sum / rating.count).toFixed(1)) : 0,
+        reviewCount: rating?.count ?? 0,
+      };
+    });
+
+    return { categories: categories ?? [], featured: listings, topOffers };
   });
 
 const businessFormSchema = z.object({
