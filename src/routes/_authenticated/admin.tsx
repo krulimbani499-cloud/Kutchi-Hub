@@ -18,11 +18,12 @@ import {
   adminListAuditLogs,
   adminGetStats,
 } from "@/lib/businesses.functions";
+import { adminListReports, adminUpdateReport } from "@/lib/reports.functions";
 import { getDashboard } from "@/lib/businesses.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save, Plus, Image as ImageIcon, BadgeCheck } from "lucide-react";
+import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save, Plus, Image as ImageIcon, BadgeCheck, Flag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,6 +62,11 @@ const statsQueryOptions = queryOptions({
   queryFn: () => adminGetStats(),
 });
 
+const reportsQueryOptions = queryOptions({
+  queryKey: ["admin", "reports"],
+  queryFn: () => adminListReports(),
+});
+
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
@@ -79,6 +85,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
       context.queryClient.ensureQueryData(verifyAdminQueryOptions),
       context.queryClient.ensureQueryData(auditLogsQueryOptions),
       context.queryClient.ensureQueryData(statsQueryOptions),
+      context.queryClient.ensureQueryData(reportsQueryOptions),
     ]);
   },
   component: AdminPage,
@@ -124,6 +131,7 @@ function AdminPage() {
           <TabsTrigger value="verify">Verify Businesses</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="banners">Banner Ads</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="audit">Audit Logs</TabsTrigger>
         </TabsList>
 
@@ -229,6 +237,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="banners" className="mt-0">
           <BannersAdmin />
+        </TabsContent>
+        <TabsContent value="reports" className="mt-0">
+          <ReportsAdmin />
         </TabsContent>
         <TabsContent value="audit" className="mt-0">
           <AuditLogsAdmin />
