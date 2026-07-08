@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Tag,
 } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { BusinessMap } from "./BusinessMap";
