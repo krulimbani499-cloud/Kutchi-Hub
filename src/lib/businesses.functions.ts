@@ -8,7 +8,8 @@ const searchSchema = z.object({
   category: z.string().optional(),
   city: z.string().optional(),
   minRating: z.coerce.number().min(0).max(5).optional(),
-  sort: z.enum(["relevance", "rating", "newest"]).optional().default("relevance"),
+  sort: z.enum(["relevance", "rating", "newest", "discount"]).optional().default("relevance"),
+  hasDiscount: z.coerce.boolean().optional().default(false),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(50).optional().default(20),
 });
@@ -64,6 +65,13 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       query = query.ilike("city", `%${data.city}%`);
     }
 
+    if (data.hasDiscount) {
+      const today = new Date().toISOString().slice(0, 10);
+      query = query
+        .gt("app_discount_percent", 0)
+        .or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`);
+    }
+
     const { data: businesses, error } = await query
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
@@ -104,6 +112,12 @@ export const searchBusinesses = createServerFn({ method: "GET" })
         (a, b) =>
           new Date((b as unknown as { created_at: string }).created_at).getTime() -
           new Date((a as unknown as { created_at: string }).created_at).getTime(),
+      );
+    } else if (data.sort === "discount") {
+      filteredResults.sort(
+        (a, b) =>
+          ((b as unknown as { app_discount_percent: number | null }).app_discount_percent ?? 0) -
+          ((a as unknown as { app_discount_percent: number | null }).app_discount_percent ?? 0),
       );
     }
 
