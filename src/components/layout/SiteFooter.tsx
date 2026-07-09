@@ -37,11 +37,14 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold text-foreground">Follow</h4>
+          <h4 className="text-sm font-semibold text-foreground">
+            Follow <span className="ml-1 rounded-full bg-[#ff6a00]/10 px-2 py-0.5 text-[10px] font-medium text-[#ff6a00]">Coming soon</span>
+          </h4>
+          <p className="mt-3 text-xs text-muted-foreground">@kutchihub</p>
           <div className="mt-3 flex gap-3 text-muted-foreground">
-            <a href="#" aria-label="Facebook" className="hover:text-primary"><Facebook className="h-5 w-5" /></a>
-            <a href="#" aria-label="Instagram" className="hover:text-primary"><Instagram className="h-5 w-5" /></a>
-            <a href="#" aria-label="Twitter" className="hover:text-primary"><Twitter className="h-5 w-5" /></a>
+            <a href="https://instagram.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-primary"><Instagram className="h-5 w-5" /></a>
+            <a href="https://facebook.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-primary"><Facebook className="h-5 w-5" /></a>
+            <a href="https://x.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="hover:text-primary"><Twitter className="h-5 w-5" /></a>
             <a href="mailto:hello@kutchihub.com" aria-label="Email" className="hover:text-primary"><Mail className="h-5 w-5" /></a>
           </div>
         </div>
