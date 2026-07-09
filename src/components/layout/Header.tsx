@@ -40,8 +40,8 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-white shadow-sm">
       <div className="mx-auto grid min-h-16 max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:flex sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0">
         <Link to="/" className="flex min-w-0 shrink items-center gap-0 font-bold -ml-2 sm:-ml-1">
-          <img src={logoUrl} alt="Kutchi Hub" className="h-8 w-auto shrink-0 object-contain sm:h-12" />
-          <span className="-ml-4 sm:-ml-8 truncate text-sm sm:text-2xl tracking-tight uppercase font-['Baloo_2',system-ui,sans-serif] font-extrabold">
+          <img src={logoUrl} alt="Kutchi Hub" className="h-11 w-auto shrink-0 object-contain sm:h-12" />
+          <span className="-ml-6 sm:-ml-8 truncate text-xl sm:text-2xl tracking-tight uppercase font-['Baloo_2',system-ui,sans-serif] font-extrabold">
             <span className="text-[#ff6a00]">KUTCHI</span> <span className="text-black">HUB</span>
           </span>
         </Link>
