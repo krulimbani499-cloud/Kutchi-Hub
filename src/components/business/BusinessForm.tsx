@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { MapPin, Loader2, Plus, Upload, X } from "lucide-react";
+import { MapPin, Loader2, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createBusiness, updateBusiness, createCategory } from "@/lib/businesses.functions";
+import { createBusiness, updateBusiness } from "@/lib/businesses.functions";
 import { geocodeAddress } from "@/lib/maps.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import type { Tables } from "@/integrations/supabase/types";
@@ -52,15 +52,11 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
   const createFn = useServerFn(createBusiness);
   const updateFn = useServerFn(updateBusiness);
   const geocodeFn = useServerFn(geocodeAddress);
-  const createCategoryFn = useServerFn(createCategory);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [geocoding, setGeocoding] = useState(false);
-  const [categoryList, setCategoryList] = useState(categories);
-  const [showAddCategory, setShowAddCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [addingCategory, setAddingCategory] = useState(false);
+  const categoryList = categories;
   const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({
     lat: initial?.latitude ?? null,
     lng: initial?.longitude ?? null,
