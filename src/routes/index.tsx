@@ -299,8 +299,8 @@ function HomePage() {
       {/* Travel bookings */}
       <Reveal><TravelBookingsSection /></Reveal>
 
-      {/* Top Contributors leaderboard */}
-      <LeaderboardSection />
+      {/* Top Contributors leaderboard - temporarily hidden */}
+      {/* <LeaderboardSection /> */}
 
       {/* Bottom CTA — subtle */}
       <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-8">
