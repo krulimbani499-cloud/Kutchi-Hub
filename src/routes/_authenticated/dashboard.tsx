@@ -2,12 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getDashboard, deleteBusiness, updateClaimStatus } from "@/lib/businesses.functions";
+import { signOut } from "@/lib/auth";
 import { getOwnerEnquiries, updateEnquiryStatus } from "@/lib/leads.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbox } from "lucide-react";
+import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbox, LogOut } from "lucide-react";
 import { BarChart3 } from "lucide-react";
 import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCard";
 import { RewardsCard } from "@/components/gamification/RewardsCard";
@@ -67,9 +68,15 @@ function DashboardPage() {
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Manage your listings and ownership claims.</p>
         </div>
-        <Button className="bg-primary text-primary-foreground" asChild>
-          <Link to="/business/new">Add New Business</Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button className="bg-primary text-primary-foreground" asChild>
+            <Link to="/business/new">Add New Business</Link>
+          </Button>
+          <Button variant="outline" onClick={() => signOut()}>
+            <LogOut className="mr-1 h-4 w-4" />
+            Sign out
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
