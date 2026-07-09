@@ -239,43 +239,45 @@ function DashboardPage() {
         </div>
 
         <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Claims
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.claims.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">No claims found.</p>
-              ) : (
-                <div className="space-y-4">
-                  {data.claims.map((claim) => (
-                    <div key={claim.id} className="rounded-lg border border-border p-4">
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="font-medium text-foreground">{claim.businessName}</span>
-                        <Badge variant="outline">{claim.status}</Badge>
-                      </div>
-                      <p className="mb-2 text-xs text-muted-foreground">{claim.message || "No message"}</p>
-                      {data.isAdmin && claim.status === "pending" && (
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="text-success" onClick={() => handleClaim(claim.id, "approved")}>
-                            Approve
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleClaim(claim.id, "rejected")}>
-                            Reject
-                          </Button>
+          {data.isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Claims
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {data.claims.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">No claims found.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {data.claims.map((claim) => (
+                      <div key={claim.id} className="rounded-lg border border-border p-4">
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="font-medium text-foreground">{claim.businessName}</span>
+                          <Badge variant="outline">{claim.status}</Badge>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        <p className="mb-2 text-xs text-muted-foreground">{claim.message || "No message"}</p>
+                        {claim.status === "pending" && (
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="text-success" onClick={() => handleClaim(claim.id, "approved")}>
+                              Approve
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleClaim(claim.id, "rejected")}>
+                              Reject
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          <div className="mt-6">
+          <div className={data.isAdmin ? "mt-6" : ""}>
             <RewardsCard />
           </div>
 
