@@ -38,7 +38,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-white shadow-sm">
-      <div className="mx-auto grid min-h-16 max-w-7xl grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-2 sm:flex sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0">
+      <div className="mx-auto grid min-h-16 max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:flex sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0">
         <Link to="/" className="flex min-w-0 shrink items-center gap-0 font-bold -ml-2 sm:-ml-1">
           <img src={logoUrl} alt="Kutchi Hub" className="h-8 w-auto shrink-0 object-contain sm:h-12" />
           <span className="-ml-4 sm:-ml-8 truncate text-sm sm:text-2xl tracking-tight uppercase font-['Baloo_2',system-ui,sans-serif] font-extrabold">
@@ -46,12 +46,12 @@ export function Header() {
           </span>
         </Link>
 
-        <div className="flex shrink-0 items-center rounded-md border border-border px-0.5 py-0.5 text-sm text-foreground sm:ml-auto sm:px-1 sm:py-1">
+        <div className="hidden sm:ml-auto sm:flex shrink-0 items-center rounded-md border border-border sm:px-1 sm:py-1 text-sm text-foreground">
           <CitySelector compact />
         </div>
 
         <form
-          className="relative order-last col-span-3 flex min-w-0 items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#ff6a00] sm:order-none sm:col-span-1 sm:flex-1 sm:max-w-xl"
+          className="relative order-last col-span-2 flex min-w-0 items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#ff6a00] sm:order-none sm:col-span-1 sm:flex-1 sm:max-w-xl"
           onSubmit={(e) => {
             e.preventDefault();
             if (search.trim()) {
