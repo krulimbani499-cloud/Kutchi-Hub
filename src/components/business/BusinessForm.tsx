@@ -235,62 +235,9 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
             ))}
           </SelectContent>
         </Select>
-        {!showAddCategory ? (
-          <button
-            type="button"
-            onClick={() => setShowAddCategory(true)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-          >
-            <Plus className="h-3 w-3" /> Add new category
-          </button>
-        ) : (
-          <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-3 sm:flex-row sm:items-center">
-            <Input
-              placeholder="New category name"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              className="h-9"
-            />
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                disabled={addingCategory || newCategoryName.trim().length < 2}
-                onClick={async () => {
-                  setAddingCategory(true);
-                  setFormMessage("");
-                  try {
-                    const created = await createCategoryFn({ data: { name: newCategoryName.trim() } });
-                    setCategoryList((list) =>
-                      list.some((c) => c.id === created.id) ? list : [...list, created],
-                    );
-                    setForm((f) => ({ ...f, category_id: created.id }));
-                    setNewCategoryName("");
-                    setShowAddCategory(false);
-                  } catch (err) {
-                    setFormMessage(err instanceof Error ? err.message : "Could not add category.");
-                  } finally {
-                    setAddingCategory(false);
-                  }
-                }}
-              >
-                {addingCategory ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
-                Add
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setShowAddCategory(false);
-                  setNewCategoryName("");
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
+        <p className="text-xs text-muted-foreground">
+          Can't find your category? Contact admin to add it.
+        </p>
         {errors.category_id && <p className="text-xs text-destructive">{errors.category_id}</p>}
       </div>
 
