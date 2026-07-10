@@ -1050,7 +1050,7 @@ export const getCityPageData = createServerFn({ method: "GET" })
         "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published")
-      .ilike("city", cityName)
+      .ilike("city", `%${cityName}%`)
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
       .limit(80);
@@ -1148,7 +1148,7 @@ export const getCityCategoryPageData = createServerFn({ method: "GET" })
       )
       .eq("status", "published")
       .eq("category_id", category.id)
-      .ilike("city", cityName)
+      .ilike("city", `%${cityName}%`)
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
       .limit(80);
