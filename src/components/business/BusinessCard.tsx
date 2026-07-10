@@ -116,25 +116,25 @@ export function BusinessCard({ business }: BusinessCardProps) {
             </div>
           )}
         </div>
-        <div className="relative z-20 mt-4 flex gap-2">
+        <div className="relative z-20 mt-4 flex gap-1.5 sm:gap-2">
           <Button
             size="sm"
             variant="outline"
-            className="flex-1 px-2"
+            className="flex-1 px-2 text-xs sm:text-sm"
             onClick={(e) => {
               e.preventDefault();
               window.location.href = `tel:${business.phone}`;
             }}
             disabled={!business.phone}
           >
-            <Phone className="mr-1 h-3.5 w-3.5" />
-            Call
+            <Phone className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">Call</span>
           </Button>
           {business.phone && (
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 border-emerald-500/30 bg-emerald-50 px-2 text-emerald-700 hover:bg-emerald-100"
+              className="flex-1 border-emerald-500/30 bg-emerald-50 px-2 text-xs text-emerald-700 hover:bg-emerald-100 sm:text-sm"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -142,11 +142,11 @@ export function BusinessCard({ business }: BusinessCardProps) {
               }}
               aria-label="Chat on WhatsApp"
             >
-              <MessageCircle className="mr-1 h-3.5 w-3.5" />
-              WhatsApp
+              <MessageCircle className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">WhatsApp</span>
             </Button>
           )}
-          <Button size="sm" className="flex-1 bg-primary px-2 text-primary-foreground" asChild>
+          <Button size="sm" className="flex-1 bg-primary px-2 text-xs text-primary-foreground sm:text-sm" asChild>
             <Link to="/business/$slug" params={{ slug: business.slug }}>
               Details
             </Link>
