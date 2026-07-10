@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   MapPin,
@@ -30,7 +30,7 @@ import { addReview } from "@/lib/businesses.functions";
 import { logBusinessEvent } from "@/lib/leads.functions";
 import { listBusinessServices } from "@/lib/services.functions";
 import { listBusinessProducts } from "@/lib/products.functions";
-import { replyToReview } from "@/lib/reviews.functions";
+import { replyToReview, updateReview } from "@/lib/reviews.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
@@ -60,18 +60,22 @@ interface BusinessDetailProps {
 
 export function BusinessDetail({ business, reviews, photos, avgRating, reviewCount }: BusinessDetailProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const submitReview = useServerFn(addReview);
+  const editReview = useServerFn(updateReview);
   const logEvent = useServerFn(logBusinessEvent);
   const replyFn = useServerFn(replyToReview);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [editingMyReview, setEditingMyReview] = useState(false);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyBusy, setReplyBusy] = useState<string | null>(null);
   const [replySaved, setReplySaved] = useState<Record<string, string>>({});
   const isOwner = !!user && user.id === business.owner_id;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const myReview = user ? reviews.find((r) => r.user_id === user.id) ?? null : null;
 
   const handleReply = async (reviewId: string) => {
     const text = (replyDrafts[reviewId] ?? "").trim();
@@ -143,15 +147,37 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
     if (!user) return;
     setSubmitting(true);
     try {
-      await submitReview({ data: { businessId: business.id, rating, review: reviewText } });
+      if (myReview && editingMyReview) {
+        await editReview({ data: { reviewId: myReview.id, rating, review: reviewText } });
+        setMessage("Review updated!");
+        setEditingMyReview(false);
+      } else {
+        await submitReview({ data: { businessId: business.id, rating, review: reviewText } });
+        setMessage("Review submitted!");
+      }
       setReviewText("");
       setRating(0);
-      setMessage("Review submitted!");
+      await router.invalidate();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to submit review");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const startEditMyReview = () => {
+    if (!myReview) return;
+    setRating(myReview.rating);
+    setReviewText(myReview.review ?? "");
+    setEditingMyReview(true);
+    setMessage("");
+  };
+
+  const cancelEditMyReview = () => {
+    setEditingMyReview(false);
+    setRating(0);
+    setReviewText("");
+    setMessage("");
   };
 
   return (
@@ -486,10 +512,10 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
 
           <div className="mt-6 rounded-2xl border border-border bg-card p-5">
             <h2 className="mb-4 text-lg font-semibold text-foreground">Reviews</h2>
-            {user ? (
+            {user && (!myReview || editingMyReview) ? (
               <form onSubmit={handleReview} className="mb-6 space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Your rating:</span>
+                  <span className="text-sm text-muted-foreground">{editingMyReview ? "Edit your rating:" : "Your rating:"}</span>
                   <div className="flex">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
@@ -510,13 +536,25 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   className="min-h-[80px]"
                 />
                 {message && <p className="text-sm text-muted-foreground">{message}</p>}
-                <Button type="submit" disabled={rating === 0 || submitting} className="bg-primary text-primary-foreground">
-                  {submitting ? "Submitting..." : "Submit Review"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button type="submit" disabled={rating === 0 || submitting} className="bg-primary text-primary-foreground">
+                    {submitting ? "Saving..." : editingMyReview ? "Update Review" : "Submit Review"}
+                  </Button>
+                  {editingMyReview && (
+                    <Button type="button" variant="ghost" onClick={cancelEditMyReview}>
+                      Cancel
+                    </Button>
+                  )}
+                </div>
               </form>
-            ) : (
+            ) : !user ? (
               <div className="mb-6 rounded-lg bg-muted p-4 text-sm text-muted-foreground">
                 <Link to="/auth" className="font-medium text-primary hover:underline">Sign in</Link> to write a review.
+              </div>
+            ) : (
+              <div className="mb-6 flex items-center justify-between gap-2 rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+                <span>You've already reviewed this business.</span>
+                <Button size="sm" variant="outline" onClick={startEditMyReview}>Edit your review</Button>
               </div>
             )}
 

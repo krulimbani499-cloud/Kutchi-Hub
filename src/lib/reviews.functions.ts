@@ -7,6 +7,33 @@ const replySchema = z.object({
   reply: z.string().trim().min(1).max(1000),
 });
 
+const updateReviewSchema = z.object({
+  reviewId: z.string().uuid(),
+  rating: z.coerce.number().min(1).max(5),
+  review: z.string().max(1000).optional(),
+});
+
+export const updateReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => updateReviewSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: existing, error: rErr } = await supabase
+      .from("business_reviews")
+      .select("id, user_id")
+      .eq("id", data.reviewId)
+      .maybeSingle();
+    if (rErr) throw new Error(rErr.message);
+    if (!existing) throw new Error("Review not found");
+    if (existing.user_id !== userId) throw new Error("You can only edit your own review");
+    const { error } = await supabase
+      .from("business_reviews")
+      .update({ rating: data.rating, review: data.review || null })
+      .eq("id", data.reviewId);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
 export const replyToReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => replySchema.parse(input))
