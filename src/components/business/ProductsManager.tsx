@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus, IndianRupee, Upload, X, Package, Pencil } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   businessId: string;
@@ -105,7 +106,11 @@ export function ProductsManager({ businessId }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (form.name.trim().length < 2) return;
+    if (form.name.trim().length < 2) {
+      setError("Product name must be at least 2 characters.");
+      toast.error("Product name too short");
+      return;
+    }
     setBusy(true);
     try {
       await upsert({
@@ -122,10 +127,14 @@ export function ProductsManager({ businessId }: Props) {
           imageUrls: images,
         },
       });
+      toast.success(editingId ? "Product updated" : "Product added");
       resetForm();
       await refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save product.");
+      const msg = e instanceof Error ? e.message : "Could not save product.";
+      console.error("[ProductsManager] upsert failed:", e);
+      setError(msg);
+      toast.error(`Could not save: ${msg}`);
     } finally {
       setBusy(false);
     }
@@ -151,14 +160,23 @@ export function ProductsManager({ businessId }: Props) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-dashed border-border p-3">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium text-foreground">{editingId ? "Edit product" : "Add a product"}</div>
-          {editingId && (
-            <button type="button" onClick={resetForm} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-              <X className="h-3 w-3" /> Cancel
-            </button>
-          )}
-        </div>
+        {editingId ? (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-900">
+            <div className="text-sm font-medium">
+              ✏️ Editing existing product — saving will overwrite it.
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={resetForm}>
+              <X className="mr-1 h-3.5 w-3.5" /> Cancel & add new
+            </Button>
+          </div>
+        ) : (
+          <div className="text-sm font-medium text-foreground">Add a new product</div>
+        )}
+        {error && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
+            {error}
+          </div>
+        )}
         <Input
           placeholder="Product name"
           value={form.name}
@@ -249,11 +267,9 @@ export function ProductsManager({ businessId }: Props) {
           </div>
         </div>
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
-
         <Button
           type="submit"
-          disabled={busy || uploading || form.name.trim().length < 2}
+          disabled={busy || uploading}
           className="bg-[#ff6a00] text-white hover:bg-[#e65a00]"
         >
           {editingId ? (
