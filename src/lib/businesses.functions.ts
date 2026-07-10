@@ -58,7 +58,15 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     }
 
     if (data.category && data.category !== "all") {
-      query = query.eq("categories.slug", data.category);
+      const { data: cat } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("slug", data.category)
+        .maybeSingle();
+      if (!cat) {
+        return [];
+      }
+      query = query.eq("category_id", cat.id);
     }
 
     if (data.city && data.city !== "all") {
