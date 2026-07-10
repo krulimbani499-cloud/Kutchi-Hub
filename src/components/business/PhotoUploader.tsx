@@ -151,19 +151,14 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
         </p>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
-      {featured && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Star className="h-3.5 w-3.5 fill-rating text-rating" />
-          <span>Featured image set. Tap another photo's star to change, or</span>
-          <button
-            type="button"
-            onClick={clearFeatured}
-            className="font-medium text-destructive underline underline-offset-2"
-          >
-            remove featured
-          </button>
-        </div>
-      )}
+      {featured ? (
+        <p className="text-xs text-muted-foreground">
+          <Star className="mr-1 inline h-3 w-3 fill-rating text-rating" />
+          Featured image is set. Tap and hold on a photo to change or remove it.
+        </p>
+      ) : photos.length > 0 ? (
+        <p className="text-xs text-muted-foreground">Tap and hold on a photo to set it as the featured image.</p>
+      ) : null}
       {photos.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {photos.map((photo) => (
