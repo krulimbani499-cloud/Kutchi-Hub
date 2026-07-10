@@ -296,6 +296,65 @@ export type Database = {
           },
         ]
       }
+      business_products: {
+        Row: {
+          active: boolean
+          business_id: string
+          category: string | null
+          created_at: string
+          description: string | null
+          discount_price: number | null
+          display_order: number
+          id: string
+          image_urls: string[]
+          in_stock: boolean
+          name: string
+          price: number | null
+          stock: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          discount_price?: number | null
+          display_order?: number
+          id?: string
+          image_urls?: string[]
+          in_stock?: boolean
+          name: string
+          price?: number | null
+          stock?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          discount_price?: number | null
+          display_order?: number
+          id?: string
+          image_urls?: string[]
+          in_stock?: boolean
+          name?: string
+          price?: number | null
+          stock?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_products_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_reviews: {
         Row: {
           business_id: string
