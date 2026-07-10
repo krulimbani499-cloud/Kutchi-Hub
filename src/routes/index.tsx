@@ -140,7 +140,7 @@ function HomePage() {
             <div className="relative flex h-12 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3 transition-all duration-300 focus-within:border-[#ff6a00] focus-within:shadow-[0_0_0_4px_rgba(255,106,0,0.15)]">
               <Input
                 type="search"
-                placeholder="Search for restaurants, doctors, salons..."
+                placeholder="Search for restaurants, doctors, grocery..."
                 className="h-11 flex-1 border-0 bg-transparent text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
