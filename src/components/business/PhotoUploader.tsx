@@ -95,6 +95,12 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
     await supabase.from("businesses").update({ featured_image: photo.url }).eq("id", businessId);
   };
 
+  const clearFeatured = async () => {
+    setFeatured(null);
+    onFeaturedChange?.("");
+    await supabase.from("businesses").update({ featured_image: null }).eq("id", businessId);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -119,31 +125,46 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
         </p>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
+      {featured && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Star className="h-3.5 w-3.5 fill-rating text-rating" />
+          <span>Featured image set. Tap another photo's star to change, or</span>
+          <button
+            type="button"
+            onClick={clearFeatured}
+            className="font-medium text-destructive underline underline-offset-2"
+          >
+            remove featured
+          </button>
+        </div>
+      )}
       {photos.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {photos.map((photo) => (
-            <div key={photo.id} className="group relative overflow-hidden rounded-lg border border-border">
+            <div key={photo.id} className="relative overflow-hidden rounded-lg border border-border">
               <BusinessPhotoImage src={photo.url} alt={photo.caption ?? "Business photo"} className="aspect-square w-full object-cover" />
-              <div className="absolute inset-0 flex items-end justify-between bg-gradient-to-t from-black/70 via-transparent to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-2">
                 <Button
                   type="button"
                   size="sm"
-                  variant="secondary"
+                  variant={featured === photo.url ? "default" : "secondary"}
                   onClick={() => setAsFeatured(photo)}
-                  className="h-7 px-2 text-xs"
-                  title="Set as featured"
+                  className="h-7 gap-1 px-2 text-xs"
+                  title={featured === photo.url ? "Featured" : "Set as featured"}
                 >
                   <Star className={`h-3.5 w-3.5 ${featured === photo.url ? "fill-rating text-rating" : ""}`} />
+                  <span className="hidden sm:inline">{featured === photo.url ? "Featured" : "Feature"}</span>
                 </Button>
                 <Button
                   type="button"
                   size="sm"
                   variant="destructive"
                   onClick={() => deletePhoto(photo)}
-                  className="h-7 px-2 text-xs"
-                  title="Delete"
+                  className="h-7 gap-1 px-2 text-xs"
+                  title="Delete photo"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Delete</span>
                 </Button>
               </div>
               {featured === photo.url && (
