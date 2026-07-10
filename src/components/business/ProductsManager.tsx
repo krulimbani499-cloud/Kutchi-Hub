@@ -103,8 +103,7 @@ export function ProductsManager({ businessId }: Props) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError("");
     if (form.name.trim().length < 2) {
       setError("Product name must be at least 2 characters.");
@@ -159,7 +158,7 @@ export function ProductsManager({ businessId }: Props) {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-dashed border-border p-3">
+      <div className="space-y-3 rounded-lg border border-dashed border-border p-3">
         {editingId ? (
           <div className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-900">
             <div className="text-sm font-medium">
@@ -268,7 +267,8 @@ export function ProductsManager({ businessId }: Props) {
         </div>
 
         <Button
-          type="submit"
+          type="button"
+          onClick={() => void handleSubmit()}
           disabled={busy || uploading}
           className="bg-[#ff6a00] text-white hover:bg-[#e65a00]"
         >
@@ -278,7 +278,7 @@ export function ProductsManager({ businessId }: Props) {
             <><Plus className="mr-1 h-4 w-4" /> {busy ? "Adding..." : "Add product"}</>
           )}
         </Button>
-      </form>
+      </div>
     </div>
   );
 }
