@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -206,6 +206,34 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     }
   };
 
+  // Auto-geocode: whenever address/city/state/pincode change, look up the pin
+  // automatically after a short debounce so the map matches what the user typed.
+  const lastGeocodedRef = useRef<string>("");
+  useEffect(() => {
+    const composed = [form.address, form.city, form.state, form.pincode]
+      .map((v) => v.trim())
+      .filter(Boolean)
+      .join(", ");
+    if (!composed || !form.city.trim()) return;
+    if (composed === lastGeocodedRef.current) return;
+    const handle = setTimeout(async () => {
+      lastGeocodedRef.current = composed;
+      setGeocoding(true);
+      try {
+        const res = await geocodeFn({ data: { address: composed } });
+        if (res.found) {
+          setCoords({ lat: res.latitude, lng: res.longitude });
+        }
+      } catch {
+        // silent — user can still click "Find on map"
+      } finally {
+        setGeocoding(false);
+      }
+    }, 900);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.address, form.city, form.state, form.pincode]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {formMessage && (
@@ -407,9 +435,21 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         </div>
         <p className="text-xs text-muted-foreground">
           {coords.lat != null && coords.lng != null
-            ? `Coordinates: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
-            : "No coordinates set. Click 'Find on map' to geocode the address."}
+            ? `Coordinates: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)} — map updates automatically as you type the address.`
+            : "Type the address, city and pincode — the map will auto-locate."}
         </p>
+        {coords.lat != null && coords.lng != null && import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY && (
+          <div className="mt-3 overflow-hidden rounded-md border border-border">
+            <iframe
+              title="Location preview"
+              width="100%"
+              height="220"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY}&q=${coords.lat},${coords.lng}&zoom=17`}
+            />
+          </div>
+        )}
       </div>
 
       {!initial && (
