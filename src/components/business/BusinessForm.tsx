@@ -444,6 +444,22 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
             lat={coords.lat}
             lng={coords.lng}
             onChange={(lat, lng) => setCoords({ lat, lng })}
+            onAddressResolved={(parts) => {
+              // Prevent the auto-geocode effect from re-running on these values.
+              const composed = [parts.address, parts.city ?? "", parts.state ?? "", parts.pincode ?? ""]
+                .map((v) => v.trim())
+                .filter(Boolean)
+                .join(", ");
+              lastGeocodedRef.current = composed;
+              setForm((f) => ({
+                ...f,
+                address: parts.address || f.address,
+                city: parts.city ?? f.city,
+                state: parts.state ?? f.state,
+                pincode: parts.pincode ?? f.pincode,
+              }));
+              setFormMessage("Address filled from map pin — edit if needed.");
+            }}
           />
         </div>
       </div>
