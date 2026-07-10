@@ -112,6 +112,11 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
     queryFn: () => listBusinessServices({ data: { businessId: business.id } }),
   });
 
+  const { data: products = [] } = useQuery({
+    queryKey: ["products", business.id],
+    queryFn: () => listBusinessProducts({ data: { businessId: business.id } }),
+  });
+
   const trackClick = (eventType: "call_click" | "whatsapp_click" | "website_click" | "direction_click" | "share_click") => {
     if (isOwner) return;
     logEvent({ data: { businessId: business.id, eventType } }).catch(() => {});
@@ -397,6 +402,17 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 <ServicesDisplay services={services} />
               ) : (
                 <p className="text-sm text-muted-foreground">No services listed.</p>
+              )}
+            </section>
+
+            <section>
+              <h2 className="mb-2 text-lg font-semibold text-foreground">Products</h2>
+              {isOwner ? (
+                <ProductsManager businessId={business.id} />
+              ) : products.length > 0 ? (
+                <ProductsDisplay products={products} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No products listed.</p>
               )}
             </section>
 
