@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, IndianRupee, Upload, X, Package } from "lucide-react";
+import { Trash2, Plus, IndianRupee, Upload, X, Package, Pencil } from "lucide-react";
 
 interface Props {
   businessId: string;
@@ -48,11 +48,35 @@ export function ProductsManager({ businessId }: Props) {
     stock: "",
     inStock: true,
   };
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(empty);
   const [images, setImages] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+
+  const resetForm = () => {
+    setEditingId(null);
+    setForm(empty);
+    setImages([]);
+    setError("");
+  };
+
+  const startEdit = (p: Product) => {
+    setEditingId(p.id);
+    setForm({
+      name: p.name,
+      description: p.description ?? "",
+      price: p.price != null ? String(p.price) : "",
+      discountPrice: p.discount_price != null ? String(p.discount_price) : "",
+      category: p.category ?? "",
+      stock: p.stock != null ? String(p.stock) : "",
+      inStock: p.in_stock,
+    });
+    setImages(p.image_urls ?? []);
+    setError("");
+    if (typeof window !== "undefined") window.scrollTo({ top: window.scrollY + 200, behavior: "smooth" });
+  };
 
   const handlePickImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -78,7 +102,7 @@ export function ProductsManager({ businessId }: Props) {
     }
   };
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (form.name.trim().length < 2) return;
@@ -86,6 +110,7 @@ export function ProductsManager({ businessId }: Props) {
     try {
       await upsert({
         data: {
+          id: editingId ?? undefined,
           businessId,
           name: form.name.trim(),
           description: form.description.trim() || undefined,
@@ -97,8 +122,7 @@ export function ProductsManager({ businessId }: Props) {
           imageUrls: images,
         },
       });
-      setForm(empty);
-      setImages([]);
+      resetForm();
       await refetch();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save product.");
@@ -110,6 +134,7 @@ export function ProductsManager({ businessId }: Props) {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product?")) return;
     await del({ data: { id } });
+    if (editingId === id) resetForm();
     await refetch();
   };
 
@@ -120,13 +145,20 @@ export function ProductsManager({ businessId }: Props) {
           <p className="text-sm text-muted-foreground">No products added yet.</p>
         ) : (
           products.map((p) => (
-            <ProductRow key={p.id} product={p} onDelete={() => handleDelete(p.id)} />
+            <ProductRow key={p.id} product={p} onEdit={() => startEdit(p)} onDelete={() => handleDelete(p.id)} />
           ))
         )}
       </div>
 
-      <form onSubmit={handleAdd} className="space-y-3 rounded-lg border border-dashed border-border p-3">
-        <div className="text-sm font-medium text-foreground">Add a product</div>
+      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-dashed border-border p-3">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium text-foreground">{editingId ? "Edit product" : "Add a product"}</div>
+          {editingId && (
+            <button type="button" onClick={resetForm} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              <X className="h-3 w-3" /> Cancel
+            </button>
+          )}
+        </div>
         <Input
           placeholder="Product name"
           value={form.name}
@@ -224,14 +256,18 @@ export function ProductsManager({ businessId }: Props) {
           disabled={busy || uploading || form.name.trim().length < 2}
           className="bg-[#ff6a00] text-white hover:bg-[#e65a00]"
         >
-          <Plus className="mr-1 h-4 w-4" /> {busy ? "Adding..." : "Add product"}
+          {editingId ? (
+            <><Pencil className="mr-1 h-4 w-4" /> {busy ? "Saving..." : "Save changes"}</>
+          ) : (
+            <><Plus className="mr-1 h-4 w-4" /> {busy ? "Adding..." : "Add product"}</>
+          )}
         </Button>
       </form>
     </div>
   );
 }
 
-function ProductRow({ product: p, onDelete }: { product: Product; onDelete?: () => void }) {
+function ProductRow({ product: p, onEdit, onDelete }: { product: Product; onEdit?: () => void; onDelete?: () => void }) {
   const cover = p.image_urls?.[0];
   const hasDiscount = p.discount_price != null && p.price != null && p.discount_price < p.price;
   return (
@@ -274,10 +310,19 @@ function ProductRow({ product: p, onDelete }: { product: Product; onDelete?: () 
           {p.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{p.description}</p>}
         </div>
       </div>
-      {onDelete && (
-        <Button variant="ghost" size="icon" onClick={onDelete}>
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+      {(onEdit || onDelete) && (
+        <div className="flex flex-shrink-0 gap-1">
+          {onEdit && (
+            <Button variant="ghost" size="icon" onClick={onEdit} title="Edit">
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="ghost" size="icon" onClick={onDelete} title="Delete">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
