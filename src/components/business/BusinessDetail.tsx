@@ -260,57 +260,57 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
           )}
 
           {/* Summary panel */}
-          <div className="flex flex-col justify-between gap-4 p-5 sm:p-6">
+          <div className="flex min-w-0 flex-col justify-between gap-4 p-4 sm:p-6">
             <div>
-              <div className="flex items-start justify-between gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                 <div className="min-w-0">
-                  <h1 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold text-foreground">
-                    <span className="truncate">{business.name}</span>
+                  <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-xl font-extrabold text-foreground sm:gap-2 sm:text-2xl">
+                    <span className="min-w-0 truncate">{business.name}</span>
                     {business.verified && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+                      <span className="inline-flex max-w-full shrink-0 items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-200 sm:px-2 sm:text-xs">
                         <BadgeCheck className="h-3.5 w-3.5" /> Verified
                       </span>
                     )}
                   </h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 truncate text-xs text-muted-foreground sm:text-sm">
                     {business.categories?.name} · {business.city}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex shrink-0 flex-col items-end gap-1">
                   <FavoriteButton businessId={business.id} />
-                  <span className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-1 text-sm font-bold text-white">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white sm:px-2 sm:py-1 sm:text-sm">
                     {avgRating.toFixed(1)} <Star className="h-3.5 w-3.5 fill-white" />
                   </span>
-                  <span className="text-xs text-muted-foreground">{reviewCount} Ratings</span>
+                  <span className="max-w-16 truncate text-[11px] text-muted-foreground sm:max-w-none sm:text-xs">{reviewCount} Ratings</span>
                 </div>
               </div>
 
-              <div className="mt-4 space-y-2 text-sm">
+              <div className="mt-4 space-y-2 text-xs sm:text-sm">
                 <div className="flex items-start gap-2 text-foreground">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#ff6a00]" />
-                  <span className="text-muted-foreground">{addressLine || "Address not provided"}</span>
+                  <span className="min-w-0 break-words text-muted-foreground">{addressLine || "Address not provided"}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   <Clock className="h-4 w-4 shrink-0 text-[#ff6a00]" />
                   <span className={`font-semibold ${isOpen ? "text-green-600" : "text-red-600"}`}>
                     {isOpen ? "Open now" : "Closed"}
                   </span>
-                  {todayHours && <span className="text-muted-foreground">· {todayHours}</span>}
+                  {todayHours && <span className="min-w-0 truncate text-muted-foreground">· {todayHours}</span>}
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {business.phone && (
-                <Button asChild className="h-11 min-w-0 bg-[#ff6a00] px-2 text-white hover:bg-[#e65a00]">
+                <Button asChild className="h-10 min-w-0 bg-[#ff6a00] px-2 text-white hover:bg-[#e65a00] sm:h-11">
                   <a href={`tel:${business.phone}`} onClick={() => trackClick("call_click")} className="flex items-center justify-center">
                     <Phone className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-sm">Call</span>
+                    <span className="truncate text-xs sm:text-sm">Call</span>
                   </a>
                 </Button>
               )}
               {business.phone && (
-                <Button asChild variant="outline" className="h-11 min-w-0 border-green-600 px-2 text-green-700 hover:bg-green-50">
+                <Button asChild variant="outline" className="h-10 min-w-0 border-green-600 px-2 text-green-700 hover:bg-green-50 sm:h-11">
                   <a
                     href={`https://wa.me/${business.phone.replace(/[^0-9]/g, "")}`}
                     target="_blank"
@@ -319,28 +319,28 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     className="flex items-center justify-center"
                   >
                     <MessageSquare className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-sm">WhatsApp</span>
+                    <span className="truncate text-xs sm:text-sm">WhatsApp</span>
                   </a>
                 </Button>
               )}
-              <Button asChild variant="outline" className="h-11 min-w-0 px-2">
+              <Button asChild variant="outline" className="h-10 min-w-0 px-2 sm:h-11">
                 <a href={mapsHref} target="_blank" rel="noreferrer" onClick={() => trackClick("direction_click")} className="flex items-center justify-center">
                   <Navigation className="mr-1 h-4 w-4 shrink-0" />
-                  <span className="truncate text-sm">Directions</span>
+                  <span className="truncate text-xs sm:text-sm">Directions</span>
                 </a>
               </Button>
               {business.website ? (
-                <Button asChild variant="outline" className="h-11 min-w-0 px-2">
+                <Button asChild variant="outline" className="h-10 min-w-0 px-2 sm:h-11">
                   <a href={business.website} target="_blank" rel="noreferrer" onClick={() => trackClick("website_click")} className="flex items-center justify-center">
                     <Globe className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-sm">Website</span>
+                    <span className="truncate text-xs sm:text-sm">Website</span>
                   </a>
                 </Button>
               ) : business.email ? (
-                <Button asChild variant="outline" className="h-11 min-w-0 px-2">
+                <Button asChild variant="outline" className="h-10 min-w-0 px-2 sm:h-11">
                   <a href={`mailto:${business.email}`} className="flex items-center justify-center">
                     <Mail className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-sm">Email</span>
+                    <span className="truncate text-xs sm:text-sm">Email</span>
                   </a>
                 </Button>
               ) : null}
