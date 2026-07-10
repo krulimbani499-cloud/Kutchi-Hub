@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   MapPin,
@@ -30,7 +30,7 @@ import { addReview } from "@/lib/businesses.functions";
 import { logBusinessEvent } from "@/lib/leads.functions";
 import { listBusinessServices } from "@/lib/services.functions";
 import { listBusinessProducts } from "@/lib/products.functions";
-import { replyToReview } from "@/lib/reviews.functions";
+import { replyToReview, updateReview } from "@/lib/reviews.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
@@ -60,18 +60,22 @@ interface BusinessDetailProps {
 
 export function BusinessDetail({ business, reviews, photos, avgRating, reviewCount }: BusinessDetailProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const submitReview = useServerFn(addReview);
+  const editReview = useServerFn(updateReview);
   const logEvent = useServerFn(logBusinessEvent);
   const replyFn = useServerFn(replyToReview);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [editingMyReview, setEditingMyReview] = useState(false);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyBusy, setReplyBusy] = useState<string | null>(null);
   const [replySaved, setReplySaved] = useState<Record<string, string>>({});
   const isOwner = !!user && user.id === business.owner_id;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const myReview = user ? reviews.find((r) => r.user_id === user.id) ?? null : null;
 
   const handleReply = async (reviewId: string) => {
     const text = (replyDrafts[reviewId] ?? "").trim();
@@ -143,15 +147,37 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
     if (!user) return;
     setSubmitting(true);
     try {
-      await submitReview({ data: { businessId: business.id, rating, review: reviewText } });
+      if (myReview && editingMyReview) {
+        await editReview({ data: { reviewId: myReview.id, rating, review: reviewText } });
+        setMessage("Review updated!");
+        setEditingMyReview(false);
+      } else {
+        await submitReview({ data: { businessId: business.id, rating, review: reviewText } });
+        setMessage("Review submitted!");
+      }
       setReviewText("");
       setRating(0);
-      setMessage("Review submitted!");
+      await router.invalidate();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to submit review");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const startEditMyReview = () => {
+    if (!myReview) return;
+    setRating(myReview.rating);
+    setReviewText(myReview.review ?? "");
+    setEditingMyReview(true);
+    setMessage("");
+  };
+
+  const cancelEditMyReview = () => {
+    setEditingMyReview(false);
+    setRating(0);
+    setReviewText("");
+    setMessage("");
   };
 
   return (
