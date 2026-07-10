@@ -435,9 +435,21 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         </div>
         <p className="text-xs text-muted-foreground">
           {coords.lat != null && coords.lng != null
-            ? `Coordinates: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
-            : "No coordinates set. Click 'Find on map' to geocode the address."}
+            ? `Coordinates: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)} — map updates automatically as you type the address.`
+            : "Type the address, city and pincode — the map will auto-locate."}
         </p>
+        {coords.lat != null && coords.lng != null && import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY && (
+          <div className="mt-3 overflow-hidden rounded-md border border-border">
+            <iframe
+              title="Location preview"
+              width="100%"
+              height="220"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY}&q=${coords.lat},${coords.lng}&zoom=17`}
+            />
+          </div>
+        )}
       </div>
 
       {!initial && (
