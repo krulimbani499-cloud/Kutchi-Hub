@@ -512,10 +512,10 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
 
           <div className="mt-6 rounded-2xl border border-border bg-card p-5">
             <h2 className="mb-4 text-lg font-semibold text-foreground">Reviews</h2>
-            {user ? (
+            {user && (!myReview || editingMyReview) ? (
               <form onSubmit={handleReview} className="mb-6 space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Your rating:</span>
+                  <span className="text-sm text-muted-foreground">{editingMyReview ? "Edit your rating:" : "Your rating:"}</span>
                   <div className="flex">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
@@ -536,13 +536,25 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   className="min-h-[80px]"
                 />
                 {message && <p className="text-sm text-muted-foreground">{message}</p>}
-                <Button type="submit" disabled={rating === 0 || submitting} className="bg-primary text-primary-foreground">
-                  {submitting ? "Submitting..." : "Submit Review"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button type="submit" disabled={rating === 0 || submitting} className="bg-primary text-primary-foreground">
+                    {submitting ? "Saving..." : editingMyReview ? "Update Review" : "Submit Review"}
+                  </Button>
+                  {editingMyReview && (
+                    <Button type="button" variant="ghost" onClick={cancelEditMyReview}>
+                      Cancel
+                    </Button>
+                  )}
+                </div>
               </form>
-            ) : (
+            ) : !user ? (
               <div className="mb-6 rounded-lg bg-muted p-4 text-sm text-muted-foreground">
                 <Link to="/auth" className="font-medium text-primary hover:underline">Sign in</Link> to write a review.
+              </div>
+            ) : (
+              <div className="mb-6 flex items-center justify-between gap-2 rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+                <span>You've already reviewed this business.</span>
+                <Button size="sm" variant="outline" onClick={startEditMyReview}>Edit your review</Button>
               </div>
             )}
 
