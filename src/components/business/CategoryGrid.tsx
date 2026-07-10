@@ -125,7 +125,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
   const sizeClasses =
     size === "sm"
       ? "grid-cols-2 sm:grid-cols-3"
-      : "grid-cols-3 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10";
+      : "grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8";
 
   return (
     <div className={`grid gap-3 ${sizeClasses}`}>
@@ -137,7 +137,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
             key={category.id}
             to="/search"
             search={{ category: category.slug }}
-            className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+            className="group flex min-w-0 flex-col items-center gap-2 rounded-2xl border border-border bg-card p-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:p-4"
           >
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/60 text-3xl leading-none">
               {iconUrl ? (
@@ -146,7 +146,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
                 <span aria-hidden>{emoji}</span>
               )}
             </div>
-            <span className="text-xs font-medium text-foreground leading-tight whitespace-nowrap">{category.name}</span>
+            <span className="w-full truncate text-xs font-medium leading-tight text-foreground sm:text-sm">{category.name}</span>
           </Link>
         );
       })}
