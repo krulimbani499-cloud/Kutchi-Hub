@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listBusinessProducts,
@@ -39,6 +40,18 @@ export function ProductsManager({ businessId }: Props) {
   });
   const upsert = useServerFn(upsertBusinessProduct);
   const del = useServerFn(deleteBusinessProduct);
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  const invalidateEverywhere = async () => {
+    await Promise.all([
+      refetch(),
+      queryClient.invalidateQueries({ queryKey: ["products", businessId] }),
+      queryClient.invalidateQueries({ queryKey: ["business"] }),
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+    ]);
+    void router.invalidate();
+  };
 
   const empty = {
     name: "",
@@ -128,7 +141,7 @@ export function ProductsManager({ businessId }: Props) {
       });
       toast.success(editingId ? "Product updated" : "Product added");
       resetForm();
-      await refetch();
+      await invalidateEverywhere();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not save product.";
       console.error("[ProductsManager] upsert failed:", e);
@@ -143,7 +156,7 @@ export function ProductsManager({ businessId }: Props) {
     if (!confirm("Delete this product?")) return;
     await del({ data: { id } });
     if (editingId === id) resetForm();
-    await refetch();
+    await invalidateEverywhere();
   };
 
   return (
