@@ -209,10 +209,12 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     }
   };
 
-  // Auto-geocode: whenever address/city/state/pincode change, look up the pin
-  // automatically after a short debounce so the map matches what the user typed.
+  // Auto-geocode ONLY when no pin has been set yet. Once the client pins a
+  // location (drag/tap/GPS/geocode), we never move it automatically — even if
+  // the address text is edited later. They must explicitly re-pin.
   const lastGeocodedRef = useRef<string>("");
   useEffect(() => {
+    if (coords.lat != null && coords.lng != null) return;
     const composed = [form.address, form.city, form.state, form.pincode]
       .map((v) => v.trim())
       .filter(Boolean)
@@ -438,7 +440,7 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         </div>
         <p className="text-xs text-muted-foreground">
           {coords.lat != null && coords.lng != null
-            ? `Coordinates: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)} — map updates automatically as you type the address.`
+            ? `Pinned at ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)} — drag the pin or tap "Find on map" to change it.`
             : "Type the address, city and pincode — the map will auto-locate."}
         </p>
         <div className="mt-3">
