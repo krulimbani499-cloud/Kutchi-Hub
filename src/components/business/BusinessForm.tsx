@@ -18,6 +18,7 @@ import {
 import { createBusiness, updateBusiness, createCategory } from "@/lib/businesses.functions";
 import { geocodeAddress } from "@/lib/maps.functions";
 import { PhotoUploader } from "./PhotoUploader";
+import { LocationPicker } from "./LocationPicker";
 import type { Tables } from "@/integrations/supabase/types";
 
 const businessFormSchema = z.object({
