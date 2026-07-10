@@ -439,9 +439,6 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
             ? `Coordinates: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)} — map updates automatically as you type the address.`
             : "Type the address, city and pincode — the map will auto-locate."}
         </p>
-        {coords.lat != null && coords.lng != null && import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY && (
-          <div className="mt-3" />
-        )}
         <div className="mt-3">
           <LocationPicker
             lat={coords.lat}
