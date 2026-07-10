@@ -1232,9 +1232,10 @@ function generateClaimCode() {
 }
 
 export const claimDiscount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
-  .handler(async ({ data }) => {
-    const supabase = createServerSupabaseClient();
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
     const { data: business, error: bErr } = await supabase
       .from("businesses")
       .select("id, app_discount_percent, app_discount_valid_until")
@@ -1254,6 +1255,7 @@ export const claimDiscount = createServerFn({ method: "POST" })
     const code = generateClaimCode();
     const { error } = await supabase.from("discount_claims").insert({
       business_id: business.id,
+      user_id: userId,
       code,
       discount_percent: business.app_discount_percent,
     });

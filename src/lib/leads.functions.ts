@@ -14,11 +14,13 @@ const enquirySchema = z.object({
 });
 
 export const submitEnquiry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input) => enquirySchema.parse(input))
-  .handler(async ({ data }) => {
-    const supabase = createServerSupabaseClient();
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
     const { error } = await supabase.from("business_enquiries").insert({
       business_id: data.businessId,
+      user_id: userId,
       name: data.name,
       phone: data.phone,
       email: data.email || null,

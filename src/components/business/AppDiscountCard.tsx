@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { Tag, Copy, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { claimDiscount } from "@/lib/businesses.functions";
+import { useAuth } from "@/lib/auth";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface Props {
@@ -14,6 +16,8 @@ interface Props {
 
 export function AppDiscountCard({ business }: Props) {
   const claimFn = useServerFn(claimDiscount);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [claimed, setClaimed] = useState(false);
   const [code, setCode] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -31,6 +35,10 @@ export function AppDiscountCard({ business }: Props) {
 
   const handleClaim = async () => {
     if (claimed || busy) return;
+    if (!isAuthenticated) {
+      navigate({ to: "/auth" });
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
