@@ -1148,7 +1148,7 @@ export const getCityCategoryPageData = createServerFn({ method: "GET" })
       )
       .eq("status", "published")
       .eq("category_id", category.id)
-      .ilike("city", cityName)
+      .ilike("city", `%${cityName}%`)
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
       .limit(80);
