@@ -64,7 +64,7 @@ export const searchBusinesses = createServerFn({ method: "GET" })
         .eq("slug", data.category)
         .maybeSingle();
       if (!cat) {
-        return { businesses: [], page: data.page, limit: data.limit };
+        return [];
       }
       query = query.eq("category_id", cat.id);
     }
