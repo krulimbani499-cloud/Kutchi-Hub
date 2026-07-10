@@ -499,14 +499,10 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
       )}
       {initial && (
         <div className="space-y-2">
-          <Label htmlFor="featured_image">Featured image URL (or use uploads below)</Label>
-          <Input id="featured_image" value={form.featured_image} onChange={(e) => setForm((f) => ({ ...f, featured_image: e.target.value }))} />
-        </div>
-      )}
-
-      {initial && (
-        <div className="space-y-2">
           <Label>Photos</Label>
+          <p className="text-xs text-muted-foreground">
+            Upload photos below. Tap and hold on any photo to set it as the featured image or delete it.
+          </p>
           <PhotoUploader
             businessId={initial.id}
             featuredImage={form.featured_image || null}
