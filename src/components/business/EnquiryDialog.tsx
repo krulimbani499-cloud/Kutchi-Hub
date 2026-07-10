@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import { submitEnquiry } from "@/lib/leads.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { MessageSquare, CheckCircle2 } from "lucide-react";
+import { MessageSquare, CheckCircle2, LogIn } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 interface Props {
   businessId: string;
@@ -18,6 +20,7 @@ interface Props {
 
 export function EnquiryDialog({ businessId, businessName, city, defaultName, defaultPhone, defaultEmail }: Props) {
   const submit = useServerFn(submitEnquiry);
+  const { isAuthenticated, isLoading } = useAuth();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -73,7 +76,18 @@ export function EnquiryDialog({ businessId, businessName, city, defaultName, def
             The business will contact you on the phone number below.
           </DialogDescription>
         </DialogHeader>
-        {done ? (
+        {!isLoading && !isAuthenticated ? (
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <LogIn className="h-10 w-10 text-muted-foreground" />
+            <p className="font-semibold text-foreground">Sign in to send an enquiry</p>
+            <p className="text-sm text-muted-foreground">
+              We ask you to sign in so businesses can trust incoming enquiries.
+            </p>
+            <Button asChild className="mt-2 bg-[#ff6a00] text-white hover:bg-[#e65a00]">
+              <Link to="/auth">Sign in / Create account</Link>
+            </Button>
+          </div>
+        ) : done ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <CheckCircle2 className="h-10 w-10 text-green-600" />
             <p className="font-semibold text-foreground">Enquiry sent!</p>
