@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Star, Upload } from "lucide-react";
@@ -20,6 +20,25 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
   const [featured, setFeatured] = useState<string | null>(featuredImage);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string>("");
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const startPress = (photoId: string) => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => {
+      setActiveMenuId(photoId);
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        try { navigator.vibrate?.(30); } catch { /* noop */ }
+      }
+    }, 450);
+  };
+  const cancelPress = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  };
+  useEffect(() => () => cancelPress(), []);
 
   useEffect(() => {
     setPhotos(initialPhotos);
@@ -103,6 +122,13 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
 
   return (
     <div className="space-y-4">
+      {activeMenuId && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setActiveMenuId(null)}
+          onContextMenu={(e) => { e.preventDefault(); setActiveMenuId(null); }}
+        />
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <label
           className={`inline-flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted px-4 py-2 text-sm font-medium text-foreground ${
@@ -141,35 +167,64 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
       {photos.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {photos.map((photo) => (
-            <div key={photo.id} className="relative overflow-hidden rounded-lg border border-border">
-              <BusinessPhotoImage src={photo.url} alt={photo.caption ?? "Business photo"} className="aspect-square w-full object-cover" />
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={featured === photo.url ? "default" : "secondary"}
-                  onClick={() => setAsFeatured(photo)}
-                  className="h-7 gap-1 px-2 text-xs"
-                  title={featured === photo.url ? "Featured" : "Set as featured"}
-                >
-                  <Star className={`h-3.5 w-3.5 ${featured === photo.url ? "fill-rating text-rating" : ""}`} />
-                  <span className="hidden sm:inline">{featured === photo.url ? "Featured" : "Feature"}</span>
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => deletePhoto(photo)}
-                  className="h-7 gap-1 px-2 text-xs"
-                  title="Delete photo"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Delete</span>
-                </Button>
-              </div>
+            <div
+              key={photo.id}
+              className="relative select-none overflow-hidden rounded-lg border border-border"
+              onPointerDown={() => startPress(photo.id)}
+              onPointerUp={cancelPress}
+              onPointerLeave={cancelPress}
+              onPointerCancel={cancelPress}
+              onContextMenu={(e) => { e.preventDefault(); setActiveMenuId(photo.id); }}
+            >
+              <BusinessPhotoImage
+                src={photo.url}
+                alt={photo.caption ?? "Business photo"}
+                className="pointer-events-none aspect-square w-full object-cover"
+              />
               {featured === photo.url && (
-                <div className="absolute left-1 top-1 rounded bg-rating px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <div className="pointer-events-none absolute left-1 top-1 flex items-center gap-1 rounded bg-rating px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  <Star className="h-3 w-3 fill-white" />
                   Featured
+                </div>
+              )}
+              {activeMenuId === photo.id && (
+                <div className="absolute inset-0 z-50 flex flex-col items-stretch justify-center gap-2 bg-black/70 p-3">
+                  {featured === photo.url ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={(e) => { e.stopPropagation(); clearFeatured(); setActiveMenuId(null); }}
+                      className="h-8 gap-1 text-xs"
+                    >
+                      <Star className="h-3.5 w-3.5" /> Remove featured
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); setAsFeatured(photo); setActiveMenuId(null); }}
+                      className="h-8 gap-1 text-xs"
+                    >
+                      <Star className="h-3.5 w-3.5 fill-rating text-rating" /> Set as featured
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    onClick={(e) => { e.stopPropagation(); deletePhoto(photo); setActiveMenuId(null); }}
+                    className="h-8 gap-1 text-xs"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Delete photo
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }}
+                    className="text-[11px] text-white/80 underline underline-offset-2"
+                  >
+                    Cancel
+                  </button>
                 </div>
               )}
             </div>
