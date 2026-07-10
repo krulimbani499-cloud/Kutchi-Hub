@@ -50,7 +50,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
       <Link to="/business/$slug" params={{ slug: business.slug }} className="absolute inset-0 z-10" />
-      <div className="relative h-40 overflow-hidden bg-muted">
+      <div className="relative h-32 overflow-hidden bg-muted sm:h-40">
         {imageSrc ? (
           <BusinessPhotoImage
             src={imageSrc}
@@ -91,9 +91,9 @@ export function BusinessCard({ business }: BusinessCardProps) {
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
         <div className="mb-1 flex items-start justify-between gap-2">
-          <h3 className="line-clamp-1 text-base font-semibold text-foreground">{business.name}</h3>
+          <h3 className="line-clamp-1 text-sm font-semibold text-foreground sm:text-base">{business.name}</h3>
           <div className="flex shrink-0 items-center gap-1 rounded bg-rating/10 px-1.5 py-0.5 text-xs font-medium text-rating">
             <Star className="h-3 w-3 fill-rating text-rating" />
             {(business.avgRating ?? 0).toFixed(1)}
@@ -103,8 +103,8 @@ export function BusinessCard({ business }: BusinessCardProps) {
           {business.categories?.name ?? "Business"}
           {business.reviewCount ? ` · ${business.reviewCount} reviews` : null}
         </p>
-        <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{business.description}</p>
-        <div className="mt-auto space-y-1.5 text-sm">
+        <p className="mb-3 line-clamp-2 text-xs text-muted-foreground sm:text-sm">{business.description}</p>
+        <div className="mt-auto space-y-1.5 text-xs sm:text-sm">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 shrink-0" />
             <span className="line-clamp-1">{business.address ?? business.city}</span>
