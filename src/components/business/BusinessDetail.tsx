@@ -29,12 +29,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { addReview } from "@/lib/businesses.functions";
 import { logBusinessEvent } from "@/lib/leads.functions";
 import { listBusinessServices } from "@/lib/services.functions";
+import { listBusinessProducts } from "@/lib/products.functions";
 import { replyToReview } from "@/lib/reviews.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
+import { ProductsManager, ProductsDisplay } from "./ProductsManager";
 import { ReportButton } from "./ReportButton";
 import { RelatedBusinesses } from "./RelatedBusinesses";
 import { ShareMenu } from "./ShareMenu";
@@ -108,6 +110,11 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const { data: services = [] } = useQuery({
     queryKey: ["services", business.id],
     queryFn: () => listBusinessServices({ data: { businessId: business.id } }),
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["products", business.id],
+    queryFn: () => listBusinessProducts({ data: { businessId: business.id } }),
   });
 
   const trackClick = (eventType: "call_click" | "whatsapp_click" | "website_click" | "direction_click" | "share_click") => {
@@ -395,6 +402,17 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 <ServicesDisplay services={services} />
               ) : (
                 <p className="text-sm text-muted-foreground">No services listed.</p>
+              )}
+            </section>
+
+            <section>
+              <h2 className="mb-2 text-lg font-semibold text-foreground">Products</h2>
+              {isOwner ? (
+                <ProductsManager businessId={business.id} />
+              ) : products.length > 0 ? (
+                <ProductsDisplay products={products} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No products listed.</p>
               )}
             </section>
 
