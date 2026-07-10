@@ -19,6 +19,8 @@ import { createBusiness, updateBusiness, createCategory } from "@/lib/businesses
 import { geocodeAddress } from "@/lib/maps.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { LocationPicker } from "./LocationPicker";
+import { ServicesManager } from "./ServicesManager";
+import { ProductsManager } from "./ProductsManager";
 import type { Tables } from "@/integrations/supabase/types";
 
 const businessFormSchema = z.object({
@@ -511,6 +513,26 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
             initialPhotos={photos}
             onFeaturedChange={(url) => setForm((f) => ({ ...f, featured_image: url }))}
           />
+        </div>
+      )}
+
+      {initial && (
+        <div className="rounded-lg border border-border bg-muted/50 p-4">
+          <Label className="mb-2 block">Services</Label>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Add, edit or remove services you offer. Changes save instantly.
+          </p>
+          <ServicesManager businessId={initial.id} />
+        </div>
+      )}
+
+      {initial && (
+        <div className="rounded-lg border border-border bg-muted/50 p-4">
+          <Label className="mb-2 block">Products</Label>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Add products with photos, price and stock. Changes save instantly.
+          </p>
+          <ProductsManager businessId={initial.id} />
         </div>
       )}
 

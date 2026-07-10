@@ -8,9 +8,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbox, LogOut } from "lucide-react";
+import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbox, LogOut, Package, Wrench, ChevronDown, ChevronUp } from "lucide-react";
 import { BarChart3 } from "lucide-react";
 import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCard";
+import { ServicesManager } from "@/components/business/ServicesManager";
+import { ProductsManager } from "@/components/business/ProductsManager";
+import { useState } from "react";
 import { RewardsCard } from "@/components/gamification/RewardsCard";
 import { ReferralCard } from "@/components/gamification/ReferralCard";
 
@@ -41,6 +44,11 @@ function DashboardPage() {
   const deleteFn = useServerFn(deleteBusiness);
   const updateClaimFn = useServerFn(updateClaimStatus);
   const updateEnquiryFn = useServerFn(updateEnquiryStatus);
+  const [expanded, setExpanded] = useState<Record<string, "services" | "products" | null>>({});
+
+  const toggle = (id: string, panel: "services" | "products") => {
+    setExpanded((prev) => ({ ...prev, [id]: prev[id] === panel ? null : panel }));
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this business?")) return;
@@ -101,8 +109,9 @@ function DashboardPage() {
               ) : (
                 <div className="space-y-4">
                   {data.businesses.map((b) => (
-                    <div key={b.id} className="flex items-start justify-between rounded-lg border border-border p-4">
-                      <div className="space-y-1">
+                    <div key={b.id} className="rounded-lg border border-border p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold text-foreground">{b.name}</h3>
                           <Badge variant="outline" className="text-xs">
@@ -117,8 +126,8 @@ function DashboardPage() {
                           <Star className="h-3.5 w-3.5" />
                           {b.categoryName}
                         </div>
-                      </div>
-                      <div className="flex gap-2">
+                        </div>
+                        <div className="flex gap-2">
                         <Button variant="ghost" size="icon" asChild>
                           <Link to="/business/$slug/edit" params={{ slug: b.slug }}>
                             <Edit className="h-4 w-4" />
@@ -127,7 +136,38 @@ function DashboardPage() {
                         <Button variant="ghost" size="icon" onClick={() => handleDelete(b.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
+                        </div>
                       </div>
+                      <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
+                        <Button
+                          size="sm"
+                          variant={expanded[b.id] === "services" ? "default" : "outline"}
+                          onClick={() => toggle(b.id, "services")}
+                        >
+                          <Wrench className="mr-1 h-3.5 w-3.5" />
+                          Services
+                          {expanded[b.id] === "services" ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={expanded[b.id] === "products" ? "default" : "outline"}
+                          onClick={() => toggle(b.id, "products")}
+                        >
+                          <Package className="mr-1 h-3.5 w-3.5" />
+                          Products
+                          {expanded[b.id] === "products" ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
+                        </Button>
+                      </div>
+                      {expanded[b.id] === "services" && (
+                        <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
+                          <ServicesManager businessId={b.id} />
+                        </div>
+                      )}
+                      {expanded[b.id] === "products" && (
+                        <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
+                          <ProductsManager businessId={b.id} />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
