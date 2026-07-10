@@ -5,7 +5,7 @@ import { listBusinessServices, upsertBusinessService, deleteBusinessService } fr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, IndianRupee } from "lucide-react";
+import { Trash2, Plus, IndianRupee, Pencil, X } from "lucide-react";
 
 type PriceUnit = "fixed" | "starts_at" | "per_hour" | "per_day" | "per_visit" | "per_item";
 
@@ -28,19 +28,38 @@ export function ServicesManager({ businessId }: Props) {
   const upsert = useServerFn(upsertBusinessService);
   const del = useServerFn(deleteBusinessService);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [priceUnit, setPriceUnit] = useState<PriceUnit>("fixed");
   const [busy, setBusy] = useState(false);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setEditingId(null);
+    setName("");
+    setDescription("");
+    setPrice("");
+    setPriceUnit("fixed");
+  };
+
+  const startEdit = (s: Awaited<ReturnType<typeof listBusinessServices>>[number]) => {
+    setEditingId(s.id);
+    setName(s.name);
+    setDescription(s.description ?? "");
+    setPrice(s.price != null ? String(s.price) : "");
+    setPriceUnit(((s.price_unit as PriceUnit) ?? "fixed"));
+    if (typeof window !== "undefined") window.scrollTo({ top: window.scrollY + 100, behavior: "smooth" });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) return;
     setBusy(true);
     try {
       await upsert({
         data: {
+          id: editingId ?? undefined,
           businessId,
           name: name.trim(),
           description: description.trim() || undefined,
@@ -48,7 +67,7 @@ export function ServicesManager({ businessId }: Props) {
           priceUnit: price ? priceUnit : null,
         },
       });
-      setName(""); setDescription(""); setPrice("");
+      resetForm();
       await refetch();
     } finally { setBusy(false); }
   };
@@ -56,6 +75,7 @@ export function ServicesManager({ businessId }: Props) {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this service?")) return;
     await del({ data: { id } });
+    if (editingId === id) resetForm();
     await refetch();
   };
 
@@ -83,16 +103,28 @@ export function ServicesManager({ businessId }: Props) {
                 </div>
                 {s.description && <p className="mt-1 text-sm text-muted-foreground">{s.description}</p>}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <div className="flex flex-shrink-0 gap-1">
+                <Button variant="ghost" size="icon" onClick={() => startEdit(s)} title="Edit">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} title="Delete">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
             </div>
           ))
         )}
       </div>
 
-      <form onSubmit={handleAdd} className="space-y-2 rounded-lg border border-dashed border-border p-3">
-        <div className="text-sm font-medium text-foreground">Add a service</div>
+      <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-dashed border-border p-3">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium text-foreground">{editingId ? "Edit service" : "Add a service"}</div>
+          {editingId && (
+            <button type="button" onClick={resetForm} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              <X className="h-3 w-3" /> Cancel
+            </button>
+          )}
+        </div>
         <Input placeholder="Service name (e.g. AC Repair)" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
         <Textarea placeholder="Short description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} rows={2} />
         <div className="flex gap-2">
@@ -111,7 +143,11 @@ export function ServicesManager({ businessId }: Props) {
           </select>
         </div>
         <Button type="submit" disabled={busy || name.trim().length < 2} className="bg-[#ff6a00] text-white hover:bg-[#e65a00]">
-          <Plus className="mr-1 h-4 w-4" /> {busy ? "Adding..." : "Add service"}
+          {editingId ? (
+            <><Pencil className="mr-1 h-4 w-4" /> {busy ? "Saving..." : "Save changes"}</>
+          ) : (
+            <><Plus className="mr-1 h-4 w-4" /> {busy ? "Adding..." : "Add service"}</>
+          )}
         </Button>
       </form>
     </div>
