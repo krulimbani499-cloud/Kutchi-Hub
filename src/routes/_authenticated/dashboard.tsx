@@ -8,8 +8,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbox, LogOut, Package, Wrench, ChevronDown, ChevronUp } from "lucide-react";
+import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbox, LogOut, Package, Wrench, ChevronDown, ChevronUp, Gift, LayoutDashboard, ShieldCheck } from "lucide-react";
 import { BarChart3 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCard";
 import { ServicesManager } from "@/components/business/ServicesManager";
 import { ProductsManager } from "@/components/business/ProductsManager";
@@ -69,6 +70,9 @@ function DashboardPage() {
   const statusVariant = (s: string) =>
     s === "new" ? "default" : s === "contacted" ? "secondary" : s === "closed" ? "outline" : "destructive";
 
+  const newEnquiryCount = enquiries.filter((e) => e.status === "new").length;
+  const pendingClaimCount = data.claims.filter((c) => c.status === "pending").length;
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -87,8 +91,42 @@ function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <Tabs defaultValue="businesses" className="w-full">
+        <TabsList className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 bg-muted p-1">
+          <TabsTrigger value="businesses">
+            <Building2 className="mr-1 h-4 w-4" />
+            My Businesses
+            <Badge variant="secondary" className="ml-2">{data.businesses.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="enquiries">
+            <Inbox className="mr-1 h-4 w-4" />
+            Enquiries
+            {newEnquiryCount > 0 && (
+              <Badge className="ml-2 bg-[#ff6a00] text-white">{newEnquiryCount} new</Badge>
+            )}
+          </TabsTrigger>
+          {data.businesses.length > 0 && (
+            <TabsTrigger value="analytics">
+              <BarChart3 className="mr-1 h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="rewards">
+            <Gift className="mr-1 h-4 w-4" />
+            Rewards & Referrals
+          </TabsTrigger>
+          {data.isAdmin && (
+            <TabsTrigger value="claims">
+              <ShieldCheck className="mr-1 h-4 w-4" />
+              Claims
+              {pendingClaimCount > 0 && (
+                <Badge className="ml-2 bg-[#ff6a00] text-white">{pendingClaimCount}</Badge>
+              )}
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="businesses">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -174,9 +212,11 @@ function DashboardPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {data.businesses.length > 0 && (
-            <Card className="mt-6">
+        {data.businesses.length > 0 && (
+          <TabsContent value="analytics">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5" />
@@ -191,17 +231,17 @@ function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
+          </TabsContent>
+        )}
 
-          <Card className="mt-6">
+        <TabsContent value="enquiries">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Inbox className="h-5 w-5" />
                 Enquiries / Leads
-                {enquiries.filter((e) => e.status === "new").length > 0 && (
-                  <Badge className="bg-[#ff6a00] text-white">
-                    {enquiries.filter((e) => e.status === "new").length} new
-                  </Badge>
+                {newEnquiryCount > 0 && (
+                  <Badge className="bg-[#ff6a00] text-white">{newEnquiryCount} new</Badge>
                 )}
               </CardTitle>
             </CardHeader>
@@ -276,10 +316,17 @@ function DashboardPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+        </TabsContent>
 
-        <div>
-          {data.isAdmin && (
+        <TabsContent value="rewards">
+          <div className="grid gap-6 md:grid-cols-2">
+            <RewardsCard />
+            <ReferralCard />
+          </div>
+        </TabsContent>
+
+        {data.isAdmin && (
+          <TabsContent value="claims">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -315,17 +362,9 @@ function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-          )}
-
-          <div className={data.isAdmin ? "mt-6" : ""}>
-            <RewardsCard />
-          </div>
-
-          <div className="mt-6">
-            <ReferralCard />
-          </div>
-        </div>
-      </div>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
