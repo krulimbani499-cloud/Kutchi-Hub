@@ -206,6 +206,34 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     }
   };
 
+  // Auto-geocode: whenever address/city/state/pincode change, look up the pin
+  // automatically after a short debounce so the map matches what the user typed.
+  const lastGeocodedRef = useRef<string>("");
+  useEffect(() => {
+    const composed = [form.address, form.city, form.state, form.pincode]
+      .map((v) => v.trim())
+      .filter(Boolean)
+      .join(", ");
+    if (!composed || !form.city.trim()) return;
+    if (composed === lastGeocodedRef.current) return;
+    const handle = setTimeout(async () => {
+      lastGeocodedRef.current = composed;
+      setGeocoding(true);
+      try {
+        const res = await geocodeFn({ data: { address: composed } });
+        if (res.found) {
+          setCoords({ lat: res.latitude, lng: res.longitude });
+        }
+      } catch {
+        // silent — user can still click "Find on map"
+      } finally {
+        setGeocoding(false);
+      }
+    }, 900);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.address, form.city, form.state, form.pincode]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {formMessage && (
