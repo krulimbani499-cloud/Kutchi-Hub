@@ -20,6 +20,7 @@ import {
 } from "@/lib/businesses.functions";
 import { adminListReports, adminUpdateReport } from "@/lib/reports.functions";
 import { getDashboard } from "@/lib/businesses.functions";
+import { EventsManager } from "@/components/admin/EventsManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -132,6 +133,7 @@ function AdminPage() {
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="banners">Banner Ads</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="audit">Audit Logs</TabsTrigger>
         </TabsList>
 
@@ -240,6 +242,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="reports" className="mt-0">
           <ReportsAdmin />
+        </TabsContent>
+        <TabsContent value="events" className="mt-0">
+          <EventsManager />
         </TabsContent>
         <TabsContent value="audit" className="mt-0">
           <AuditLogsAdmin />
