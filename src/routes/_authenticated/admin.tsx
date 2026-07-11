@@ -331,6 +331,24 @@ function CategoriesAdmin() {
     setForm((f) => ({ ...f, icon_url: dataUrl }));
   };
 
+  const handlePopularImageFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file (PNG/JPG/WebP)");
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      toast.error("Image too large. Please use one under 500 KB.");
+      return;
+    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+    setForm((f) => ({ ...f, popular_image_url: dataUrl }));
+  };
+
   const remove = async (id: string, name: string) => {
     if (!confirm(`Delete category "${name}"? This cannot be undone.`)) return;
     setBusy(id);
