@@ -20,6 +20,7 @@ import {
   X,
   Tag,
 } from "lucide-react";
+import { Instagram, Facebook, Youtube } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { BusinessMap } from "./BusinessMap";
 import { Button } from "@/components/ui/button";
