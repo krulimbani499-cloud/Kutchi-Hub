@@ -35,6 +35,9 @@ const businessFormSchema = z.object({
   phone: z.string().max(30).optional(),
   email: z.union([z.string().email().max(255), z.literal("")]).optional(),
   website: z.union([z.string().url().max(500), z.literal("")]).optional(),
+  instagram_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
+  facebook_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
+  youtube_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
   featured_image: z.string().max(1000).optional(),
   hours: z.record(z.string()).optional(),
   app_discount_percent: z
@@ -83,6 +86,9 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     phone: initial?.phone ?? "",
     email: initial?.email ?? "",
     website: initial?.website ?? "",
+    instagram_url: (initial as any)?.instagram_url ?? "",
+    facebook_url: (initial as any)?.facebook_url ?? "",
+    youtube_url: (initial as any)?.youtube_url ?? "",
     featured_image: initial?.featured_image ?? "",
     app_discount_percent:
       initial?.app_discount_percent != null ? String(initial.app_discount_percent) : "",
@@ -372,6 +378,28 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         <Label htmlFor="website">Website</Label>
         <Input id="website" value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
         {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
+      </div>
+
+      <div className="rounded-lg border border-border bg-muted/30 p-4">
+        <Label className="text-base">Social media links <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
+        <p className="mb-3 text-xs text-muted-foreground">Add your profile URLs so customers can follow you.</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="instagram_url" className="text-xs">Instagram</Label>
+            <Input id="instagram_url" placeholder="https://instagram.com/..." value={form.instagram_url} onChange={(e) => setForm((f) => ({ ...f, instagram_url: e.target.value }))} />
+            {errors.instagram_url && <p className="text-xs text-destructive">{errors.instagram_url}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="facebook_url" className="text-xs">Facebook</Label>
+            <Input id="facebook_url" placeholder="https://facebook.com/..." value={form.facebook_url} onChange={(e) => setForm((f) => ({ ...f, facebook_url: e.target.value }))} />
+            {errors.facebook_url && <p className="text-xs text-destructive">{errors.facebook_url}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="youtube_url" className="text-xs">YouTube</Label>
+            <Input id="youtube_url" placeholder="https://youtube.com/@..." value={form.youtube_url} onChange={(e) => setForm((f) => ({ ...f, youtube_url: e.target.value }))} />
+            {errors.youtube_url && <p className="text-xs text-destructive">{errors.youtube_url}</p>}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-lg border border-[#ff6a00]/30 bg-[#ff6a00]/5 p-4">

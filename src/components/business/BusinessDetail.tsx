@@ -20,6 +20,7 @@ import {
   X,
   Tag,
 } from "lucide-react";
+import { Instagram, Facebook, Youtube } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { BusinessMap } from "./BusinessMap";
 import { Button } from "@/components/ui/button";
@@ -634,6 +635,43 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Globe className="h-4 w-4 shrink-0" />
                   <a href={business.website} target="_blank" rel="noreferrer" className="text-foreground hover:underline">{business.website}</a>
+                </div>
+              )}
+              {(business.instagram_url || business.facebook_url || business.youtube_url) && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {business.instagram_url && (
+                    <a
+                      href={business.instagram_url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      aria-label="Instagram"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 text-white transition-transform hover:scale-110"
+                    >
+                      <Instagram className="h-4 w-4" />
+                    </a>
+                  )}
+                  {business.facebook_url && (
+                    <a
+                      href={business.facebook_url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      aria-label="Facebook"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1877F2] text-white transition-transform hover:scale-110"
+                    >
+                      <Facebook className="h-4 w-4" />
+                    </a>
+                  )}
+                  {business.youtube_url && (
+                    <a
+                      href={business.youtube_url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      aria-label="YouTube"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FF0000] text-white transition-transform hover:scale-110"
+                    >
+                      <Youtube className="h-4 w-4" />
+                    </a>
+                  )}
                 </div>
               )}
               <div className="flex items-start gap-2 text-muted-foreground">

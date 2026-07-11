@@ -463,9 +463,11 @@ export type Database = {
           created_at: string
           description: string | null
           email: string | null
+          facebook_url: string | null
           featured_image: string | null
           hours: Json | null
           id: string
+          instagram_url: string | null
           latitude: number | null
           longitude: number | null
           name: string
@@ -478,6 +480,7 @@ export type Database = {
           updated_at: string
           verified: boolean
           website: string | null
+          youtube_url: string | null
         }
         Insert: {
           address?: string | null
@@ -489,9 +492,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           email?: string | null
+          facebook_url?: string | null
           featured_image?: string | null
           hours?: Json | null
           id?: string
+          instagram_url?: string | null
           latitude?: number | null
           longitude?: number | null
           name: string
@@ -504,6 +509,7 @@ export type Database = {
           updated_at?: string
           verified?: boolean
           website?: string | null
+          youtube_url?: string | null
         }
         Update: {
           address?: string | null
@@ -515,9 +521,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           email?: string | null
+          facebook_url?: string | null
           featured_image?: string | null
           hours?: Json | null
           id?: string
+          instagram_url?: string | null
           latitude?: number | null
           longitude?: number | null
           name?: string
@@ -530,6 +538,7 @@ export type Database = {
           updated_at?: string
           verified?: boolean
           website?: string | null
+          youtube_url?: string | null
         }
         Relationships: [
           {
