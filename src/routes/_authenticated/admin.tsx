@@ -305,8 +305,8 @@ function CategoriesAdmin() {
       toast.error("Please choose an image file (PNG/JPG/SVG)");
       return;
     }
-    if (file.size > 150 * 1024) {
-      toast.error("Icon too large. Please use an image under 150 KB.");
+    if (file.size > 500 * 1024) {
+      toast.error("Icon too large. Please use an image under 500 KB.");
       return;
     }
     const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -368,7 +368,7 @@ function CategoriesAdmin() {
                         />
                       </div>
                       <div className="sm:col-span-2 lg:col-span-3">
-                        <Label className="text-xs">Custom icon (PNG/SVG, max 150KB)</Label>
+                        <Label className="text-xs">Custom icon (PNG/SVG, max 500KB)</Label>
                         <div className="flex items-center gap-3">
                           {form.icon_url ? (
                             <img
