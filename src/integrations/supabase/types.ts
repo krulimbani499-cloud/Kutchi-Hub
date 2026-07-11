@@ -560,6 +560,8 @@ export type Database = {
           id: string
           name: string
           parent_id: string | null
+          popular_featured: boolean
+          popular_image_url: string | null
           slug: string
           updated_at: string
         }
@@ -572,6 +574,8 @@ export type Database = {
           id?: string
           name: string
           parent_id?: string | null
+          popular_featured?: boolean
+          popular_image_url?: string | null
           slug: string
           updated_at?: string
         }
@@ -584,6 +588,8 @@ export type Database = {
           id?: string
           name?: string
           parent_id?: string | null
+          popular_featured?: boolean
+          popular_image_url?: string | null
           slug?: string
           updated_at?: string
         }

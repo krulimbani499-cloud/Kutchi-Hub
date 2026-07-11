@@ -260,8 +260,17 @@ function CategoriesAdmin() {
   const deleteFn = useServerFn(adminDeleteCategory);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [form, setForm] = useState<{ name: string; slug: string; icon: string; icon_url: string; color: string; display_order: number }>(
-    { name: "", slug: "", icon: "", icon_url: "", color: "", display_order: 0 },
+  const [form, setForm] = useState<{
+    name: string;
+    slug: string;
+    icon: string;
+    icon_url: string;
+    color: string;
+    display_order: number;
+    popular_image_url: string;
+    popular_featured: boolean;
+  }>(
+    { name: "", slug: "", icon: "", icon_url: "", color: "", display_order: 0, popular_image_url: "", popular_featured: false },
   );
 
   const startEdit = (c: Tables<"categories">) => {
@@ -273,6 +282,8 @@ function CategoriesAdmin() {
       icon_url: (c as unknown as { icon_url?: string | null }).icon_url ?? "",
       color: c.color ?? "",
       display_order: c.display_order,
+      popular_image_url: (c as unknown as { popular_image_url?: string | null }).popular_image_url ?? "",
+      popular_featured: Boolean((c as unknown as { popular_featured?: boolean | null }).popular_featured),
     });
   };
 
@@ -288,6 +299,8 @@ function CategoriesAdmin() {
           icon_url: form.icon_url || null,
           color: form.color,
           display_order: Number(form.display_order) || 0,
+          popular_image_url: form.popular_image_url || null,
+          popular_featured: form.popular_featured,
         },
       });
       toast.success("Category updated");
@@ -316,6 +329,24 @@ function CategoriesAdmin() {
       reader.readAsDataURL(file);
     });
     setForm((f) => ({ ...f, icon_url: dataUrl }));
+  };
+
+  const handlePopularImageFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file (PNG/JPG/WebP)");
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      toast.error("Image too large. Please use one under 500 KB.");
+      return;
+    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+    setForm((f) => ({ ...f, popular_image_url: dataUrl }));
   };
 
   const remove = async (id: string, name: string) => {
@@ -420,6 +451,60 @@ function CategoriesAdmin() {
                           }
                         />
                       </div>
+                      <div className="sm:col-span-2 lg:col-span-5 rounded-lg border border-dashed border-border p-3">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div>
+                            <Label className="text-sm font-semibold">Popular Searches</Label>
+                            <p className="text-xs text-muted-foreground">Show this category on the homepage Popular Searches strip with a custom image.</p>
+                          </div>
+                          <label className="flex items-center gap-2 text-xs">
+                            <span>Featured</span>
+                            <Switch
+                              checked={form.popular_featured}
+                              onCheckedChange={(v) => setForm((f) => ({ ...f, popular_featured: v }))}
+                            />
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {form.popular_image_url ? (
+                            <img
+                              src={form.popular_image_url}
+                              alt="popular preview"
+                              className="h-16 w-24 rounded-md border border-border object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-16 w-24 items-center justify-center rounded-md border border-dashed border-border text-xs text-muted-foreground">
+                              No image
+                            </div>
+                          )}
+                          <div className="flex-1 space-y-2">
+                            <Input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handlePopularImageFile(f);
+                                e.target.value = "";
+                              }}
+                            />
+                            <Input
+                              placeholder="…or paste an image URL"
+                              value={form.popular_image_url}
+                              onChange={(e) => setForm((f) => ({ ...f, popular_image_url: e.target.value }))}
+                            />
+                          </div>
+                          {form.popular_image_url ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setForm((f) => ({ ...f, popular_image_url: "" }))}
+                            >
+                              Remove
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
                       <div className="flex gap-2 sm:col-span-2 lg:col-span-5">
                         <Button size="sm" onClick={() => save(c.id)} disabled={busy === c.id}>
                           <Save className="mr-1.5 h-4 w-4" /> Save
@@ -449,6 +534,9 @@ function CategoriesAdmin() {
                             </span>
                           ) : null}
                           <span className="text-xs text-muted-foreground">order: {c.display_order}</span>
+                          {(c as unknown as { popular_featured?: boolean | null }).popular_featured ? (
+                            <Badge className="text-xs">Popular</Badge>
+                          ) : null}
                         </div>
                       </div>
                       <Button size="sm" variant="outline" onClick={() => startEdit(c)}>

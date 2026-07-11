@@ -253,6 +253,8 @@ const updateCategorySchema = z.object({
   icon_url: z.string().trim().max(200000).nullable().optional(),
   color: z.string().trim().max(30).nullable().optional(),
   display_order: z.coerce.number().int().min(0).max(9999).optional(),
+  popular_image_url: z.string().trim().max(600000).nullable().optional(),
+  popular_featured: z.boolean().optional(),
 });
 
 async function assertAdmin(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string) {
@@ -273,6 +275,8 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
       icon_url?: string | null;
       color?: string | null;
       display_order?: number;
+      popular_image_url?: string | null;
+      popular_featured?: boolean;
     } = {
       name: data.name.trim(),
       slug: data.slug.trim(),
@@ -281,6 +285,8 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
     if (data.icon_url !== undefined) patch.icon_url = data.icon_url?.trim() || null;
     if (data.color !== undefined) patch.color = data.color?.trim() || null;
     if (data.display_order !== undefined) patch.display_order = data.display_order;
+    if (data.popular_image_url !== undefined) patch.popular_image_url = data.popular_image_url?.trim() || null;
+    if (data.popular_featured !== undefined) patch.popular_featured = data.popular_featured;
 
     const { data: updated, error } = await context.supabase
       .from("categories")

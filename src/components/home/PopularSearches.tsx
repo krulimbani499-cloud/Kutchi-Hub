@@ -6,6 +6,8 @@ type Category = {
   id: string;
   name: string;
   slug: string;
+  popular_image_url?: string | null;
+  popular_featured?: boolean | null;
 };
 
 // Manual image overrides for specific category slugs. Everything else falls
@@ -36,6 +38,9 @@ const IMAGE_OVERRIDES: Record<string, string> = {
 };
 
 function imageFor(cat: Category) {
+  if (cat.popular_image_url && cat.popular_image_url.trim().length > 0) {
+    return cat.popular_image_url;
+  }
   return (
     IMAGE_OVERRIDES[cat.slug] ??
     `https://loremflickr.com/480/320/${encodeURIComponent(cat.name)}?lock=${cat.id.slice(0, 8)}`
@@ -44,13 +49,15 @@ function imageFor(cat: Category) {
 
 export function PopularSearches({ categories }: { categories: Category[] }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const items = categories
-    .filter((c) => {
-      const s = c.slug.toLowerCase();
-      const n = c.name.toLowerCase();
-      return !s.includes("salon") && !n.includes("salon") && !s.includes("saloon") && !n.includes("saloon");
-    })
-    .slice(0, 10);
+  const featured = categories.filter((c) => c.popular_featured);
+  const base = featured.length > 0
+    ? featured
+    : categories.filter((c) => {
+        const s = c.slug.toLowerCase();
+        const n = c.name.toLowerCase();
+        return !s.includes("salon") && !n.includes("salon") && !s.includes("saloon") && !n.includes("saloon");
+      });
+  const items = base.slice(0, 10);
 
   if (items.length === 0) return null;
 
