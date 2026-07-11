@@ -623,6 +623,60 @@ export type Database = {
           },
         ]
       }
+      events: {
+        Row: {
+          category: string | null
+          city: string | null
+          contact: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_at: string | null
+          id: string
+          image_url: string | null
+          link_url: string | null
+          location: string | null
+          published: boolean
+          start_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          city?: string | null
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_at?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          location?: string | null
+          published?: boolean
+          start_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          city?: string | null
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_at?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          location?: string | null
+          published?: boolean
+          start_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null

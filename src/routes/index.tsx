@@ -2,10 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { getHomeData } from "@/lib/businesses.functions";
+import { listUpcomingEvents } from "@/lib/events.functions";
+import { useQuery } from "@tanstack/react-query";
 import { CategoryGrid } from "@/components/business/CategoryGrid";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Building2, Mic, ArrowRight, Smartphone, Tag } from "lucide-react";
+import { Search, MapPin, Building2, Mic, ArrowRight, Smartphone, Tag, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
@@ -291,6 +293,7 @@ function HomePage() {
       )}
 
       {/* Curated collections */}
+      <UpcomingEventsSection />
       <Reveal><CollectionsSection /></Reveal>
 
       {/* Popular Searches — auto-populated from categories */}
@@ -317,5 +320,47 @@ function HomePage() {
         </div>
       </Reveal>
     </div>
+  );
+}
+
+function UpcomingEventsSection() {
+  const { data: events = [] } = useQuery({
+    queryKey: ["upcoming-events"],
+    queryFn: () => listUpcomingEvents({ data: { limit: 6 } }),
+  });
+  if (events.length === 0) return null;
+  return (
+    <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+      <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-bold text-foreground sm:text-lg">
+            <Calendar className="h-5 w-5 text-primary" /> Upcoming Events
+          </h2>
+          <Link to="/events" className="text-sm font-medium text-primary hover:underline">View all →</Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {events.map((e) => (
+            <Link key={e.id} to="/events" className="group overflow-hidden rounded-xl border border-border bg-background transition-all hover:-translate-y-0.5 hover:shadow-md">
+              {e.image_url ? (
+                <div className="aspect-video w-full overflow-hidden bg-muted">
+                  <img src={e.image_url} alt={e.title} loading="lazy" className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                </div>
+              ) : (
+                <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                  <Calendar className="h-10 w-10 text-primary/60" />
+                </div>
+              )}
+              <div className="p-3">
+                <p className="text-xs font-semibold text-primary">
+                  {new Date(e.start_at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                  {e.city ? ` · ${e.city}` : ""}
+                </p>
+                <h3 className="mt-1 line-clamp-2 text-sm font-bold text-foreground">{e.title}</h3>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </Reveal>
   );
 }
