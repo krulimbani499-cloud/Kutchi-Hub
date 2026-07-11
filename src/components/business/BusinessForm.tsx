@@ -380,6 +380,28 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
       </div>
 
+      <div className="rounded-lg border border-border bg-muted/30 p-4">
+        <Label className="text-base">Social media links <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
+        <p className="mb-3 text-xs text-muted-foreground">Add your profile URLs so customers can follow you.</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="instagram_url" className="text-xs">Instagram</Label>
+            <Input id="instagram_url" placeholder="https://instagram.com/..." value={form.instagram_url} onChange={(e) => setForm((f) => ({ ...f, instagram_url: e.target.value }))} />
+            {errors.instagram_url && <p className="text-xs text-destructive">{errors.instagram_url}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="facebook_url" className="text-xs">Facebook</Label>
+            <Input id="facebook_url" placeholder="https://facebook.com/..." value={form.facebook_url} onChange={(e) => setForm((f) => ({ ...f, facebook_url: e.target.value }))} />
+            {errors.facebook_url && <p className="text-xs text-destructive">{errors.facebook_url}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="youtube_url" className="text-xs">YouTube</Label>
+            <Input id="youtube_url" placeholder="https://youtube.com/@..." value={form.youtube_url} onChange={(e) => setForm((f) => ({ ...f, youtube_url: e.target.value }))} />
+            {errors.youtube_url && <p className="text-xs text-destructive">{errors.youtube_url}</p>}
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-lg border border-[#ff6a00]/30 bg-[#ff6a00]/5 p-4">
         <div className="mb-1 flex items-center gap-2">
           <Label className="text-base">App-exclusive discount</Label>
