@@ -610,6 +610,9 @@ export const createBusiness = createServerFn({ method: "POST" })
         status: "pending",
         website: data.website || null,
         email: data.email || null,
+        instagram_url: data.instagram_url || null,
+        facebook_url: data.facebook_url || null,
+        youtube_url: data.youtube_url || null,
         featured_image: data.featured_image || null,
         app_discount_percent:
           data.app_discount_percent == null || Number.isNaN(data.app_discount_percent)
@@ -657,6 +660,9 @@ export const updateBusiness = createServerFn({ method: "POST" })
         ...rest,
         website: rest.website || null,
         email: rest.email || null,
+        instagram_url: rest.instagram_url || null,
+        facebook_url: rest.facebook_url || null,
+        youtube_url: rest.youtube_url || null,
         featured_image: rest.featured_image || null,
         app_discount_percent:
           rest.app_discount_percent == null || Number.isNaN(rest.app_discount_percent)
