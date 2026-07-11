@@ -260,8 +260,17 @@ function CategoriesAdmin() {
   const deleteFn = useServerFn(adminDeleteCategory);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [form, setForm] = useState<{ name: string; slug: string; icon: string; icon_url: string; color: string; display_order: number }>(
-    { name: "", slug: "", icon: "", icon_url: "", color: "", display_order: 0 },
+  const [form, setForm] = useState<{
+    name: string;
+    slug: string;
+    icon: string;
+    icon_url: string;
+    color: string;
+    display_order: number;
+    popular_image_url: string;
+    popular_featured: boolean;
+  }>(
+    { name: "", slug: "", icon: "", icon_url: "", color: "", display_order: 0, popular_image_url: "", popular_featured: false },
   );
 
   const startEdit = (c: Tables<"categories">) => {
@@ -273,6 +282,8 @@ function CategoriesAdmin() {
       icon_url: (c as unknown as { icon_url?: string | null }).icon_url ?? "",
       color: c.color ?? "",
       display_order: c.display_order,
+      popular_image_url: (c as unknown as { popular_image_url?: string | null }).popular_image_url ?? "",
+      popular_featured: Boolean((c as unknown as { popular_featured?: boolean | null }).popular_featured),
     });
   };
 
@@ -288,6 +299,8 @@ function CategoriesAdmin() {
           icon_url: form.icon_url || null,
           color: form.color,
           display_order: Number(form.display_order) || 0,
+          popular_image_url: form.popular_image_url || null,
+          popular_featured: form.popular_featured,
         },
       });
       toast.success("Category updated");
