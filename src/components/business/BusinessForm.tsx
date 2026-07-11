@@ -35,6 +35,9 @@ const businessFormSchema = z.object({
   phone: z.string().max(30).optional(),
   email: z.union([z.string().email().max(255), z.literal("")]).optional(),
   website: z.union([z.string().url().max(500), z.literal("")]).optional(),
+  instagram_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
+  facebook_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
+  youtube_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
   featured_image: z.string().max(1000).optional(),
   hours: z.record(z.string()).optional(),
   app_discount_percent: z
@@ -83,6 +86,9 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     phone: initial?.phone ?? "",
     email: initial?.email ?? "",
     website: initial?.website ?? "",
+    instagram_url: (initial as any)?.instagram_url ?? "",
+    facebook_url: (initial as any)?.facebook_url ?? "",
+    youtube_url: (initial as any)?.youtube_url ?? "",
     featured_image: initial?.featured_image ?? "",
     app_discount_percent:
       initial?.app_discount_percent != null ? String(initial.app_discount_percent) : "",
