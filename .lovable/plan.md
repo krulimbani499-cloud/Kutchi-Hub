@@ -1,111 +1,108 @@
-# Kutchi Hub — Complete SEO Plan
+## Phase 1: Pricing System (Display + Admin Setup only)
 
-Goal: rank Kutchi Hub for local business discovery searches (category + city, business name, "near me") on Google and get rich results (stars, breadcrumbs, sitelinks) so users click through.
+Payment gateway abhi skip — Phase 2 me Stripe/Razorpay add karenge. Abhi business owners "Upgrade" click karke WhatsApp/Call admin ko contact karenge, admin manually plan assign karega.
 
----
+### 1. Database (1 migration)
 
-## 1. Foundations (site-wide, one-time)
+**`plans` table** (admin-managed pricing tiers)
+- name (Free/Silver/Gold/Platinum), slug, tier_order
+- price_monthly, price_yearly (₹)
+- description, features (JSON array of strings)
+- color, icon, is_active, is_popular (highlight badge)
+- Limits: max_photos, max_products, max_services, max_events
+- Perks: featured_listing, verified_badge, top_ranking, unlimited_leads, priority_support, analytics_access, banner_ad_slots
+- RLS: anon+authenticated SELECT active plans; admin full manage
 
-- Canonical domain: `https://kutchi-hub.lovable.app` (or custom domain once connected). Add `<link rel="canonical">` on every route pointing to the clean URL (no query strings, no trailing slash).
-- Force HTTPS + single host (no www vs non-www split).
-- Update `src/routes/__root.tsx` head:
-  - Replace generic title/description with a keyword-rich default only for pages that don't override.
-  - Add `og:site_name`, `og:locale` (`en_IN`), fix `twitter:site` (must be `@handle`, not text).
-  - Add JSON-LD `Organization` + `WebSite` with `SearchAction` (enables Google sitelinks searchbox).
-- `public/robots.txt`: allow all, disallow `/auth`, `/_authenticated/*`, `/reset-password`; reference sitemap URL.
-- Verify `sitemap.xml` route includes: home, categories index, every category, every city, every published business, static pages. Include `<lastmod>` from DB `updated_at`. Ping Google/Bing on publish.
-- Register site in Google Search Console + Bing Webmaster Tools; submit sitemap.
+**`business_subscriptions` table**
+- business_id → businesses, plan_id → plans
+- status (active/expired/pending/cancelled)
+- started_at, expires_at, billing_cycle (monthly/yearly)
+- amount_paid, payment_ref (nullable — manual for now), notes
+- RLS: business owner + admin can view own; admin only can insert/update
 
-## 2. Per-route metadata (unique title + description on every page)
+**`ad_slots` table** (banner/featured ad inventory)
+- slot_key (homepage_top, category_banner, event_sponsor, popular_search_featured)
+- name, description, price_monthly, price_yearly
+- max_active (kitne ads ek time pe)
+- RLS: public SELECT; admin manage
 
-Format rules: title <60 chars, description <160 chars, one H1 per page, keyword near the front.
+Businesses table pe `current_plan_id` cache column add (for fast filtering).
 
-| Route | Title pattern | H1 |
-|---|---|---|
-| `/` (home) | `Kutchi Hub — Find Local Businesses in {defaultCity}` | Find trusted local businesses |
-| `/categories` | `All Business Categories — Kutchi Hub` | Browse categories |
-| `/category/$slug` | `Best {Category} in {City} — Reviews & Contacts \| Kutchi Hub` | Best {Category} in {City} |
-| `/city/$slug` | `Top Businesses in {City} — Kutchi Hub` | Businesses in {City} |
-| `/business/$slug` | `{Business Name} — {Category} in {City} \| Kutchi Hub` | {Business Name} |
-| `/search` | `noindex` (thin/duplicate) | — |
-| `/list-your-business` | `List Your Business Free — Kutchi Hub` | List your business |
-| `/auth`, `/_authenticated/*`, `/reset-password` | `noindex` | — |
+Seed default 4 plans (Free/Silver/Gold/Platinum) + 4 ad slots via same migration.
 
-Each route's `head()` sets `og:title`, `og:description`, `og:type` (`website` / `article` / `business.business`), `og:image` (hero image absolute URL — leaf only), `twitter:card=summary_large_image`, canonical link.
+### 2. Server functions (`src/lib/plans.functions.ts`)
 
-## 3. Structured data (JSON-LD)
+- `listActivePlans()` — public
+- `listAdSlots()` — public
+- `getMyBusinessSubscription(businessId)` — authenticated
+- `upsertPlan(...)` — admin only (has_role check)
+- `deletePlan(id)` — admin only
+- `upsertAdSlot(...)` — admin only
+- `assignPlanToBusiness(businessId, planId, cycle, expiresAt, amountPaid, notes)` — admin only (manual assignment)
+- `cancelBusinessSubscription(subId)` — admin only
 
-Inject via route `head().scripts` on the matching page:
+### 3. Public Pricing Page — `src/routes/pricing.tsx`
 
-- Home: `Organization` + `WebSite` with `SearchAction` pointing to `/search?q={search_term_string}`.
-- `/business/$slug`: `LocalBusiness` (or specific subtype — `Restaurant`, `MedicalBusiness`, `HealthAndBeautyBusiness` — chosen from category), with `name`, `image`, `address` (`PostalAddress`), `geo`, `telephone`, `url`, `openingHoursSpecification`, `priceRange`, `aggregateRating` (only if reviewCount > 0), and up to N `review` items with author + rating. Add `BreadcrumbList`.
-- `/category/$slug` and `/city/$slug`: `CollectionPage` + `BreadcrumbList` + `ItemList` of the listings on the page.
-- `/categories`: `BreadcrumbList` + `ItemList`.
+- Hero: "Grow your business on Kutchi Hub"
+- 4 pricing cards (Free/Silver/Gold/Platinum) with monthly/yearly toggle
+- Feature comparison checklist per plan
+- "Popular" badge on recommended tier
+- CTA: "Get Started" → `/list-your-business` for Free; "Contact Admin" → WhatsApp/tel link for paid
+- Ad slots section below: "Advertise with us" — 4 slot cards with pricing
+- SEO head() with proper title/desc/og tags
 
-## 4. URL & information architecture
+### 4. Header/Footer link
 
-- Keep slugs short, lowercase, hyphenated. Slug generated from name + city on create; enforce uniqueness (already in schema — verify).
-- Add city+category combo pages later (`/{city}/{category}`) for long-tail "restaurants in bhuj" queries — highest local SEO ROI.
-- Internal linking:
-  - Business page → sibling businesses (RelatedBusinesses already exists), parent category, city.
-  - Category page → other categories, top cities.
-  - Breadcrumbs (visible + JSON-LD) on category, city, and business pages.
-- Every internal navigation uses `<Link>` (crawlable `<a href>`), no JS-only handlers.
+Add "Pricing" link in Header + SiteFooter.
 
-## 5. Content SEO
+### 5. Admin Panel additions (`src/routes/_authenticated/admin.tsx`)
 
-- Each category page: 60–120 word intro paragraph above the fold ("Looking for the best {category} in {city}? Browse verified listings, reviews, hours and contact details…"). Store in DB or a category-content map.
-- Each city page: short intro + FAQ block ("How many {businesses} are listed in {city}?", "How to add my business?") marked up with `FAQPage` JSON-LD.
-- Business page: ensure description ≥ 150 words is prompted at listing time; show services, hours, address, photos, reviews — Google needs unique content.
-- Blog / guides (phase 2): `/guide/starting-a-business-in-{city}`, `/guide/best-{category}-in-{city}` — capture informational queries.
+Add two new sections:
 
-## 6. Images
+**"Plans & Pricing" section:**
+- Table of plans with edit/delete
+- Create/edit form: name, prices, features (multi-line), limits, perks toggles, popular flag, active toggle
+- Reorder by tier_order
 
-- Every `<img>` gets descriptive `alt` (business name + category + city). Audit `BusinessCard`, `BusinessDetail`, `BusinessPhotoImage`.
-- Serve responsive `srcset` from Supabase storage transformations; lazy-load below the fold (`loading="lazy"`, `decoding="async"`); explicit `width`/`height` to prevent CLS.
-- Preload the LCP image on business detail routes.
+**"Ad Slots" section:**
+- Table of ad slots with pricing
+- Edit inline
 
-## 7. Performance / Core Web Vitals
+**"Business Subscriptions" section:**
+- Search business, view current plan
+- Assign plan modal: pick plan, cycle, expiry date, amount paid, notes
+- History table of past subscriptions
 
-- Target LCP < 2.5s, INP < 200ms, CLS < 0.1.
-- Route-level code splitting is default in TanStack Start — verify with a prod build; keep heavy libs (maps, charts) dynamic-imported.
-- `<link rel="preconnect">` to Supabase storage host in `__root.tsx`.
-- Cache category/city listings (`staleTime` already set) — reduces TTFB on repeat views.
-- Compress hero images to WebP/AVIF ≤ 150 KB.
-- Remove unused fonts; `font-display: swap`.
+### 6. Business Dashboard hint (`src/routes/_authenticated/dashboard.tsx`)
 
-## 8. Local SEO signals
+Small card showing current plan of user's businesses + "Upgrade" button linking to `/pricing`.
 
-- Add NAP (Name, Address, Phone) consistently on business page — must match `LocalBusiness` JSON-LD verbatim.
-- Encourage owners to claim listings (claim flow already exists) — verified badge = trust signal.
-- Prompt satisfied customers to leave reviews (post-visit email/notification) — review volume + freshness ranks local.
-- Ensure `sameAs` in JSON-LD links out to the business's real socials when provided.
+### 7. Business Card badge
 
-## 9. Off-page / discovery
+If business's `current_plan_id` → Gold/Platinum, show small crown/star badge on BusinessCard (visual only, cosmetic).
 
-- Submit sitemap to Google + Bing.
-- Create Google Business Profile for Kutchi Hub itself.
-- Share weekly featured-business posts on socials linking back with clean URLs.
-- Reach out to Kutchi community forums / Facebook groups for backlinks.
-- Add a public "Press / About" page — natural target for backlinks.
+## Technical notes
 
-## 10. Monitoring
+- No payment gateway this phase — `payment_ref` and `amount_paid` are informational, admin fills manually.
+- All admin mutations gated via `has_role(auth.uid(), 'admin')` inside server functions.
+- Plans and ad_slots are `TO anon` SELECT (public reads) since pricing page must render SSR.
+- `business_subscriptions` is `TO authenticated` only (owner sees own, admin sees all).
+- Phase 2 (later): integrate Stripe/Razorpay checkout → auto-create subscription on successful payment webhook.
 
-- Search Console: monitor coverage, Core Web Vitals, rich result reports (LocalBusiness, BreadcrumbList), top queries per page.
-- Weekly check: pages indexed vs pages submitted; 404s; mobile usability errors.
-- Track top 20 target queries (`{category} in {city}`) in a lightweight rank tracker.
+## Files to create/edit
 
----
+Create:
+- `supabase/migrations/<ts>_plans_subscriptions.sql`
+- `src/lib/plans.functions.ts`
+- `src/routes/pricing.tsx`
+- `src/components/admin/PlansManager.tsx`
+- `src/components/admin/AdSlotsManager.tsx`
+- `src/components/admin/SubscriptionsManager.tsx`
+- `src/components/pricing/PlanCard.tsx`
 
-## Technical details (implementation order)
-
-1. **Metadata pass** — update `head()` on `__root.tsx`, `index.tsx`, `categories.tsx`, `category.$slug.tsx`, `city.$slug.tsx`, `business.$slug.tsx`, `list-your-business.tsx`. Add canonical link builder in `src/lib/seo.ts`.
-2. **JSON-LD helpers** — `src/lib/seo/jsonld.ts` with `organizationLd()`, `websiteLd()`, `localBusinessLd(business, reviews)`, `breadcrumbLd(items)`, `itemListLd(items)`, `faqLd(qas)`. Inject via `head().scripts`.
-3. **Robots + sitemap audit** — extend `sitemap[.]xml.ts` to include categories/cities/businesses with `lastmod`; update `public/robots.txt`.
-4. **Noindex private routes** — `_authenticated/*`, `auth`, `reset-password`, `search` head adds `{ name: "robots", content: "noindex,follow" }`.
-5. **Breadcrumb component** — visible breadcrumb on category/city/business pages, paired with `BreadcrumbList` JSON-LD.
-6. **Image audit** — fix alts, add width/height, lazy-load, preconnect Supabase host.
-7. **Content blocks** — intro paragraph per category/city page (DB column `seo_intro`), FAQ per city.
-8. **Search Console setup** — verify domain, submit sitemap, monitor.
-
-Phase 1 items 1–5 are the highest-impact and can ship first; 6–8 follow.
+Edit:
+- `src/routes/_authenticated/admin.tsx` (add 3 new tabs/sections)
+- `src/routes/_authenticated/dashboard.tsx` (plan status card)
+- `src/components/layout/Header.tsx` (Pricing link)
+- `src/components/layout/SiteFooter.tsx` (Pricing link)
+- `src/components/business/BusinessCard.tsx` (premium badge)
