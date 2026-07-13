@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ListYourBusinessRouteImport } from './routes/list-your-business'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as CategoriesRouteImport } from './routes/categories'
@@ -43,6 +44,11 @@ const SearchRoute = SearchRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ListYourBusinessRoute = ListYourBusinessRouteImport.update({
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/categories': typeof CategoriesRoute
   '/events': typeof EventsRoute
   '/list-your-business': typeof ListYourBusinessRoute
+  '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/categories': typeof CategoriesRoute
   '/events': typeof EventsRoute
   '/list-your-business': typeof ListYourBusinessRoute
+  '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/categories': typeof CategoriesRoute
   '/events': typeof EventsRoute
   '/list-your-business': typeof ListYourBusinessRoute
+  '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/events'
     | '/list-your-business'
+    | '/pricing'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/events'
     | '/list-your-business'
+    | '/pricing'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/events'
     | '/list-your-business'
+    | '/pricing'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
@@ -273,6 +285,7 @@ export interface RootRouteChildren {
   CategoriesRoute: typeof CategoriesRoute
   EventsRoute: typeof EventsRoute
   ListYourBusinessRoute: typeof ListYourBusinessRoute
+  PricingRoute: typeof PricingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -303,6 +316,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/list-your-business': {
@@ -467,6 +487,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategoriesRoute: CategoriesRoute,
   EventsRoute: EventsRoute,
   ListYourBusinessRoute: ListYourBusinessRoute,
+  PricingRoute: PricingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
