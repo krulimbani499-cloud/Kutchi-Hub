@@ -21,6 +21,9 @@ import {
 import { adminListReports, adminUpdateReport } from "@/lib/reports.functions";
 import { getDashboard } from "@/lib/businesses.functions";
 import { EventsManager } from "@/components/admin/EventsManager";
+import { PlansManager } from "@/components/admin/PlansManager";
+import { AdSlotsManager } from "@/components/admin/AdSlotsManager";
+import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -134,6 +137,9 @@ function AdminPage() {
           <TabsTrigger value="banners">Banner Ads</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
+          <TabsTrigger value="plans">Plans</TabsTrigger>
+          <TabsTrigger value="adslots">Ad Slots</TabsTrigger>
+          <TabsTrigger value="subs">Subscriptions</TabsTrigger>
           <TabsTrigger value="audit">Audit Logs</TabsTrigger>
         </TabsList>
 
@@ -245,6 +251,15 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="events" className="mt-0">
           <EventsManager />
+        </TabsContent>
+        <TabsContent value="plans" className="mt-0">
+          <PlansManager />
+        </TabsContent>
+        <TabsContent value="adslots" className="mt-0">
+          <AdSlotsManager />
+        </TabsContent>
+        <TabsContent value="subs" className="mt-0">
+          <SubscriptionsManager />
         </TabsContent>
         <TabsContent value="audit" className="mt-0">
           <AuditLogsAdmin />

@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_slots: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          max_active: number
+          name: string
+          price_monthly: number
+          price_yearly: number
+          slot_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          max_active?: number
+          name: string
+          price_monthly?: number
+          price_yearly?: number
+          slot_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          max_active?: number
+          name?: string
+          price_monthly?: number
+          price_yearly?: number
+          slot_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           actor_id: string | null
@@ -452,6 +494,69 @@ export type Database = {
           },
         ]
       }
+      business_subscriptions: {
+        Row: {
+          amount_paid: number | null
+          billing_cycle: string
+          business_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          notes: string | null
+          payment_ref: string | null
+          plan_id: string
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number | null
+          billing_cycle?: string
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_ref?: string | null
+          plan_id: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number | null
+          billing_cycle?: string
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_ref?: string | null
+          plan_id?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_subscriptions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           address: string | null
@@ -461,6 +566,7 @@ export type Database = {
           category_id: string
           city: string | null
           created_at: string
+          current_plan_id: string | null
           description: string | null
           email: string | null
           facebook_url: string | null
@@ -490,6 +596,7 @@ export type Database = {
           category_id: string
           city?: string | null
           created_at?: string
+          current_plan_id?: string | null
           description?: string | null
           email?: string | null
           facebook_url?: string | null
@@ -519,6 +626,7 @@ export type Database = {
           category_id?: string
           city?: string | null
           created_at?: string
+          current_plan_id?: string | null
           description?: string | null
           email?: string | null
           facebook_url?: string | null
@@ -546,6 +654,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_current_plan_id_fkey"
+            columns: ["current_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
@@ -728,6 +843,90 @@ export type Database = {
           title?: string
           type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      plans: {
+        Row: {
+          analytics_access: boolean
+          banner_ad_slots: number
+          color: string | null
+          created_at: string
+          description: string | null
+          featured_listing: boolean
+          features: Json
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          max_events: number | null
+          max_photos: number | null
+          max_products: number | null
+          max_services: number | null
+          name: string
+          price_monthly: number
+          price_yearly: number
+          priority_support: boolean
+          slug: string
+          tier_order: number
+          top_ranking: boolean
+          unlimited_leads: boolean
+          updated_at: string
+          verified_badge: boolean
+        }
+        Insert: {
+          analytics_access?: boolean
+          banner_ad_slots?: number
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          featured_listing?: boolean
+          features?: Json
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          max_events?: number | null
+          max_photos?: number | null
+          max_products?: number | null
+          max_services?: number | null
+          name: string
+          price_monthly?: number
+          price_yearly?: number
+          priority_support?: boolean
+          slug: string
+          tier_order?: number
+          top_ranking?: boolean
+          unlimited_leads?: boolean
+          updated_at?: string
+          verified_badge?: boolean
+        }
+        Update: {
+          analytics_access?: boolean
+          banner_ad_slots?: number
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          featured_listing?: boolean
+          features?: Json
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          max_events?: number | null
+          max_photos?: number | null
+          max_products?: number | null
+          max_services?: number | null
+          name?: string
+          price_monthly?: number
+          price_yearly?: number
+          priority_support?: boolean
+          slug?: string
+          tier_order?: number
+          top_ranking?: boolean
+          unlimited_leads?: boolean
+          updated_at?: string
+          verified_badge?: boolean
         }
         Relationships: []
       }
