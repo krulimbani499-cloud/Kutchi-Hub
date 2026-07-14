@@ -449,6 +449,17 @@ export const getHomeData = createServerFn({ method: "GET" })
       .limit(8);
     if (city) featuredQuery = featuredQuery.ilike("city", city);
 
+    // Platinum spotlight: Platinum (4) & Enterprise (5) only — the auto-showcase perk
+    let spotlightQuery = supabase
+      .from("businesses")
+      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
+      .eq("status", "published")
+      .gte("plan_tier_order", 4)
+      .order("plan_tier_order", { ascending: false })
+      .order("verified", { ascending: false })
+      .limit(8);
+    if (city) spotlightQuery = spotlightQuery.ilike("city", city);
+
     const today = new Date().toISOString().slice(0, 10);
     let offersQuery = supabase
       .from("businesses")
@@ -460,14 +471,19 @@ export const getHomeData = createServerFn({ method: "GET" })
       .limit(8);
     if (city) offersQuery = offersQuery.ilike("city", city);
 
-    const [{ data: categories }, { data: featured }, { data: offers }] = await Promise.all([
+    const [{ data: categories }, { data: featured }, { data: offers }, { data: spotlight }] = await Promise.all([
       supabase.from("categories").select("*").order("display_order", { ascending: true }).limit(12),
       featuredQuery,
       offersQuery,
+      spotlightQuery,
     ]);
 
   const businessIds = Array.from(
-    new Set([...(featured ?? []).map((b) => b.id), ...(offers ?? []).map((b) => b.id)]),
+    new Set([
+      ...(featured ?? []).map((b) => b.id),
+      ...(offers ?? []).map((b) => b.id),
+      ...(spotlight ?? []).map((b) => b.id),
+    ]),
   );
   let ratings = new Map<string, { count: number; sum: number }>();
   if (businessIds.length > 0) {
@@ -501,7 +517,16 @@ export const getHomeData = createServerFn({ method: "GET" })
       };
     });
 
-    return { categories: categories ?? [], featured: listings, topOffers };
+    const platinumSpotlight = (spotlight ?? []).map((b) => {
+      const rating = ratings.get(b.id);
+      return {
+        ...b,
+        avgRating: rating ? Number((rating.sum / rating.count).toFixed(1)) : 0,
+        reviewCount: rating?.count ?? 0,
+      };
+    });
+
+    return { categories: categories ?? [], featured: listings, topOffers, platinumSpotlight };
   });
 
 // Personalized recommendations based on the user's recently-viewed categories.
