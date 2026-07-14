@@ -263,6 +263,30 @@ function HomePage() {
         </div>
       </Reveal>
 
+      {/* Platinum Spotlight — auto-showcase for Platinum/Enterprise plans */}
+      {home.platinumSpotlight && home.platinumSpotlight.length > 0 && (
+        <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+          <div className="rounded-2xl border-2 border-amber-400/40 bg-gradient-to-br from-amber-50 via-orange-50 to-background p-5 sm:p-6">
+            <div className="mb-5 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-base font-bold text-foreground sm:text-lg">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md">
+                  <Crown className="h-4 w-4" />
+                </span>
+                Platinum Spotlight{city ? ` in ${city}` : ""}
+              </h2>
+              <span className="text-xs font-medium text-muted-foreground">Premium partners</span>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {home.platinumSpotlight.map((business, i) => (
+                <Reveal key={business.id} delay={i * 70} y={12}>
+                  <BusinessCard business={business} />
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      )}
+
       {/* Top Offers */}
       {home.topOffers && home.topOffers.length > 0 && (
         <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
