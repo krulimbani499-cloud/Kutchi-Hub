@@ -226,7 +226,12 @@ function DashboardPage() {
               <CardContent>
                 <div className="space-y-4">
                   {data.businesses.map((b) => (
-                    <BusinessAnalyticsCard key={b.id} businessId={b.id} businessName={b.name} />
+                    <BusinessAnalyticsCard
+                      key={b.id}
+                      businessId={b.id}
+                      businessName={b.name}
+                      analyticsAccess={data.isAdmin || b.analyticsAccess}
+                    />
                   ))}
                 </div>
               </CardContent>

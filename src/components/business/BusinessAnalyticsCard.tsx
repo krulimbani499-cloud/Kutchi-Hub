@@ -1,11 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { getBusinessAnalytics } from "@/lib/leads.functions";
 import { listBusinessDiscountClaims } from "@/lib/businesses.functions";
-import { Eye, Phone, MessageSquare, Globe, Navigation, Share2, Inbox, Tag } from "lucide-react";
+import { Eye, Phone, MessageSquare, Globe, Navigation, Share2, Inbox, Tag, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-interface Props { businessId: string; businessName: string }
+interface Props { businessId: string; businessName: string; analyticsAccess?: boolean }
 
-export function BusinessAnalyticsCard({ businessId, businessName }: Props) {
+export function BusinessAnalyticsCard({ businessId, businessName, analyticsAccess = false }: Props) {
+  if (!analyticsAccess) {
+    return (
+      <div className="rounded-lg border border-dashed border-border p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="font-medium text-foreground">{businessName}</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            <Lock className="h-3 w-3" /> Locked
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground">Analytics available on Silver plan and above.</p>
+        <Button asChild size="sm" className="mt-2 bg-[#ff6a00] text-white hover:bg-[#e65a00]">
+          <Link to="/pricing">Upgrade to unlock</Link>
+        </Button>
+      </div>
+    );
+  }
   const { data, isLoading } = useQuery({
     queryKey: ["analytics", businessId],
     queryFn: () => getBusinessAnalytics({ data: { businessId } }),

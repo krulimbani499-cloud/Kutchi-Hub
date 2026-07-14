@@ -23,7 +23,7 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     let query = supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, state, phone, verified, featured_image, hours, status, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, featured_image, hours, status, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published");
 
@@ -81,6 +81,8 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     }
 
     const { data: businesses, error } = await query
+      .order("plan_tier_order", { ascending: false })
+      .order("plan_featured", { ascending: false })
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
       .range(offset, offset + data.limit - 1);
@@ -439,8 +441,10 @@ export const getHomeData = createServerFn({ method: "GET" })
     const city = data?.city?.trim();
     let featuredQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
+      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
       .eq("status", "published")
+      .order("plan_tier_order", { ascending: false })
+      .order("plan_featured", { ascending: false })
       .order("verified", { ascending: false })
       .limit(8);
     if (city) featuredQuery = featuredQuery.ilike("city", city);
@@ -448,7 +452,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     const today = new Date().toISOString().slice(0, 10);
     let offersQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
+      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
       .eq("status", "published")
       .gt("app_discount_percent", 0)
       .or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`)
@@ -527,10 +531,12 @@ export const getRecommendations = createServerFn({ method: "GET" })
     let query = supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, phone, verified, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published")
       .in("category_id", categoryIds)
+      .order("plan_tier_order", { ascending: false })
+      .order("plan_featured", { ascending: false })
       .order("verified", { ascending: false })
       .limit(data.limit * 2);
 
@@ -881,7 +887,7 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     let businessesQuery = supabase
       .from("businesses")
-      .select("id, name, slug, status, city, category_id, categories:category_id(name, slug)")
+      .select("id, name, slug, status, city, category_id, current_plan_id, plan_tier_order, plans:current_plan_id(name, slug, analytics_access), categories:category_id(name, slug)")
       .order("created_at", { ascending: false });
     if (!isAdmin) {
       businessesQuery = businessesQuery.eq("owner_id", userId);
@@ -906,6 +912,9 @@ export const getDashboard = createServerFn({ method: "GET" })
       status: (b as unknown as { status: string }).status,
       city: (b as unknown as { city: string | null }).city,
       categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
+      planName: (b as unknown as { plans: { name: string } | null }).plans?.name ?? null,
+      planTierOrder: (b as unknown as { plan_tier_order: number }).plan_tier_order ?? 0,
+      analyticsAccess: !!(b as unknown as { plans: { analytics_access: boolean } | null }).plans?.analytics_access,
     }));
 
     const typedClaims = (claims ?? []).map((c) => ({
@@ -1014,10 +1023,12 @@ export const getCategoryPageData = createServerFn({ method: "GET" })
     const { data: businesses, error } = await supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published")
       .eq("category_id", category.id)
+      .order("plan_tier_order", { ascending: false })
+      .order("plan_featured", { ascending: false })
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
       .limit(60);
@@ -1062,10 +1073,12 @@ export const getCityPageData = createServerFn({ method: "GET" })
     const { data: businesses, error } = await supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published")
       .ilike("city", `%${cityName}%`)
+      .order("plan_tier_order", { ascending: false })
+      .order("plan_featured", { ascending: false })
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
       .limit(80);
@@ -1123,7 +1136,7 @@ export const getRelatedBusinesses = createServerFn({ method: "GET" })
     let query = supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published")
       .neq("id", data.businessId)
@@ -1131,6 +1144,8 @@ export const getRelatedBusinesses = createServerFn({ method: "GET" })
     if (data.categoryId) query = query.eq("category_id", data.categoryId);
     if (data.city) query = query.ilike("city", data.city);
     const { data: businesses, error } = await query
+      .order("plan_tier_order", { ascending: false })
+      .order("plan_featured", { ascending: false })
       .order("verified", { ascending: false })
       .order("name", { ascending: true });
     if (error) throw new Error(error.message);
@@ -1159,11 +1174,13 @@ export const getCityCategoryPageData = createServerFn({ method: "GET" })
     const { data: businesses, error } = await supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, phone, verified, featured_image, hours, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id(id, name, slug, color)",
       )
       .eq("status", "published")
       .eq("category_id", category.id)
       .ilike("city", `%${cityName}%`)
+      .order("plan_tier_order", { ascending: false })
+      .order("plan_featured", { ascending: false })
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
       .limit(80);
