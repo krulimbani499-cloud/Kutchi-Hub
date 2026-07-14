@@ -580,6 +580,9 @@ export type Database = {
           owner_id: string | null
           phone: string | null
           pincode: string | null
+          plan_featured: boolean
+          plan_tier_order: number
+          plan_top_ranking: boolean
           slug: string
           state: string | null
           status: string
@@ -610,6 +613,9 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           pincode?: string | null
+          plan_featured?: boolean
+          plan_tier_order?: number
+          plan_top_ranking?: boolean
           slug: string
           state?: string | null
           status?: string
@@ -640,6 +646,9 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           pincode?: string | null
+          plan_featured?: boolean
+          plan_tier_order?: number
+          plan_top_ranking?: boolean
           slug?: string
           state?: string | null
           status?: string
@@ -1102,6 +1111,25 @@ export type Database = {
         Returns: undefined
       }
       generate_referral_code: { Args: never; Returns: string }
+      get_business_plan: {
+        Args: { _business_id: string }
+        Returns: {
+          analytics_access: boolean
+          banner_ad_slots: number
+          featured_listing: boolean
+          max_events: number
+          max_photos: number
+          max_products: number
+          max_services: number
+          plan_id: string
+          plan_slug: string
+          priority_support: boolean
+          tier_order: number
+          top_ranking: boolean
+          unlimited_leads: boolean
+          verified_badge: boolean
+        }[]
+      }
       get_leaderboard: {
         Args: { _limit?: number }
         Returns: {

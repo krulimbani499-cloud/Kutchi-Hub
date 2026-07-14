@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Phone, Star, BadgeCheck, MessageCircle, Clock, Tag } from "lucide-react";
+import { MapPin, Phone, Star, BadgeCheck, MessageCircle, Clock, Tag, Crown } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
@@ -19,6 +19,7 @@ interface BusinessCardProps {
     verified: boolean;
     featured_image: string | null;
     featured_image_url?: string | null;
+    plan_tier_order?: number | null;
     hours?: unknown;
     avgRating?: number;
     reviewCount?: number;
@@ -67,6 +68,12 @@ export function BusinessCard({ business }: BusinessCardProps) {
           <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-success px-2 py-0.5 text-xs font-medium text-success-foreground">
             <BadgeCheck className="h-3 w-3" />
             Verified
+          </div>
+        )}
+        {(business.plan_tier_order ?? 0) >= 3 && (
+          <div className="absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[11px] font-bold text-white shadow-md">
+            <Crown className="h-3 w-3" />
+            {(business.plan_tier_order ?? 0) >= 5 ? "Enterprise" : (business.plan_tier_order ?? 0) === 4 ? "Platinum" : "Gold"}
           </div>
         )}
         {discountActive && (
