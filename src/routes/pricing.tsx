@@ -77,7 +77,7 @@ function PricingPage() {
 
       <div className="mx-auto mt-10 grid max-w-6xl gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
         {plans.map((p) => {
-          const isFree = Number(cycle === "monthly" ? p.price_monthly : p.price_yearly) === 0;
+          const isFree = Number(p.price_yearly) === 0;
           if (isFree) {
             return (
               <div key={p.id}>
