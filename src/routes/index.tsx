@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CategoryGrid } from "@/components/business/CategoryGrid";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Building2, Mic, ArrowRight, Smartphone, Tag, Calendar } from "lucide-react";
+import { Search, MapPin, Building2, Mic, ArrowRight, Smartphone, Tag, Calendar, Crown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
