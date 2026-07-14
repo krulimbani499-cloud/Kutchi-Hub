@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Search, Menu, User, LogOut, Heart, Shield } from "lucide-react";
+import { Search, Menu, User, LogOut, Heart, Shield, Tag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth, signOut } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,6 +79,15 @@ export function Header() {
           <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
             <Link to="/categories" title="Categories">
               <Menu className="h-5 w-5" />
+            </Link>
+          </Button>
+
+          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
+            <Link to="/pricing">Pricing</Link>
+          </Button>
+          <Button variant="ghost" size="icon" className="sm:hidden" asChild title="Pricing">
+            <Link to="/pricing" aria-label="Pricing">
+              <Tag className="h-5 w-5" />
             </Link>
           </Button>
 
