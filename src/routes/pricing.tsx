@@ -92,7 +92,7 @@ function PricingPage() {
         </div>
       </div>
 
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
+      <div className="mx-auto mt-10 grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((p) => {
           const isFree = Number(cycle === "monthly" ? p.price_monthly : p.price_yearly) === 0;
           if (isFree) {
