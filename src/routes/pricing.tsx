@@ -52,7 +52,7 @@ export const Route = createFileRoute("/pricing")({
 function PricingPage() {
   const { data: plans } = useSuspenseQuery(plansQueryOptions);
   const { data: adSlots } = useSuspenseQuery(adSlotsQueryOptions);
-  const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
+  const cycle = "yearly" as const;
 
   const contactHref = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent("Hi, I'd like to upgrade my Kutchi Hub listing.")}`;
 
@@ -72,29 +72,12 @@ function PricingPage() {
           Choose a plan that fits your business. Cancel anytime.
         </p>
 
-        <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-border bg-card p-1">
-          <button
-            onClick={() => setCycle("monthly")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              cycle === "monthly" ? "bg-[#ff6a00] text-white" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setCycle("yearly")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              cycle === "yearly" ? "bg-[#ff6a00] text-white" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Yearly <span className="ml-1 text-xs opacity-80">Save ~16%</span>
-          </button>
-        </div>
+        <p className="mt-4 text-sm font-medium text-[#ff6a00]">All plans are billed yearly</p>
       </div>
 
       <div className="mx-auto mt-10 grid max-w-6xl gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
         {plans.map((p) => {
-          const isFree = Number(cycle === "monthly" ? p.price_monthly : p.price_yearly) === 0;
+          const isFree = Number(p.price_yearly) === 0;
           if (isFree) {
             return (
               <div key={p.id}>
