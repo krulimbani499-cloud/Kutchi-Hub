@@ -82,15 +82,6 @@ export function Header() {
             </Link>
           </Button>
 
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
-            <Link to="/pricing">Pricing</Link>
-          </Button>
-          <Button variant="ghost" size="icon" className="sm:hidden" asChild title="Pricing">
-            <Link to="/pricing" aria-label="Pricing">
-              <Tag className="h-5 w-5" />
-            </Link>
-          </Button>
-
           {!isLoading && (
             <>
               {user ? (
@@ -98,6 +89,14 @@ export function Header() {
                   <NotificationsBell />
                   {isAdmin && (
                     <>
+                      <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
+                        <Link to="/pricing">Pricing</Link>
+                      </Button>
+                      <Button variant="ghost" size="icon" className="sm:hidden" asChild title="Pricing">
+                        <Link to="/pricing" aria-label="Pricing">
+                          <Tag className="h-5 w-5" />
+                        </Link>
+                      </Button>
                       <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
                         <Link to="/admin">Admin</Link>
                       </Button>
