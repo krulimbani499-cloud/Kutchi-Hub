@@ -1110,6 +1110,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      business_visible_to_caller: {
+        Args: { _business_id: string }
+        Returns: boolean
+      }
       generate_referral_code: { Args: never; Returns: string }
       get_business_plan: {
         Args: { _business_id: string }
