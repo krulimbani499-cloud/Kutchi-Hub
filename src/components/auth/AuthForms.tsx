@@ -128,7 +128,7 @@ export function AuthForms() {
         <p className="mt-1 text-sm text-muted-foreground">Sign in to find and manage local businesses.</p>
       </div>
 
-      {mode !== "reset" && (
+      {mode !== "reset" && !(typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.()) && (
         <>
           <div className="space-y-2">
             <Button
