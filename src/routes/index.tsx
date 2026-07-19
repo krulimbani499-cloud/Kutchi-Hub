@@ -18,6 +18,7 @@ import { TravelBookingsSection } from "@/components/home/TravelBookingsSection";
 import { PopularSearches } from "@/components/home/PopularSearches";
 import { RecentlyViewed } from "@/components/home/RecentlyViewed";
 import { ForYou } from "@/components/home/ForYou";
+import { NearbyBusinesses } from "@/components/home/NearbyBusinesses";
 import { LeaderboardSection } from "@/components/gamification/LeaderboardSection";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import tileB2B from "@/assets/tile-b2b.jpg";
@@ -181,6 +182,9 @@ function HomePage() {
 
       {/* Recently viewed (localStorage) */}
       <RecentlyViewed />
+
+      {/* Nearby businesses (uses device location) */}
+      <NearbyBusinesses />
 
       {/* Personalized recommendations */}
       <ForYou />
