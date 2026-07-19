@@ -1333,3 +1333,54 @@ export const listBusinessDiscountClaims = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+const nearbySchema = z.object({
+  lat: z.coerce.number(),
+  lng: z.coerce.number(),
+  radiusKm: z.coerce.number().min(1).max(200).optional().default(25),
+  limit: z.coerce.number().min(1).max(50).optional().default(12),
+});
+
+export const getNearbyBusinesses = createServerFn({ method: "GET" })
+  .inputValidator((input) => nearbySchema.parse(input))
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    const { lat, lng, radiusKm, limit } = data;
+    // ~1 deg latitude ≈ 111km; longitude varies with cos(lat)
+    const latDelta = radiusKm / 111;
+    const lngDelta = radiusKm / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
+
+    const { data: rows, error } = await supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, featured_image, hours, status, app_discount_percent, app_discount_label, app_discount_valid_until, latitude, longitude, categories:category_id(id, name, slug, color)",
+      )
+      .eq("status", "published")
+      .not("latitude", "is", null)
+      .not("longitude", "is", null)
+      .gte("latitude", lat - latDelta)
+      .lte("latitude", lat + latDelta)
+      .gte("longitude", lng - lngDelta)
+      .lte("longitude", lng + lngDelta)
+      .limit(100);
+    if (error) throw new Error(error.message);
+
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const haversine = (la: number, ln: number) => {
+      const R = 6371;
+      const dLat = toRad(la - lat);
+      const dLon = toRad(ln - lng);
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat)) * Math.cos(toRad(la)) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    const withDist = (rows ?? [])
+      .map((b) => ({ ...b, distanceKm: haversine(b.latitude!, b.longitude!) }))
+      .filter((b) => b.distanceKm <= radiusKm)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, limit);
+
+    return withDist;
+  });
