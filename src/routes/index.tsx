@@ -83,6 +83,17 @@ function HomePage() {
   const { city } = useCity();
   const { data: home } = useSuspenseQuery(homeQueryOptions(city ?? undefined));
   const [search, setSearch] = useState("");
+  const [isNativeApp, setIsNativeApp] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cap = (window as any).Capacitor;
+    const ua = navigator.userAgent.toLowerCase();
+    setIsNativeApp(
+      cap?.isNativePlatform?.() === true ||
+      ua.includes("capacitor") ||
+      (ua.includes("android") && ua.includes("; wv"))
+    );
+  }, []);
 
   const submitSearch = (q?: string) => {
     const params = new URLSearchParams();
@@ -111,7 +122,7 @@ function HomePage() {
               <span className="animate-text-shine font-extrabold">Kutchi Businesses</span>
             </h1>
             <div className="flex shrink-0 items-center gap-2">
-              {!isNativeApp() && (
+              {!isNativeApp && (
                 <>
                   <PWAInstallButton />
                   <button
