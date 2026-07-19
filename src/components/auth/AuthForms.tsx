@@ -13,6 +13,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const emailSchema = z.string().email("Enter a valid email");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
+function isRunningInsideMobileApp() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+
+  const capacitor = (window as any).Capacitor;
+  const platform = capacitor?.getPlatform?.();
+  const userAgent = navigator.userAgent.toLowerCase();
+
+  return (
+    capacitor?.isNativePlatform?.() === true ||
+    (typeof platform === "string" && platform !== "web") ||
+    userAgent.includes("capacitor") ||
+    (userAgent.includes("android") && userAgent.includes("; wv"))
+  );
+}
+
 export function AuthForms() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
@@ -22,6 +37,7 @@ export function AuthForms() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [showSocialAuth, setShowSocialAuth] = useState(false);
 
   // Capture ?ref=CODE from URL and stash for post-signup redemption
   useEffect(() => {
@@ -44,6 +60,10 @@ export function AuthForms() {
         /* ignore */
       }
     }
+  }, []);
+
+  useEffect(() => {
+    setShowSocialAuth(!isRunningInsideMobileApp());
   }, []);
 
   const tryRedeemPending = async () => {
@@ -128,7 +148,7 @@ export function AuthForms() {
         <p className="mt-1 text-sm text-muted-foreground">Sign in to find and manage local businesses.</p>
       </div>
 
-      {mode !== "reset" && !(typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.()) && (
+      {mode !== "reset" && showSocialAuth && (
         <>
           <div className="space-y-2">
             <Button
