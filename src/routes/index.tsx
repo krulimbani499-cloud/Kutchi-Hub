@@ -83,6 +83,17 @@ function HomePage() {
   const { city } = useCity();
   const { data: home } = useSuspenseQuery(homeQueryOptions(city ?? undefined));
   const [search, setSearch] = useState("");
+  const [isNativeApp, setIsNativeApp] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cap = (window as any).Capacitor;
+    const ua = navigator.userAgent.toLowerCase();
+    setIsNativeApp(
+      cap?.isNativePlatform?.() === true ||
+      ua.includes("capacitor") ||
+      (ua.includes("android") && ua.includes("; wv"))
+    );
+  }, []);
 
   const submitSearch = (q?: string) => {
     const params = new URLSearchParams();
@@ -111,8 +122,10 @@ function HomePage() {
               <span className="animate-text-shine font-extrabold">Kutchi Businesses</span>
             </h1>
             <div className="flex shrink-0 items-center gap-2">
-              <PWAInstallButton />
-              <button
+              {!isNativeApp && (
+                <>
+                  <PWAInstallButton />
+                  <button
               type="button"
               onClick={() =>
                 alert("Download app coming soon! The application link will be added once the app is ready.")
@@ -125,7 +138,9 @@ function HomePage() {
               <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6a00] to-[#e65a00] text-white shadow-sm animate-phone-wiggle transition-transform group-hover:scale-110">
                 <Smartphone className="h-4 w-4" strokeWidth={2.5} />
               </span>
-              </button>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
