@@ -13,7 +13,7 @@ export const Route = createFileRoute("/categories")({
   head: () => ({
     meta: [
       { title: "All Business Categories — Kutchi Hub" },
-      { name: "description", content: "Browse every business category on Kutchi Hub — restaurants, doctors, salons, shops, services and more. Find verified local listings with reviews." },
+      { name: "description", content: "Browse every business category on Kutchi Hub — restaurants, doctors, grocery, shops, services and more. Find verified local listings with reviews." },
       { property: "og:title", content: "All Business Categories — Kutchi Hub" },
       { property: "og:description", content: "Browse every business category on Kutchi Hub — verified local listings with reviews, contact info and directions." },
       { property: "og:type", content: "website" },
