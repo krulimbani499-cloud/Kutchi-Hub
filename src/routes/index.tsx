@@ -15,7 +15,7 @@ import { CitySelector } from "@/components/layout/CitySelector";
 import { MarketingBanner } from "@/components/home/MarketingBanner";
 import { CollectionsSection } from "@/components/home/CollectionsSection";
 import { TravelBookingsSection } from "@/components/home/TravelBookingsSection";
-import { PopularSearches } from "@/components/home/PopularSearches";
+// import { PopularSearches } from "@/components/home/PopularSearches";
 import { RecentlyViewed } from "@/components/home/RecentlyViewed";
 import { ForYou } from "@/components/home/ForYou";
 import { NearbyBusinesses } from "@/components/home/NearbyBusinesses";
@@ -340,7 +340,7 @@ function HomePage() {
       <Reveal><CollectionsSection /></Reveal>
 
       {/* Popular Searches — auto-populated from categories */}
-      <Reveal><PopularSearches categories={home.categories} /></Reveal>
+      {/* <Reveal><PopularSearches categories={home.categories} /></Reveal> */}
 
       {/* Travel bookings */}
       <Reveal><TravelBookingsSection /></Reveal>
