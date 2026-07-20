@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { getHomeData } from "@/lib/businesses.functions";
 import { listUpcomingEvents } from "@/lib/events.functions";
@@ -63,7 +62,11 @@ export const Route = createFileRoute("/")({
       ldScript(breadcrumbLd([{ name: "Home", url: "/" }])),
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(homeQueryOptions()),
+  loader: ({ context }) => {
+    // Non-blocking prefetch — homepage renders instantly with a skeleton
+    // while data loads in the background.
+    context.queryClient.prefetchQuery(homeQueryOptions());
+  },
   staleTime: 60_000,
   component: HomePage,
 });
@@ -95,7 +98,7 @@ function AnimatedCount({ target }: { target: number }) {
 
 function HomePage() {
   const { city } = useCity();
-  const { data: home } = useSuspenseQuery(homeQueryOptions(city ?? undefined));
+  const { data: home } = useQuery(homeQueryOptions(city ?? undefined));
   const [search, setSearch] = useState("");
   const [isNativeApp, setIsNativeApp] = useState(false);
   useEffect(() => {
@@ -262,7 +265,15 @@ function HomePage() {
               View all →
             </Link>
           </div>
-          <CategoryGrid categories={home.categories} />
+          {home ? (
+            <CategoryGrid categories={home.categories} />
+          ) : (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-8">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
+              ))}
+            </div>
+          )}
         </div>
       </Reveal>
 
@@ -275,12 +286,18 @@ function HomePage() {
             Browse all
           </Link>
         </div>
-        {home.featured.length > 0 ? (
+        {home && home.featured.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {home.featured.map((business, i) => (
               <Reveal key={business.id} delay={i * 70} y={12}>
                 <BusinessCard business={business} />
               </Reveal>
+            ))}
+          </div>
+        ) : !home ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-64 animate-pulse rounded-xl bg-muted" />
             ))}
           </div>
         ) : (
@@ -296,7 +313,7 @@ function HomePage() {
       </Reveal>
 
       {/* Platinum Spotlight — auto-showcase for Platinum/Enterprise plans */}
-      {home.platinumSpotlight && home.platinumSpotlight.length > 0 && (
+      {home && home.platinumSpotlight && home.platinumSpotlight.length > 0 && (
         <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
           <div className="rounded-2xl border-2 border-amber-400/40 bg-gradient-to-br from-amber-50 via-orange-50 to-background p-5 sm:p-6">
             <div className="mb-5 flex items-center justify-between gap-2">
@@ -320,7 +337,7 @@ function HomePage() {
       )}
 
       {/* Top Offers */}
-      {home.topOffers && home.topOffers.length > 0 && (
+      {home && home.topOffers && home.topOffers.length > 0 && (
         <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
           <div className="rounded-2xl border-2 border-[#ff6a00]/20 bg-gradient-to-br from-[#fff4ea] to-background p-5 sm:p-6">
             <div className="mb-5 flex items-center justify-between gap-2">
