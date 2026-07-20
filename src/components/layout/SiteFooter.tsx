@@ -15,7 +15,9 @@ export function SiteFooter() {
             </span>
           </Link>
           <p className="mt-3 text-sm text-muted-foreground">
-            India's local business directory.
+            Kutchi Hub Kutch ka apna local business directory hai — restaurants, doctors, salons,
+            shops aur services ek hi jagah. Trusted listings, real reviews aur direct contact ke saath
+            hum local businesses ko customers se jodte hain aur Kutchi community ko digitally empower karte hain.
           </p>
         </div>
 

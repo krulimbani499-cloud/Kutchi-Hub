@@ -10,7 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { Header } from "@/components/layout/Header";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
-// import { SiteFooter } from "@/components/layout/SiteFooter";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { supabase } from "@/integrations/supabase/client";
 import { applyReferralCode } from "@/lib/referrals.functions";
 
@@ -179,7 +179,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <MobileBottomNav />
-        {/* <SiteFooter /> — temporarily hidden */}
+        <SiteFooter />
       </div>
     </QueryClientProvider>
   );
