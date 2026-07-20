@@ -10,7 +10,7 @@ export const INDIAN_CITIES = [
   "Khambhat", "Petlad", "Borsad", "Anand Rural", "Umreth", "Karamsad", "Vallabh Vidyanagar",
   "Kheda", "Mahemdavad", "Balasinor", "Thasra",
   // Gujarat — Kheda / Anand / Ahmedabad district towns
-  "Kapadwanj", "Kathlal", "Mahudha", "Nadiad Rural",
+  "Kapadvanj", "Kathlal", "Mahudha", "Nadiad Rural",
   "Dahegam", "Bavla", "Dholka", "Sanand", "Viramgam", "Dhandhuka", "Barwala",
   "Ranpur", "Mandal", "Detroj", "Hanspura",
   // Gujarat — Sabarkantha / Aravalli / Panchmahal / Mahisagar
