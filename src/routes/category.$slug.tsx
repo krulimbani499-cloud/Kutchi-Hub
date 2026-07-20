@@ -126,6 +126,17 @@ function CategoryPage() {
         )}
       </div>
 
+      <section className="mb-8 rounded-2xl border border-border bg-card p-6">
+        <h2 className="mb-3 text-lg font-semibold text-foreground">About {category.name} on Kutchi Hub</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Looking for the best <strong>{category.name.toLowerCase()}</strong> in Kutch? Kutchi Hub brings together verified
+          {" "}{category.name.toLowerCase()} listings from Bhuj, Gandhidham, Anjar, Mandvi, Mundra, Kapadvanj and other towns —
+          each with real customer reviews, opening hours, phone numbers, addresses and directions on the map. Filter by city,
+          sort by rating, and reach out via call or WhatsApp in one tap. Business owner? List your {category.name.toLowerCase()} for
+          free and reach thousands of local customers every month.
+        </p>
+      </section>
+
       {businesses.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
           No {category.name.toLowerCase()} listings yet.{" "}
