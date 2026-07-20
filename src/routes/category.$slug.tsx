@@ -3,7 +3,7 @@ import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getCategoryPageData } from "@/lib/businesses.functions";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { MapPin } from "lucide-react";
-import { BASE_URL, breadcrumbLd, itemListLd, ldScript } from "@/lib/seo";
+import { BASE_URL, breadcrumbLd, itemListLd, faqLd, ldScript } from "@/lib/seo";
 
 const categoryPageOptions = (slug: string) =>
   queryOptions({
@@ -48,6 +48,22 @@ export const Route = createFileRoute("/category/$slug")({
               url: `/business/${b.slug}`,
             })),
           ),
+        ),
+        ldScript(
+          faqLd([
+            {
+              q: `How many ${name.toLowerCase()} are listed on Kutchi Hub?`,
+              a: `Kutchi Hub currently has ${count} verified ${name.toLowerCase()} listings${topCity ? ` with ${topCity} and nearby cities` : ""} across Kutch and Gujarat.`,
+            },
+            {
+              q: `How do I find the best ${name.toLowerCase()} near me?`,
+              a: `Filter ${name.toLowerCase()} by city on Kutchi Hub, check verified ratings and reviews, view hours and phone numbers, then call or WhatsApp directly.`,
+            },
+            {
+              q: `How do I list my ${name.toLowerCase()} business on Kutchi Hub?`,
+              a: `Click "List Your Business", add your details, photos, hours and contact info. Free to start; upgrade for verification badge, top placement and app-only discounts.`,
+            },
+          ]),
         ),
       ],
     };
