@@ -1,108 +1,135 @@
-## Phase 1: Pricing System (Display + Admin Setup only)
+# Kutchi Hub — Complete SEO Plan
 
-Payment gateway abhi skip — Phase 2 me Stripe/Razorpay add karenge. Abhi business owners "Upgrade" click karke WhatsApp/Call admin ko contact karenge, admin manually plan assign karega.
+Goal: Rank Kutchi Hub as the #1 local business directory for Kutch region (Bhuj, Gandhidham, Anjar, Mandvi, Mundra, Kapadvanj, etc.) on Google, and dominate long-tail "[category] in [city]" searches.
 
-### 1. Database (1 migration)
+---
 
-**`plans` table** (admin-managed pricing tiers)
-- name (Free/Silver/Gold/Platinum), slug, tier_order
-- price_monthly, price_yearly (₹)
-- description, features (JSON array of strings)
-- color, icon, is_active, is_popular (highlight badge)
-- Limits: max_photos, max_products, max_services, max_events
-- Perks: featured_listing, verified_badge, top_ranking, unlimited_leads, priority_support, analytics_access, banner_ad_slots
-- RLS: anon+authenticated SELECT active plans; admin full manage
+## Phase 1 — Technical SEO Foundation (Week 1)
 
-**`business_subscriptions` table**
-- business_id → businesses, plan_id → plans
-- status (active/expired/pending/cancelled)
-- started_at, expires_at, billing_cycle (monthly/yearly)
-- amount_paid, payment_ref (nullable — manual for now), notes
-- RLS: business owner + admin can view own; admin only can insert/update
+Most items already exist; this phase closes gaps.
 
-**`ad_slots` table** (banner/featured ad inventory)
-- slot_key (homepage_top, category_banner, event_sponsor, popular_search_featured)
-- name, description, price_monthly, price_yearly
-- max_active (kitne ads ek time pe)
-- RLS: public SELECT; admin manage
+1. **Sitemap audit**
+   - Already dynamic at `/sitemap.xml`. Add `lastmod` on category & city pages using latest business `updated_at` per bucket.
+   - Split into `sitemap-businesses.xml`, `sitemap-cities.xml`, `sitemap-categories.xml` via a `<sitemapindex>` when businesses cross 500 URLs.
 
-Businesses table pe `current_plan_id` cache column add (for fast filtering).
+2. **robots.txt**
+   - Keep current disallows. Add `Disallow: /search?` to avoid infinite parameter crawls, but `Allow: /search$` for the base page.
 
-Seed default 4 plans (Free/Silver/Gold/Platinum) + 4 ad slots via same migration.
+3. **Canonical & OG hygiene**
+   - Audit every route file to confirm canonical + og:url self-reference (already good on business/city/categories). Add same pattern to `/search`, `/category/$slug`, `/city/$slug/category/$category`, `/events`, `/list-your-business`, `/pricing`.
 
-### 2. Server functions (`src/lib/plans.functions.ts`)
+4. **Structured data expansion**
+   - Add `LocalBusiness` `openingHoursSpecification`, `priceRange`, `geo` (lat/lng) to business detail JSON-LD.
+   - Add `Review` items (top 5) inside `LocalBusiness` schema.
+   - Add `Event` schema on `/events` route.
+   - Add `BreadcrumbList` on category & search pages.
 
-- `listActivePlans()` — public
-- `listAdSlots()` — public
-- `getMyBusinessSubscription(businessId)` — authenticated
-- `upsertPlan(...)` — admin only (has_role check)
-- `deletePlan(id)` — admin only
-- `upsertAdSlot(...)` — admin only
-- `assignPlanToBusiness(businessId, planId, cycle, expiresAt, amountPaid, notes)` — admin only (manual assignment)
-- `cancelBusinessSubscription(subId)` — admin only
+5. **Performance / Core Web Vitals**
+   - Homepage already lazy-loads below-the-fold. Add `<link rel="preload">` for hero font subset.
+   - Convert business featured images to WebP + `srcset` (already using Supabase storage — add transform params).
+   - Add `loading="lazy"` + `decoding="async"` to every BusinessCard image.
 
-### 3. Public Pricing Page — `src/routes/pricing.tsx`
+6. **Indexability**
+   - Add `<meta name="robots" content="noindex,follow">` on `/search` result pages with query params, and on paginated pages beyond page 1.
+   - Ensure 404s return proper status (TanStack `notFoundComponent` — verify SSR 404 response code).
 
-- Hero: "Grow your business on Kutchi Hub"
-- 4 pricing cards (Free/Silver/Gold/Platinum) with monthly/yearly toggle
-- Feature comparison checklist per plan
-- "Popular" badge on recommended tier
-- CTA: "Get Started" → `/list-your-business` for Free; "Contact Admin" → WhatsApp/tel link for paid
-- Ad slots section below: "Advertise with us" — 4 slot cards with pricing
-- SEO head() with proper title/desc/og tags
+7. **Internal linking**
+   - Footer: link to top 8 cities + top 12 categories.
+   - Business page: "More [category] in [city]" + "Nearby businesses" (already exists) — ensure crawlable `<a href>`.
 
-### 4. Header/Footer link
+---
 
-Add "Pricing" link in Header + SiteFooter.
+## Phase 2 — On-Page SEO (Week 2)
 
-### 5. Admin Panel additions (`src/routes/_authenticated/admin.tsx`)
+1. **Title/description templates** (finalize):
+   - Business: `{Name} — {Category} in {City}, Kutch | Kutchi Hub`
+   - City: `Top {N} Businesses in {City}, Kutch — Reviews & Contacts | Kutchi Hub`
+   - Category: `Best {Category} in Kutch — {N} Verified Listings | Kutchi Hub`
+   - City+Category: `Best {Category} in {City} — Reviews, Phone, Address | Kutchi Hub`
 
-Add two new sections:
+2. **H1 hierarchy** — one H1 per page, matches primary keyword.
 
-**"Plans & Pricing" section:**
-- Table of plans with edit/delete
-- Create/edit form: name, prices, features (multi-line), limits, perks toggles, popular flag, active toggle
-- Reorder by tier_order
+3. **Content blocks on category & city pages**
+   - 150–250 word intro paragraph (unique per page) above the fold: "About {category/city}", why to choose, what to look for.
+   - FAQ block (3–5 Q&As) at bottom — already added to city pages; extend to category & city+category.
 
-**"Ad Slots" section:**
-- Table of ad slots with pricing
-- Edit inline
+4. **Image SEO**
+   - Alt text template: `{Business name} — {category} in {city}`.
+   - Auto-generate at upload time in `PhotoUploader`.
 
-**"Business Subscriptions" section:**
-- Search business, view current plan
-- Assign plan modal: pick plan, cycle, expiry date, amount paid, notes
-- History table of past subscriptions
+5. **URL structure** — already clean (`/business/slug`, `/city/slug`, `/category/slug`). Keep.
 
-### 6. Business Dashboard hint (`src/routes/_authenticated/dashboard.tsx`)
+---
 
-Small card showing current plan of user's businesses + "Upgrade" button linking to `/pricing`.
+## Phase 3 — Keyword & Content Strategy (Weeks 3–4)
 
-### 7. Business Card badge
+1. **Primary keyword clusters** (target):
+   - `businesses in {city}` — Bhuj, Gandhidham, Anjar, Mandvi, Mundra, Kapadvanj, Nakhatrana, Rapar
+   - `{category} in {city}` — restaurants, doctors, hospitals, salons, grocery, hotels, mechanics
+   - `kutch business directory`, `kutchi hub`, `local businesses kutch`
 
-If business's `current_plan_id` → Gold/Platinum, show small crown/star badge on BusinessCard (visual only, cosmetic).
+2. **Semrush research pass** — I'll run `keyword_research` + `serp_analysis` on the top 20 seed phrases to validate volume/difficulty before we finalize.
 
-## Technical notes
+3. **Blog / content hub** (new `/blog` route)
+   - 2 posts/week starter set:
+     - "Top 10 Restaurants in Bhuj (2026)"
+     - "Best Doctors in Gandhidham — Complete Guide"
+     - "Kutch Travel Guide: Where to Eat, Stay, Shop"
+     - "How to Grow Your Local Business in Kutch"
+   - Each post: 800–1500 words, internal links to relevant city/category pages, Article JSON-LD.
 
-- No payment gateway this phase — `payment_ref` and `amount_paid` are informational, admin fills manually.
-- All admin mutations gated via `has_role(auth.uid(), 'admin')` inside server functions.
-- Plans and ad_slots are `TO anon` SELECT (public reads) since pricing page must render SSR.
-- `business_subscriptions` is `TO authenticated` only (owner sees own, admin sees all).
-- Phase 2 (later): integrate Stripe/Razorpay checkout → auto-create subscription on successful payment webhook.
+4. **Programmatic pages** — already exist for city+category; ensure at least one exists for every top city × top 15 categories combination.
 
-## Files to create/edit
+---
 
-Create:
-- `supabase/migrations/<ts>_plans_subscriptions.sql`
-- `src/lib/plans.functions.ts`
-- `src/routes/pricing.tsx`
-- `src/components/admin/PlansManager.tsx`
-- `src/components/admin/AdSlotsManager.tsx`
-- `src/components/admin/SubscriptionsManager.tsx`
-- `src/components/pricing/PlanCard.tsx`
+## Phase 4 — Local SEO (Ongoing)
 
-Edit:
-- `src/routes/_authenticated/admin.tsx` (add 3 new tabs/sections)
-- `src/routes/_authenticated/dashboard.tsx` (plan status card)
-- `src/components/layout/Header.tsx` (Pricing link)
-- `src/components/layout/SiteFooter.tsx` (Pricing link)
-- `src/components/business/BusinessCard.tsx` (premium badge)
+1. **Google Business Profile** for Kutchi Hub itself (registered address in Kutch).
+2. Encourage listed businesses to add their own GBP and link back to Kutchi Hub page.
+3. **NAP consistency** — enforce standard phone/address format in `BusinessForm`.
+4. **Review generation** — post-visit prompt (email + WhatsApp) to leave reviews on the business's Kutchi Hub page.
+
+---
+
+## Phase 5 — Off-Page & Authority (Month 2+)
+
+1. Submit sitemap to Google Search Console + Bing Webmaster Tools.
+2. Directory citations: Justdial, Sulekha, IndiaMART, local Kutch chambers of commerce.
+3. Guest posts on Gujarati news sites / Kutch community blogs.
+4. Social signals: Instagram/Facebook/YouTube (accounts already reserved) — auto-share new listings.
+5. PR: press release when hitting 500, 1000 listings.
+
+---
+
+## Phase 6 — Monitoring & Iteration (Continuous)
+
+1. **Google Search Console** — verified already (`google-site-verification` present). Weekly review of impressions, CTR, top queries.
+2. **Semrush tracking** — I'll run `domain_analysis` + `seo_trend` monthly to track keyword count & traffic.
+3. **Rank tracking** — top 30 keywords across Bhuj/Gandhidham/Kapadvanj markets.
+4. **A/B title tests** on top 20 traffic pages.
+5. **404 & broken-link audit** monthly.
+
+---
+
+## Deliverables I'll Build in This Project
+
+If you approve, I'll implement in this order:
+
+1. Structured data expansion (LocalBusiness enrichment, Event schema, more breadcrumbs)
+2. Image alt-text automation + lazy-loading pass
+3. `/search` noindex logic + parameter handling
+4. Unique intro copy + FAQ block on category & city+category pages
+5. Blog route scaffolding (`/blog`, `/blog/$slug`) with Article schema
+6. Footer internal-linking hub (top cities + categories)
+7. Semrush keyword validation pass (I'll call the tools and share results)
+
+## Out of Scope (needs you)
+
+- GBP claim & verification
+- Off-site citations & guest posts
+- Social account content calendar
+- Writing the actual blog articles (I can draft — you approve/edit)
+
+---
+
+Approve karo aur main Phase 1 se implementation shuru kar deta hu. Ya specific phase se start karna hai batao.
