@@ -17,7 +17,6 @@ const GROUPS: Group[] = [
     items: [
       { label: "Beauty Parlours", emoji: "💅", slug: "beauty", bg: "from-pink-100 to-pink-200" },
       { label: "Spa & Massages", emoji: "💆", slug: "spa", bg: "from-emerald-100 to-emerald-200" },
-      { label: "Salons", emoji: "💇", slug: "salon", bg: "from-fuchsia-100 to-fuchsia-200" },
     ],
   },
   {

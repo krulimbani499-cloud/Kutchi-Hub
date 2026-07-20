@@ -7,7 +7,6 @@ const TOP_CATEGORIES = [
   { slug: "restaurants", name: "Restaurants" },
   { slug: "hospitals", name: "Hospitals" },
   { slug: "doctors", name: "Doctors" },
-  { slug: "salons", name: "Salons" },
   { slug: "grocery", name: "Grocery" },
   { slug: "hotels", name: "Hotels" },
 ];
@@ -29,7 +28,7 @@ export function SiteFooter() {
             </span>
           </Link>
           <p className="mt-3 text-sm text-muted-foreground">
-            Kutchi Hub Kutch ka apna local business directory hai — restaurants, doctors, salons,
+            Kutchi Hub Kutch ka apna local business directory hai — restaurants, doctors, grocery,
             shops aur services ek hi jagah. Trusted listings, real reviews aur direct contact ke saath
             hum local businesses ko customers se jodte hain aur Kutchi community ko digitally empower karte hain.
           </p>

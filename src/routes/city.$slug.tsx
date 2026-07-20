@@ -17,7 +17,7 @@ export const Route = createFileRoute("/city/$slug")({
     const businesses = loaderData?.businesses ?? [];
     const count = businesses.length;
     const title = `Top Businesses in ${name} — Reviews & Contacts | Kutchi Hub`;
-    const desc = `Discover ${count > 0 ? count + "+ " : ""}businesses in ${name} — restaurants, doctors, salons, shops and services. Reviews, hours, phone numbers and directions.`;
+    const desc = `Discover ${count > 0 ? count + "+ " : ""}businesses in ${name} — restaurants, doctors, grocery, shops and services. Reviews, hours, phone numbers and directions.`;
     const url = `${BASE_URL}/city/${params.slug}`;
     return {
       meta: [
