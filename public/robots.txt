@@ -8,5 +8,6 @@ Disallow: /favorites
 Disallow: /business/*/edit
 Disallow: /business/*/claim
 Disallow: /business/new
+Disallow: /search?
 
 Sitemap: https://kutchi-hub.lovable.app/sitemap.xml

@@ -2,6 +2,20 @@ import { Link } from "@tanstack/react-router";
 import { Facebook, Instagram, Twitter, Mail } from "lucide-react";
 import logoUrl from "@/assets/kutchi-hub-logo.png";
 
+const TOP_CITIES = ["Bhuj", "Gandhidham", "Anjar", "Mandvi", "Mundra", "Kapadvanj", "Nakhatrana", "Rapar"];
+const TOP_CATEGORIES = [
+  { slug: "restaurants", name: "Restaurants" },
+  { slug: "hospitals", name: "Hospitals" },
+  { slug: "doctors", name: "Doctors" },
+  { slug: "salons", name: "Salons" },
+  { slug: "grocery", name: "Grocery" },
+  { slug: "hotels", name: "Hotels" },
+];
+
+function citySlug(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 export function SiteFooter() {
   const year = new Date().getFullYear();
   return (
@@ -22,17 +36,32 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold text-foreground">Explore</h4>
+          <h4 className="text-sm font-semibold text-foreground">Top Cities</h4>
+          <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-muted-foreground">
+            {TOP_CITIES.map((c) => (
+              <li key={c}>
+                <Link to="/city/$slug" params={{ slug: citySlug(c) }} className="hover:text-primary">{c}</Link>
+              </li>
+            ))}
+          </ul>
+          <h4 className="mt-5 text-sm font-semibold text-foreground">Explore</h4>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li><Link to="/categories" className="hover:text-primary">Categories</Link></li>
-            <li><Link to="/search" className="hover:text-primary">Search</Link></li>
+            <li><Link to="/categories" className="hover:text-primary">All Categories</Link></li>
             <li><Link to="/list-your-business" className="hover:text-primary">List your business</Link></li>
             <li><Link to="/events" className="hover:text-primary">Events</Link></li>
           </ul>
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold text-foreground">Account</h4>
+          <h4 className="text-sm font-semibold text-foreground">Popular Categories</h4>
+          <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-muted-foreground">
+            {TOP_CATEGORIES.map((c) => (
+              <li key={c.slug}>
+                <Link to="/category/$slug" params={{ slug: c.slug }} className="hover:text-primary">{c.name}</Link>
+              </li>
+            ))}
+          </ul>
+          <h4 className="mt-5 text-sm font-semibold text-foreground">Account</h4>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li><Link to="/auth" className="hover:text-primary">Sign in</Link></li>
             <li><Link to="/dashboard" className="hover:text-primary">My Listings</Link></li>
