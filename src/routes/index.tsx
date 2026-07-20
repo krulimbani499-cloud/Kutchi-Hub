@@ -63,7 +63,11 @@ export const Route = createFileRoute("/")({
       ldScript(breadcrumbLd([{ name: "Home", url: "/" }])),
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(homeQueryOptions()),
+  loader: ({ context }) => {
+    // Non-blocking prefetch — homepage renders instantly with a skeleton
+    // while data loads in the background.
+    context.queryClient.prefetchQuery(homeQueryOptions());
+  },
   staleTime: 60_000,
   component: HomePage,
 });
@@ -95,7 +99,7 @@ function AnimatedCount({ target }: { target: number }) {
 
 function HomePage() {
   const { city } = useCity();
-  const { data: home } = useSuspenseQuery(homeQueryOptions(city ?? undefined));
+  const { data: home, isLoading } = useQuery(homeQueryOptions(city ?? undefined));
   const [search, setSearch] = useState("");
   const [isNativeApp, setIsNativeApp] = useState(false);
   useEffect(() => {
