@@ -9,18 +9,30 @@ import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2, Mic, ArrowRight, Smartphone, Tag, Calendar, Crown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
-import { MarketingBanner } from "@/components/home/MarketingBanner";
-import { CollectionsSection } from "@/components/home/CollectionsSection";
-import { TravelBookingsSection } from "@/components/home/TravelBookingsSection";
-// import { PopularSearches } from "@/components/home/PopularSearches";
-import { RecentlyViewed } from "@/components/home/RecentlyViewed";
-import { ForYou } from "@/components/home/ForYou";
-import { NearbyBusinesses } from "@/components/home/NearbyBusinesses";
-import { LeaderboardSection } from "@/components/gamification/LeaderboardSection";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
+
+// Lazy-load below-the-fold sections to speed up initial paint
+const MarketingBanner = lazy(() =>
+  import("@/components/home/MarketingBanner").then((m) => ({ default: m.MarketingBanner })),
+);
+const CollectionsSection = lazy(() =>
+  import("@/components/home/CollectionsSection").then((m) => ({ default: m.CollectionsSection })),
+);
+const TravelBookingsSection = lazy(() =>
+  import("@/components/home/TravelBookingsSection").then((m) => ({ default: m.TravelBookingsSection })),
+);
+const RecentlyViewed = lazy(() =>
+  import("@/components/home/RecentlyViewed").then((m) => ({ default: m.RecentlyViewed })),
+);
+const ForYou = lazy(() =>
+  import("@/components/home/ForYou").then((m) => ({ default: m.ForYou })),
+);
+const NearbyBusinesses = lazy(() =>
+  import("@/components/home/NearbyBusinesses").then((m) => ({ default: m.NearbyBusinesses })),
+);
 import tileB2B from "@/assets/tile-b2b.jpg";
 import tileRepairs from "@/assets/tile-repairs.jpg";
 import tileRealEstate from "@/assets/tile-realestate.jpg";
@@ -52,6 +64,7 @@ export const Route = createFileRoute("/")({
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(homeQueryOptions()),
+  staleTime: 60_000,
   component: HomePage,
 });
 
@@ -178,16 +191,16 @@ function HomePage() {
       </section>
 
       {/* Location-aware sponsored banner */}
-      <MarketingBanner />
+      <Suspense fallback={null}><MarketingBanner /></Suspense>
 
       {/* Recently viewed (localStorage) */}
-      <RecentlyViewed />
+      <Suspense fallback={null}><RecentlyViewed /></Suspense>
 
       {/* Nearby businesses (uses device location) */}
-      <NearbyBusinesses />
+      <Suspense fallback={null}><NearbyBusinesses /></Suspense>
 
       {/* Personalized recommendations */}
-      <ForYou />
+      <Suspense fallback={null}><ForYou /></Suspense>
 
       {/* Promo banner + feature tiles row */}
       <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
@@ -337,13 +350,10 @@ function HomePage() {
 
       {/* Curated collections */}
       <UpcomingEventsSection />
-      <Reveal><CollectionsSection /></Reveal>
-
-      {/* Popular Searches — auto-populated from categories */}
-      {/* <Reveal><PopularSearches categories={home.categories} /></Reveal> */}
+      <Suspense fallback={null}><Reveal><CollectionsSection /></Reveal></Suspense>
 
       {/* Travel bookings */}
-      <Reveal><TravelBookingsSection /></Reveal>
+      <Suspense fallback={null}><Reveal><TravelBookingsSection /></Reveal></Suspense>
 
       {/* Top Contributors leaderboard - temporarily hidden */}
       {/* <LeaderboardSection /> */}
