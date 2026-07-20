@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { getHomeData } from "@/lib/businesses.functions";
 import { listUpcomingEvents } from "@/lib/events.functions";
@@ -99,7 +98,7 @@ function AnimatedCount({ target }: { target: number }) {
 
 function HomePage() {
   const { city } = useCity();
-  const { data: home, isLoading } = useQuery(homeQueryOptions(city ?? undefined));
+  const { data: home } = useQuery(homeQueryOptions(city ?? undefined));
   const [search, setSearch] = useState("");
   const [isNativeApp, setIsNativeApp] = useState(false);
   useEffect(() => {
