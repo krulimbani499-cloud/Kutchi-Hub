@@ -25,10 +25,19 @@ export const Route = createFileRoute("/business/$slug")({
             description?: string;
             featured_image?: string;
             featured_image_url?: string;
+            latitude?: number | null;
+            longitude?: number | null;
+            hours?: Record<string, string> | null;
+            website?: string | null;
+            instagram_url?: string | null;
+            facebook_url?: string | null;
+            youtube_url?: string | null;
+            price_range?: string | null;
             categories?: { name?: string } | null;
           };
           avgRating?: number;
           reviewCount?: number;
+          reviews?: Array<{ rating: number; comment: string | null; created_at: string; profiles?: { display_name: string | null } | null }>;
         }
       | undefined;
     const b = ld?.business;
@@ -73,12 +82,53 @@ export const Route = createFileRoute("/business/$slug")({
       telephone: b?.phone ?? undefined,
       image: image ?? undefined,
     };
+    if (typeof b?.latitude === "number" && typeof b?.longitude === "number") {
+      jsonLd.geo = { "@type": "GeoCoordinates", latitude: b.latitude, longitude: b.longitude };
+    }
+    if (b?.price_range) {
+      jsonLd.priceRange = b.price_range;
+    }
+    const sameAs = [b?.website, b?.instagram_url, b?.facebook_url, b?.youtube_url].filter(
+      (u): u is string => typeof u === "string" && u.length > 0,
+    );
+    if (sameAs.length > 0) jsonLd.sameAs = sameAs;
+    if (b?.hours && typeof b.hours === "object") {
+      const dayMap: Record<string, string> = {
+        mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday",
+        fri: "Friday", sat: "Saturday", sun: "Sunday",
+      };
+      const specs: Array<Record<string, string>> = [];
+      for (const [key, val] of Object.entries(b.hours as Record<string, string>)) {
+        const day = dayMap[key.toLowerCase().slice(0, 3)];
+        if (!day || !val || /closed/i.test(val)) continue;
+        const m = String(val).match(/(\d{1,2}:?\d{0,2})\s*[-–—to]+\s*(\d{1,2}:?\d{0,2})/i);
+        if (m) {
+          specs.push({
+            "@type": "OpeningHoursSpecification",
+            dayOfWeek: day,
+            opens: m[1].includes(":") ? m[1] : `${m[1]}:00`,
+            closes: m[2].includes(":") ? m[2] : `${m[2]}:00`,
+          });
+        }
+      }
+      if (specs.length > 0) jsonLd.openingHoursSpecification = specs;
+    }
     if (reviewCount > 0) {
       jsonLd.aggregateRating = {
         "@type": "AggregateRating",
         ratingValue: rating,
         reviewCount,
       };
+    }
+    const topReviews = (ld?.reviews ?? []).slice(0, 5).filter((r) => r.comment);
+    if (topReviews.length > 0) {
+      jsonLd.review = topReviews.map((r) => ({
+        "@type": "Review",
+        reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
+        author: { "@type": "Person", name: r.profiles?.display_name ?? "Customer" },
+        reviewBody: r.comment,
+        datePublished: r.created_at,
+      }));
     }
     return {
       meta,
