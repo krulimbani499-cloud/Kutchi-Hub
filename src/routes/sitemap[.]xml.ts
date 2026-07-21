@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { getSitemapData } from "@/lib/businesses.functions";
+import { INDIAN_CITIES } from "@/lib/cities";
 
 const BASE_URL = "https://kutchi-hub.lovable.app";
 
@@ -23,19 +24,37 @@ export const Route = createFileRoute("/sitemap.xml")({
 
         try {
           const data = await getSitemapData();
-          for (const c of data.categories) {
-            entries.push({ path: `/category/${c.slug}`, changefreq: "weekly", priority: "0.8" });
+          const toSlug = (s: string) =>
+            String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+          const categorySlugs = (data.categories ?? [])
+            .map((c) => c.slug)
+            .filter(Boolean) as string[];
+          for (const slug of categorySlugs) {
+            entries.push({ path: `/category/${slug}`, changefreq: "weekly", priority: "0.8" });
           }
-          for (const city of data.cities) {
-            const slug = String(city).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-            if (slug) entries.push({ path: `/city/${slug}`, changefreq: "weekly", priority: "0.7" });
+
+          // Union of DB cities + full curated city list so every city gets an
+          // indexable landing page + city×category combos, not just cities
+          // that already have listings.
+          const citySlugs = new Set<string>();
+          for (const city of data.cities ?? []) {
+            const s = toSlug(String(city));
+            if (s) citySlugs.add(s);
           }
-          for (const combo of data.combos ?? []) {
-            if (combo.city && combo.category) {
+          for (const city of INDIAN_CITIES) {
+            const s = toSlug(city);
+            if (s) citySlugs.add(s);
+          }
+          for (const slug of citySlugs) {
+            entries.push({ path: `/city/${slug}`, changefreq: "weekly", priority: "0.7" });
+          }
+          for (const citySlug of citySlugs) {
+            for (const catSlug of categorySlugs) {
               entries.push({
-                path: `/city/${combo.city}/category/${combo.category}`,
+                path: `/city/${citySlug}/category/${catSlug}`,
                 changefreq: "weekly",
-                priority: "0.7",
+                priority: "0.6",
               });
             }
           }
