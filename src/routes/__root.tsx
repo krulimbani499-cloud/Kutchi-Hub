@@ -18,6 +18,7 @@ import appCss from "../styles.css?url";
 import logoIcon from "@/assets/kutchi-hub-logo.png";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BASE_URL, SITE_NAME, ldScript, organizationLd, websiteLd } from "@/lib/seo";
+import { ComingSoonGate } from "@/components/ComingSoonGate";
 
 function NotFoundComponent() {
   return (
@@ -172,15 +173,17 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <main className="flex-1 pb-16 sm:pb-0">
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-        </main>
-        <MobileBottomNav />
-        <SiteFooter />
-      </div>
+      <ComingSoonGate>
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="flex-1 pb-16 sm:pb-0">
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </main>
+          <MobileBottomNav />
+          <SiteFooter />
+        </div>
+      </ComingSoonGate>
     </QueryClientProvider>
   );
 }
