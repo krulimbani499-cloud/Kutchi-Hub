@@ -7,43 +7,8 @@ import logo from "@/assets/kutchi-hub-logo.png";
 const ALLOWED_PATHS = ["/auth", "/reset-password"];
 
 export function ComingSoonGate({ children }: { children: ReactNode }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [status, setStatus] = useState<"loading" | "admin" | "blocked">("loading");
-
-  useEffect(() => {
-    let mounted = true;
-
-    const check = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
-      if (!user) {
-        if (mounted) setStatus("blocked");
-        return;
-      }
-      const { data: isAdmin } = await supabase.rpc("has_role", {
-        _user_id: user.id,
-        _role: "admin",
-      });
-      if (!mounted) return;
-      setStatus(isAdmin ? "admin" : "blocked");
-    };
-
-    check();
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      check();
-    });
-    return () => {
-      mounted = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  if (status === "admin") return <>{children}</>;
-
-  // Always allow auth/reset routes so admin can sign in.
-  if (ALLOWED_PATHS.some((p) => pathname.startsWith(p))) return <>{children}</>;
-
-  return <ComingSoonScreen loading={status === "loading"} />;
+  // Coming Soon gate temporarily disabled — full site open to all users.
+  return <>{children}</>;
 }
 
 function ComingSoonScreen({ loading }: { loading: boolean }) {
