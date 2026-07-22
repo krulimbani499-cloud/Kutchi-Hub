@@ -14,6 +14,8 @@ export function Header() {
   const [search, setSearch] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasListings, setHasListings] = useState(false);
+  const canSeePricing =
+    isAdmin || (user?.email ?? "").toLowerCase() === "priyallimbani21@gmail.com";
 
   useEffect(() => {
     let cancelled = false;
@@ -87,7 +89,7 @@ export function Header() {
               {user ? (
                 <div className="flex items-center gap-2">
                   <NotificationsBell />
-                  {isAdmin && (
+                  {canSeePricing && (
                     <>
                       <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
                         <Link to="/pricing">Pricing</Link>
@@ -97,6 +99,10 @@ export function Header() {
                           <Tag className="h-5 w-5" />
                         </Link>
                       </Button>
+                    </>
+                  )}
+                  {isAdmin && (
+                    <>
                       <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
                         <Link to="/admin">Admin</Link>
                       </Button>

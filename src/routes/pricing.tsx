@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BASE_URL } from "@/lib/seo";
 import { Phone, MessageCircle, Mail, Megaphone } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+const ALLOWED_PRICING_EMAILS = new Set(["priyallimbani21@gmail.com"]);
 
 const CONTACT_WHATSAPP = "919999999999"; // Admin can update
 const CONTACT_PHONE = "+91 99999 99999";
@@ -52,6 +57,50 @@ function PricingPage() {
   const { data: plans } = useSuspenseQuery(plansQueryOptions);
   const { data: adSlots } = useSuspenseQuery(adSlotsQueryOptions);
   const cycle = "yearly" as const;
+  const { user, isLoading } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkedRole, setCheckedRole] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user) {
+      setIsAdmin(false);
+      setCheckedRole(true);
+      return;
+    }
+    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
+      if (!cancelled) {
+        setIsAdmin(!!data);
+        setCheckedRole(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const emailAllowed = ALLOWED_PRICING_EMAILS.has((user?.email ?? "").toLowerCase());
+  const allowed = isAdmin || emailAllowed;
+
+  if (isLoading || !checkedRole) {
+    return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-muted-foreground">Loading…</div>;
+  }
+
+  if (!allowed) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold text-foreground">Pricing coming soon</h1>
+        <p className="mt-3 text-muted-foreground">
+          Yeh page abhi sirf select accounts ke liye available hai. Details ke liye humse contact karein.
+        </p>
+        <div className="mt-6">
+          <Button asChild variant="outline">
+            <Link to="/">Back to Home</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const contactHref = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent("Hi, I'd like to upgrade my Kutchi Hub listing.")}`;
 
