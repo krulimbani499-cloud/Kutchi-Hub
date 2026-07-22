@@ -1,8 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/lib/auth";
-import { supabase } from "@/integrations/supabase/client";
 import { listActivePlans, listAdSlots } from "@/lib/plans.functions";
 import { PlanCard } from "@/components/pricing/PlanCard";
 import { Button } from "@/components/ui/button";
