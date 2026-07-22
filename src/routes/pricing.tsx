@@ -55,33 +55,6 @@ function PricingPage() {
   const { data: plans } = useSuspenseQuery(plansQueryOptions);
   const { data: adSlots } = useSuspenseQuery(adSlotsQueryOptions);
   const cycle = "yearly" as const;
-  const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (isLoading) return;
-    if (!user) {
-      navigate({ to: "/" });
-      return;
-    }
-    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
-      if (cancelled) return;
-      if (!data) {
-        navigate({ to: "/" });
-      } else {
-        setIsAdmin(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [user, isLoading, navigate]);
-
-  if (!isAdmin) {
-    return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-muted-foreground">Loading…</div>;
-  }
 
   const contactHref = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent("Hi, I'd like to upgrade my Kutchi Hub listing.")}`;
 
