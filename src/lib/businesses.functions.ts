@@ -359,7 +359,12 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
     query = query.ilike("city", data.city);
     const { data: banners, error } = await query;
     if (error) throw new Error(error.message);
-    return banners ?? [];
+    return (banners ?? []).map((banner) => ({
+      ...banner,
+      image_url: banner.image_url?.startsWith("/__l5e/")
+        ? `https://kutchi-hub.lovable.app${banner.image_url}`
+        : banner.image_url,
+    }));
   });
 
 const bannerInputSchema = z.object({
