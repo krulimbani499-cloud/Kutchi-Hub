@@ -343,6 +343,11 @@ export const adminDeleteCategory = createServerFn({ method: "POST" })
 
 // ---------- Banner ads ----------
 
+const normalizeBannerImageUrl = (url: string) => {
+  const trimmed = url.trim();
+  return trimmed.startsWith("/__l5e/") ? `https://kutchi-hub.lovable.app${trimmed}` : trimmed;
+};
+
 export const getBannerAdsForCity = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ city: z.string().trim().min(1).max(80).optional() }).parse(input ?? {}))
   .handler(async ({ data }) => {
@@ -361,9 +366,7 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return (banners ?? []).map((banner) => ({
       ...banner,
-      image_url: banner.image_url?.startsWith("/__l5e/")
-        ? `https://kutchi-hub.lovable.app${banner.image_url}`
-        : banner.image_url,
+      image_url: normalizeBannerImageUrl(banner.image_url),
     }));
   });
 
@@ -406,7 +409,7 @@ export const adminCreateBannerAd = createServerFn({ method: "POST" })
         owner_id: context.userId,
         title: data.title,
         subtitle: data.subtitle ?? null,
-        image_url: data.image_url,
+        image_url: normalizeBannerImageUrl(data.image_url),
         cta_label: data.cta_label ?? null,
         cta_url: data.cta_url ?? null,
         city: data.city,
@@ -433,7 +436,7 @@ export const adminUpdateBannerAd = createServerFn({ method: "POST" })
         business_id: rest.business_id ?? null,
         title: rest.title,
         subtitle: rest.subtitle ?? null,
-        image_url: rest.image_url,
+        image_url: normalizeBannerImageUrl(rest.image_url),
         cta_label: rest.cta_label ?? null,
         cta_url: rest.cta_url ?? null,
         city: rest.city,
