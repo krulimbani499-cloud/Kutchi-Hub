@@ -30,6 +30,7 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     // If the search term matches any category name/slug, resolve those
     // category IDs so we can also match businesses tagged with them.
     let matchingCategoryIds: string[] = [];
+    let matchingProductBusinessIds: string[] = [];
     if (data.q) {
       const term = data.q.trim();
       if (term) {
@@ -38,6 +39,24 @@ export const searchBusinesses = createServerFn({ method: "GET" })
           .select("id")
           .or(`name.ilike.%${term}%,slug.ilike.%${term}%`);
         matchingCategoryIds = (cats ?? []).map((c) => c.id);
+
+        // Match businesses selling a product/service that matches the term.
+        const likeTerm = `%${term.replace(/[,()]/g, " ")}%`;
+        const [{ data: prodRows }, { data: svcRows }] = await Promise.all([
+          supabase
+            .from("business_products")
+            .select("business_id")
+            .eq("active", true)
+            .or(`name.ilike.${likeTerm},description.ilike.${likeTerm},category.ilike.${likeTerm}`),
+          supabase
+            .from("business_services")
+            .select("business_id")
+            .or(`name.ilike.${likeTerm},description.ilike.${likeTerm}`),
+        ]);
+        const ids = new Set<string>();
+        for (const r of prodRows ?? []) ids.add(r.business_id);
+        for (const r of svcRows ?? []) ids.add(r.business_id);
+        matchingProductBusinessIds = [...ids];
       }
     }
 
@@ -52,6 +71,9 @@ export const searchBusinesses = createServerFn({ method: "GET" })
         ];
         if (matchingCategoryIds.length > 0) {
           parts.push(`category_id.in.(${matchingCategoryIds.join(",")})`);
+        }
+        if (matchingProductBusinessIds.length > 0) {
+          parts.push(`id.in.(${matchingProductBusinessIds.join(",")})`);
         }
         query = query.or(parts.join(","));
       }
