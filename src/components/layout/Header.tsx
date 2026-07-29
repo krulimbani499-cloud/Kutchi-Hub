@@ -17,8 +17,6 @@ export function Header() {
   const [search, setSearch] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasListings, setHasListings] = useState(false);
-  const canSeePricing =
-    isAdmin || (user?.email ?? "").toLowerCase() === "priyallimbani21@gmail.com";
 
   useEffect(() => {
     let cancelled = false;
@@ -88,24 +86,20 @@ export function Header() {
               <Menu className="h-5 w-5" />
             </Link>
           </Button>
+          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
+            <Link to="/pricing">{t("nav.pricing")}</Link>
+          </Button>
+          <Button variant="ghost" size="icon" className="sm:hidden" asChild title={t("nav.pricing")}>
+            <Link to="/pricing" aria-label={t("nav.pricing")}>
+              <Tag className="h-5 w-5" />
+            </Link>
+          </Button>
 
           {!isLoading && (
             <>
               {user ? (
                 <div className="flex items-center gap-2">
                   <NotificationsBell />
-                  {canSeePricing && (
-                    <>
-                      <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
-                        <Link to="/pricing">{t("nav.pricing")}</Link>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="sm:hidden" asChild title={t("nav.pricing")}>
-                        <Link to="/pricing" aria-label={t("nav.pricing")}>
-                          <Tag className="h-5 w-5" />
-                        </Link>
-                      </Button>
-                    </>
-                  )}
                   {isAdmin && (
                     <>
                       <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
