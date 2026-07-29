@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/__l5e/:path*",
+      "destination": "https://kutchi-hub.lovable.app/__l5e/:path*"
+    },
+    {
+      "source": "/~oauth/:path*",
+      "destination": "https://kutchi-hub.lovable.app/~oauth/:path*"
+    }
+  ]
+}

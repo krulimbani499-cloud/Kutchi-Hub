@@ -1,0 +1,71 @@
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { getBusinessAnalytics } from "@/lib/leads.functions";
+import { listBusinessDiscountClaims } from "@/lib/businesses.functions";
+import { Eye, Phone, MessageSquare, Globe, Navigation, Share2, Inbox, Tag, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface Props { businessId: string; businessName: string; analyticsAccess?: boolean }
+
+export function BusinessAnalyticsCard({ businessId, businessName, analyticsAccess = false }: Props) {
+  if (!analyticsAccess) {
+    return (
+      <div className="rounded-lg border border-dashed border-border p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="font-medium text-foreground">{businessName}</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            <Lock className="h-3 w-3" /> Locked
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground">Analytics available on Silver plan and above.</p>
+        <Button asChild size="sm" className="mt-2 bg-[#ff6a00] text-white hover:bg-[#e65a00]">
+          <Link to="/pricing">Upgrade to unlock</Link>
+        </Button>
+      </div>
+    );
+  }
+  const { data, isLoading } = useQuery({
+    queryKey: ["analytics", businessId],
+    queryFn: () => getBusinessAnalytics({ data: { businessId } }),
+  });
+
+  const { data: claims } = useQuery({
+    queryKey: ["discount-claims", businessId],
+    queryFn: () => listBusinessDiscountClaims({ data: { businessId } }),
+  });
+
+  const t = data?.totals ?? { view: 0, call_click: 0, whatsapp_click: 0, website_click: 0, direction_click: 0, share_click: 0, enquiry_submit: 0 };
+
+  const stats = [
+    { label: "Profile Views", value: t.view, icon: Eye, color: "text-blue-600" },
+    { label: "Calls", value: t.call_click, icon: Phone, color: "text-[#ff6a00]" },
+    { label: "WhatsApp", value: t.whatsapp_click, icon: MessageSquare, color: "text-green-600" },
+    { label: "Directions", value: t.direction_click, icon: Navigation, color: "text-purple-600" },
+    { label: "Website", value: t.website_click, icon: Globe, color: "text-cyan-600" },
+    { label: "Shares", value: t.share_click, icon: Share2, color: "text-slate-600" },
+    { label: "Enquiries", value: t.enquiry_submit, icon: Inbox, color: "text-rose-600" },
+    { label: "Coupon Claims", value: claims?.length ?? 0, icon: Tag, color: "text-[#ff6a00]" },
+  ];
+
+  return (
+    <div className="rounded-lg border border-border p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="font-medium text-foreground">{businessName}</span>
+        <span className="text-xs text-muted-foreground">Last 30 days</span>
+      </div>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-md bg-muted/40 p-2 text-center">
+              <s.icon className={`mx-auto mb-1 h-4 w-4 ${s.color}`} />
+              <div className="text-lg font-bold text-foreground">{s.value}</div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

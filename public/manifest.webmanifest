@@ -1,0 +1,16 @@
+{
+  "name": "Kutchi Hub — Local Business Directory",
+  "short_name": "Kutchi Hub",
+  "description": "Discover trusted Kutchi businesses near you — restaurants, hotels, doctors, services and more.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ff6a00",
+  "icons": [
+    { "src": "/favicon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
