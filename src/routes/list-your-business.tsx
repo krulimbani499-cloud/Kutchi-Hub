@@ -6,17 +6,17 @@ import { useAuth } from "@/lib/auth";
 export const Route = createFileRoute("/list-your-business")({
   head: () => ({
     meta: [
-      { title: "List Your Business Free — Kutchi Hub" },
+      { title: "List Your Business — Kutchi Hub" },
       {
         name: "description",
         content:
-          "List your Kutchi business on Kutchi Hub only in ₹500 and get discovered by thousands of local customers.",
+          "List your Kutchi business on Kutchi Hub and get discovered by thousands of local customers.",
       },
-      { property: "og:title", content: "List Your Business Free — Kutchi Hub" },
+      { property: "og:title", content: "List Your Business — Kutchi Hub" },
       {
         property: "og:description",
         content:
-          "Get discovered by thousands of Kutchi customers. List your business on Kutchi Hub for just ₹500.",
+          "Get discovered by thousands of Kutchi customers. List your business on Kutchi Hub today.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://kutchi-hub.lovable.app/list-your-business" },
@@ -42,10 +42,17 @@ function ListYourBusinessPage() {
           </p>
           <div className="max-w-2xl">
             <h1 className="text-4xl font-extrabold leading-tight text-foreground md:text-5xl">
-              List Your Business <span className="text-[#ff6a00]">Only in ₹500</span>
+              List Your Business on Kutchi Hub
             </h1>
             <p className="mt-3 text-lg text-muted-foreground">
               with Kutchi Hub — Your Local Kutchi Search Engine
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Check out our{" "}
+              <Link to="/pricing" className="font-medium text-[#ff6a00] hover:underline">
+                plans & pricing
+              </Link>{" "}
+              to see what's included.
             </p>
 
             <div className="mt-6 rounded-xl border border-[#ff6a00]/40 bg-orange-50/70 px-4 py-3 text-sm font-medium text-foreground">
