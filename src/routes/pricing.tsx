@@ -7,8 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BASE_URL } from "@/lib/seo";
 import { Phone, MessageCircle, Mail, Megaphone } from "lucide-react";
 
-const CONTACT_WHATSAPP = "919999999999"; // Admin can update
-const CONTACT_PHONE = "+91 99999 99999";
+const CONTACT_WHATSAPP = "917359036946"; // Admin can update
+const CONTACT_PHONE = "+91 73590 36946";
 const CONTACT_EMAIL = "hello@kutchihub.com";
 
 const plansQueryOptions = queryOptions({
