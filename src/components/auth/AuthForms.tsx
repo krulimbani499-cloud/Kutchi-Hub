@@ -108,7 +108,7 @@ export function AuthForms() {
       } else if (mode === "signup") {
         emailSchema.parse(email);
         passwordSchema.parse(password);
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin },
@@ -121,7 +121,13 @@ export function AuthForms() {
             /* ignore */
           }
         }
-        setMessage("Check your email to confirm your account.");
+        if (data.session) {
+          setMessage("Account created! You're all set.");
+          await tryRedeemPending();
+          await navigate({ to: "/" });
+        } else {
+          setMessage("Check your email to confirm your account.");
+        }
       } else {
         emailSchema.parse(email);
         passwordSchema.parse(password);
