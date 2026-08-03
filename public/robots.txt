@@ -10,4 +10,4 @@ Disallow: /business/*/claim
 Disallow: /business/new
 Disallow: /search?
 
-Sitemap: https://kutchi-hub.lovable.app/sitemap.xml
+Sitemap: https://kutchihub.com/sitemap.xml

@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { getSitemapData } from "@/lib/businesses.functions";
 import { INDIAN_CITIES } from "@/lib/cities";
-
-const BASE_URL = "https://kutchi-hub.lovable.app";
+import { BASE_URL } from "@/lib/seo";
 
 interface SitemapEntry {
   path: string;

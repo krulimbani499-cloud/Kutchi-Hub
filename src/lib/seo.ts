@@ -2,7 +2,7 @@
 // Keep this file the single source of truth for BASE_URL, canonical URLs,
 // and JSON-LD builders — used across route head() functions.
 
-export const BASE_URL = "https://kutchi-hub.lovable.app";
+export const BASE_URL = "https://kutchihub.com";
 export const SITE_NAME = "Kutchi Hub";
 
 export function canonical(path: string): string {

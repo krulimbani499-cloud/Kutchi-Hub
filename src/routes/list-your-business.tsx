@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { BASE_URL } from "@/lib/seo";
 
 export const Route = createFileRoute("/list-your-business")({
   head: () => ({
@@ -19,9 +20,9 @@ export const Route = createFileRoute("/list-your-business")({
           "Get discovered by thousands of Kutchi customers. List your business on Kutchi Hub today.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://kutchi-hub.lovable.app/list-your-business" },
+      { property: "og:url", content: `${BASE_URL}/list-your-business` },
     ],
-    links: [{ rel: "canonical", href: "https://kutchi-hub.lovable.app/list-your-business" }],
+    links: [{ rel: "canonical", href: `${BASE_URL}/list-your-business` }],
   }),
   component: ListYourBusinessPage,
 });

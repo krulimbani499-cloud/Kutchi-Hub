@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { getCategories } from "@/lib/businesses.functions";
 import { CategoryGrid } from "@/components/business/CategoryGrid";
+import { BASE_URL } from "@/lib/seo";
 
 const categoriesQueryOptions = queryOptions({
   queryKey: ["categories"],
@@ -17,9 +18,9 @@ export const Route = createFileRoute("/categories")({
       { property: "og:title", content: "All Business Categories — Kutchi Hub" },
       { property: "og:description", content: "Browse every business category on Kutchi Hub — verified local listings with reviews, contact info and directions." },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://kutchi-hub.lovable.app/categories" },
+      { property: "og:url", content: `${BASE_URL}/categories` },
     ],
-    links: [{ rel: "canonical", href: "https://kutchi-hub.lovable.app/categories" }],
+    links: [{ rel: "canonical", href: `${BASE_URL}/categories` }],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions),
   component: CategoriesPage,
