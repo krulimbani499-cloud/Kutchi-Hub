@@ -1,34 +1,5 @@
-/// <reference types="google.maps" />
-import { useEffect, useRef, useState } from "react";
-import { MapPin } from "lucide-react";
-
-declare global {
-  interface Window {
-    google?: typeof google;
-    __nearmeMapInit?: () => void;
-  }
-}
-
-const SCRIPT_ID = "google-maps-js";
-let loadPromise: Promise<void> | null = null;
-
-function loadGoogleMaps(apiKey: string, channel: string): Promise<void> {
-  if (typeof window === "undefined") return Promise.reject(new Error("SSR"));
-  if (window.google?.maps) return Promise.resolve();
-  if (loadPromise) return loadPromise;
-
-  loadPromise = new Promise<void>((resolve, reject) => {
-    window.__nearmeMapInit = () => resolve();
-    const s = document.createElement("script");
-    s.id = SCRIPT_ID;
-    s.async = true;
-    s.defer = true;
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&callback=__nearmeMapInit${channel ? `&channel=${channel}` : ""}`;
-    s.onerror = () => reject(new Error("Failed to load Google Maps"));
-    document.head.appendChild(s);
-  });
-  return loadPromise;
-}
+import { MapPin, Navigation } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface BusinessMapProps {
   lat: number | null;
@@ -38,61 +9,34 @@ interface BusinessMapProps {
 }
 
 export function BusinessMap({ lat, lng, name, address }: BusinessMapProps) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const apiKey = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
-  const channel = (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string | undefined) ?? "";
-
-  useEffect(() => {
-    if (!ref.current || lat == null || lng == null || !apiKey) return;
-    let cancelled = false;
-
-    loadGoogleMaps(apiKey, channel)
-      .then(() => {
-        if (cancelled || !ref.current || !window.google) return;
-        const position = { lat, lng };
-        const map = new window.google.maps.Map(ref.current, {
-          center: position,
-          zoom: 15,
-          disableDefaultUI: false,
-          streetViewControl: false,
-          mapTypeControl: false,
-        });
-        new window.google.maps.Marker({ position, map, title: name });
-      })
-      .catch((e: Error) => !cancelled && setError(e.message));
-
-    return () => {
-      cancelled = true;
-    };
-  }, [lat, lng, name, apiKey, channel]);
-
-  if (lat == null || lng == null) {
-    return (
-      <div className="rounded-lg bg-muted p-4 text-center text-xs text-muted-foreground">
-        <MapPin className="mx-auto mb-1 h-5 w-5" />
-        Location not set. Use the address above for directions.
-      </div>
-    );
-  }
-
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const hasCoords = lat != null && lng != null;
+  const query = hasCoords ? `${lat},${lng}` : encodeURIComponent(address?.trim() || name);
+  const viewUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${query}`;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
-      <div ref={ref} className="h-56 w-full bg-muted" aria-label={`Map showing ${name}`} />
-      {error && (
-        <div className="border-t border-border bg-muted p-2 text-center text-xs text-destructive">{error}</div>
-      )}
-      <a
-        href={directionsUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="block bg-card px-3 py-2 text-center text-xs font-medium text-primary hover:bg-accent"
-      >
-        Get directions{address ? ` — ${address}` : ""}
-      </a>
+    <div className="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-orange-50/60 to-card">
+      <div className="flex flex-col items-center gap-3 p-6 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ff6a00]/10">
+          <MapPin className="h-6 w-6 text-[#ff6a00]" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">{name}</p>
+          {address && <p className="mt-1 text-sm text-muted-foreground">{address}</p>}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <Button asChild size="sm" className="rounded-full bg-[#ff6a00] text-white hover:bg-[#e65a00]">
+            <a href={viewUrl} target="_blank" rel="noreferrer">
+              📍 View on Google Maps
+            </a>
+          </Button>
+          <Button asChild size="sm" variant="outline" className="rounded-full">
+            <a href={directionsUrl} target="_blank" rel="noreferrer">
+              <Navigation className="mr-1.5 h-3.5 w-3.5" /> Get Directions
+            </a>
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
