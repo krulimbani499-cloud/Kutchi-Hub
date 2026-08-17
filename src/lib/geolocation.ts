@@ -94,13 +94,43 @@ export async function getCurrentLocation(): Promise<GeolocationResult> {
   });
 }
 
+const NOMINATIM_RETRY_ATTEMPTS = 3;
+const NOMINATIM_RETRY_DELAY_MS = 700;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function reverseGeocode(lat: number, lon: number): Promise<ReverseGeocodeResult> {
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
-    { headers: { "Accept-Language": "en" } },
-  );
-  if (!res.ok) throw new Error("Reverse geocoding lookup failed.");
-  return res.json();
+  // Browsers forbid client-side JS from setting the User-Agent or Referer
+  // headers (Fetch spec's forbidden-header list) — the browser already
+  // attaches its own UA and the page's Referer/origin automatically on
+  // every request, which is what satisfies Nominatim's "identify your app"
+  // usage policy. We can't improve on that from client-side fetch, so
+  // instead we make the request itself resilient to transient failures.
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= NOMINATIM_RETRY_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+        { headers: { "Accept-Language": "en" } },
+      );
+      if (!res.ok) {
+        throw new Error(`Nominatim responded with ${res.status}`);
+      }
+      return await res.json();
+    } catch (err) {
+      lastError = err;
+      console.warn(`[geolocation] Reverse geocode attempt ${attempt}/${NOMINATIM_RETRY_ATTEMPTS} failed:`, err);
+      if (attempt < NOMINATIM_RETRY_ATTEMPTS) {
+        await sleep(NOMINATIM_RETRY_DELAY_MS);
+      }
+    }
+  }
+
+  console.warn("[geolocation] Reverse geocoding failed after all retries.", lastError);
+  throw new Error("Couldn't detect location — please select your city manually.");
 }
 
 export function extractCity(rg: ReverseGeocodeResult): string | null {
