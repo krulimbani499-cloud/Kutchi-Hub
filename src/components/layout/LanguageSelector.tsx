@@ -23,7 +23,7 @@ export function LanguageSelector({ compact = false }: { compact?: boolean }) {
           title={t("nav.language")}
         >
           <Globe className="h-4 w-4" />
-          <span className={compact ? "text-xs font-semibold" : "text-sm font-semibold"}>
+          <span className={compact ? "hidden text-xs font-semibold sm:inline" : "text-sm font-semibold"}>
             {compact ? current.short : current.label}
           </span>
         </Button>
