@@ -1,135 +1,72 @@
-# Kutchi Hub — Complete SEO Plan
+# Migration Toolkit: Lovable Cloud -> Your Own Supabase
 
-Goal: Rank Kutchi Hub as the #1 local business directory for Kutch region (Bhuj, Gandhidham, Anjar, Mandvi, Mundra, Kapadvanj, etc.) on Google, and dominate long-tail "[category] in [city]" searches.
+Goal: move database, auth users and storage into a Supabase project you own, so the frontend can run on Vercel with your own service role key. Nothing is changed in the live app by this plan — it only adds a `migration/` folder of scripts and instructions to the repo.
 
----
+## Good news on scale
 
-## Phase 1 — Technical SEO Foundation (Week 1)
+Current data is small, so the whole move is low risk:
 
-Most items already exist; this phase closes gaps.
+```text
+business_events 87   categories 49   user_roles 15   profiles 11
+banner_ads 11        audit_logs 10   point_events 9  discount_claims 8
+business_photos 6    plans 4         ad_slots 4      businesses 3
+business_products 3  reviews 2       notifications 2 favorites 1
+(claims, services, reports, subscriptions, enquiries, referrals, events = 0)
+```
 
-1. **Sitemap audit**
-   - Already dynamic at `/sitemap.xml`. Add `lastmod` on category & city pages using latest business `updated_at` per bucket.
-   - Split into `sitemap-businesses.xml`, `sitemap-cities.xml`, `sitemap-categories.xml` via a `<sitemapindex>` when businesses cross 500 URLs.
+Roughly 11 auth users and 6 photos to move.
 
-2. **robots.txt**
-   - Keep current disallows. Add `Disallow: /search?` to avoid infinite parameter crawls, but `Allow: /search$` for the base page.
+## What gets added to the repo
 
-3. **Canonical & OG hygiene**
-   - Audit every route file to confirm canonical + og:url self-reference (already good on business/city/categories). Add same pattern to `/search`, `/category/$slug`, `/city/$slug/category/$category`, `/events`, `/list-your-business`, `/pricing`.
+A new `migration/` folder:
 
-4. **Structured data expansion**
-   - Add `LocalBusiness` `openingHoursSpecification`, `priceRange`, `geo` (lat/lng) to business detail JSON-LD.
-   - Add `Review` items (top 5) inside `LocalBusiness` schema.
-   - Add `Event` schema on `/events` route.
-   - Add `BreadcrumbList` on category & search pages.
+1. `README.md` — step-by-step runbook (the master document, written so it can be followed top to bottom without guessing).
+2. `01-schema.md` — how to replay the 59 existing files in `supabase/migrations/` into the new project with `supabase db push`, plus a verification query listing every table, policy, function and trigger so you can diff old vs new.
+3. `02-export.sh` — exports every public table to CSV in the correct dependency order, into `migration/data/`. Order: plans, categories, ad_slots, profiles, user_roles, businesses, business_photos, business_products, business_services, business_subscriptions, business_reviews, business_enquiries, business_claims, business_favorites, business_events, banner_ads, events, notifications, point_events, referrals, discount_claims, reports, audit_logs.
+4. `03-import.sh` — imports those CSVs into the new project in the same order, inside a single transaction, with `session_replication_role = replica` so triggers and FK checks do not fight the load, then re-enables them.
+5. `04-verify.sql` — prints a row count per table; run it against both databases and compare side by side. Also checks orphan rows (any child row whose parent id is missing) and that every `user_id` in public tables exists in `auth.users`.
+6. `05-auth-users.ts` — reads the exported user list and recreates each user in the new project **with the same UUID** via the Auth Admin API, so every foreign key keeps working. Passwords cannot be copied (Lovable Cloud does not expose the source service key), so users are created as confirmed accounts without a password and the script prints a ready-to-send password-reset list. Google/Apple identities relink on next sign-in by email.
+7. `06-storage-copy.ts` — lists every object in `business-photos` on the old project, downloads via signed URL, re-uploads to the new project at the identical path, then verifies object count and that each `business_photos.url` / `businesses.catalog_url` / `featured_image` resolves.
+8. `07-env.md` — the exact environment variables to set in Vercel and locally, plus the Google OAuth change needed once you leave Lovable hosting.
+9. `08-rollback.md` — see below.
 
-5. **Performance / Core Web Vitals**
-   - Homepage already lazy-loads below-the-fold. Add `<link rel="preload">` for hero font subset.
-   - Convert business featured images to WebP + `srcset` (already using Supabase storage — add transform params).
-   - Add `loading="lazy"` + `decoding="async"` to every BusinessCard image.
+All scripts read connection details from a `migration/.env` file (git-ignored) with `OLD_DB_URL`, `NEW_DB_URL`, `NEW_SUPABASE_URL`, `NEW_SERVICE_ROLE_KEY`, `OLD_SUPABASE_URL`, `OLD_ANON_KEY`. Every script is idempotent: re-running it will not duplicate rows or users.
 
-6. **Indexability**
-   - Add `<meta name="robots" content="noindex,follow">` on `/search` result pages with query params, and on paginated pages beyond page 1.
-   - Ensure 404s return proper status (TanStack `notFoundComponent` — verify SSR 404 response code).
+## Safety design
 
-7. **Internal linking**
-   - Footer: link to top 8 cities + top 12 categories.
-   - Business page: "More [category] in [city]" + "Nearby businesses" (already exists) — ensure crawlable `<a href>`.
+- Export is read-only. Nothing runs against the old project except SELECTs and signed-URL downloads.
+- Import runs in one transaction per table set — a failure rolls back that batch rather than leaving half-loaded tables.
+- Every script has a `--dry-run` flag that prints what it would do and touches nothing.
+- The old backend stays fully live and untouched during the whole process, so the current site keeps working.
 
----
+## Rollback plan
 
-## Phase 2 — On-Page SEO (Week 2)
+Because the old Lovable Cloud backend is never modified, rollback is simply "keep using it":
 
-1. **Title/description templates** (finalize):
-   - Business: `{Name} — {Category} in {City}, Kutch | Kutchi Hub`
-   - City: `Top {N} Businesses in {City}, Kutch — Reviews & Contacts | Kutchi Hub`
-   - Category: `Best {Category} in Kutch — {N} Verified Listings | Kutchi Hub`
-   - City+Category: `Best {Category} in {City} — Reviews, Phone, Address | Kutchi Hub`
+1. **Before DNS cutover** — abort by doing nothing. Delete rows in the new project (`08-rollback.md` includes a `TRUNCATE ... CASCADE` script in reverse dependency order) and re-run the import after fixing the issue.
+2. **After Vercel env switch, before DNS** — revert the Vercel environment variables to the Lovable Cloud values (kept in `07-env.md`) and redeploy; the site is back on the old backend in minutes.
+3. **After DNS cutover** — point DNS back, restore the old env vars, redeploy. Any data written to the new backend during the window is captured by a `09-delta-sync.sh` script that re-exports rows created after the cutover timestamp so nothing new is lost.
+4. A pre-cutover snapshot: run `02-export.sh` one final time immediately before cutover and commit the CSVs to a private branch / archive, so there is always a point-in-time copy of every row.
 
-2. **H1 hierarchy** — one H1 per page, matches primary keyword.
+## Cutover sequence (from the README)
 
-3. **Content blocks on category & city pages**
-   - 150–250 word intro paragraph (unique per page) above the fold: "About {category/city}", why to choose, what to look for.
-   - FAQ block (3–5 Q&As) at bottom — already added to city pages; extend to category & city+category.
+```text
+1. Create new Supabase project        (no downtime)
+2. supabase db push                   (schema + RLS + triggers)
+3. 05-auth-users.ts                   (users, same UUIDs)
+4. 02-export.sh  ->  03-import.sh     (data)
+5. 06-storage-copy.ts                 (files)
+6. 04-verify.sql on both  -> compare  (gate: must match)
+7. Deploy a Vercel PREVIEW with new env vars, test end to end
+8. Switch production env vars + redeploy
+9. Watch for 24-48h, then DNS/final cutover
+```
 
-4. **Image SEO**
-   - Alt text template: `{Business name} — {category} in {city}`.
-   - Auto-generate at upload time in `PhotoUploader`.
+Step 6 is a hard gate: do not proceed if counts differ.
 
-5. **URL structure** — already clean (`/business/slug`, `/city/slug`, `/category/slug`). Keep.
+## Technical notes
 
----
-
-## Phase 3 — Keyword & Content Strategy (Weeks 3–4)
-
-1. **Primary keyword clusters** (target):
-   - `businesses in {city}` — Bhuj, Gandhidham, Anjar, Mandvi, Mundra, Kapadvanj, Nakhatrana, Rapar
-   - `{category} in {city}` — restaurants, doctors, hospitals, salons, grocery, hotels, mechanics
-   - `kutch business directory`, `kutchi hub`, `local businesses kutch`
-
-2. **Semrush research pass** — I'll run `keyword_research` + `serp_analysis` on the top 20 seed phrases to validate volume/difficulty before we finalize.
-
-3. **Blog / content hub** (new `/blog` route)
-   - 2 posts/week starter set:
-     - "Top 10 Restaurants in Bhuj (2026)"
-     - "Best Doctors in Gandhidham — Complete Guide"
-     - "Kutch Travel Guide: Where to Eat, Stay, Shop"
-     - "How to Grow Your Local Business in Kutch"
-   - Each post: 800–1500 words, internal links to relevant city/category pages, Article JSON-LD.
-
-4. **Programmatic pages** — already exist for city+category; ensure at least one exists for every top city × top 15 categories combination.
-
----
-
-## Phase 4 — Local SEO (Ongoing)
-
-1. **Google Business Profile** for Kutchi Hub itself (registered address in Kutch).
-2. Encourage listed businesses to add their own GBP and link back to Kutchi Hub page.
-3. **NAP consistency** — enforce standard phone/address format in `BusinessForm`.
-4. **Review generation** — post-visit prompt (email + WhatsApp) to leave reviews on the business's Kutchi Hub page.
-
----
-
-## Phase 5 — Off-Page & Authority (Month 2+)
-
-1. Submit sitemap to Google Search Console + Bing Webmaster Tools.
-2. Directory citations: Justdial, Sulekha, IndiaMART, local Kutch chambers of commerce.
-3. Guest posts on Gujarati news sites / Kutch community blogs.
-4. Social signals: Instagram/Facebook/YouTube (accounts already reserved) — auto-share new listings.
-5. PR: press release when hitting 500, 1000 listings.
-
----
-
-## Phase 6 — Monitoring & Iteration (Continuous)
-
-1. **Google Search Console** — verified already (`google-site-verification` present). Weekly review of impressions, CTR, top queries.
-2. **Semrush tracking** — I'll run `domain_analysis` + `seo_trend` monthly to track keyword count & traffic.
-3. **Rank tracking** — top 30 keywords across Bhuj/Gandhidham/Kapadvanj markets.
-4. **A/B title tests** on top 20 traffic pages.
-5. **404 & broken-link audit** monthly.
-
----
-
-## Deliverables I'll Build in This Project
-
-If you approve, I'll implement in this order:
-
-1. Structured data expansion (LocalBusiness enrichment, Event schema, more breadcrumbs)
-2. Image alt-text automation + lazy-loading pass
-3. `/search` noindex logic + parameter handling
-4. Unique intro copy + FAQ block on category & city+category pages
-5. Blog route scaffolding (`/blog`, `/blog/$slug`) with Article schema
-6. Footer internal-linking hub (top cities + categories)
-7. Semrush keyword validation pass (I'll call the tools and share results)
-
-## Out of Scope (needs you)
-
-- GBP claim & verification
-- Off-site citations & guest posts
-- Social account content calendar
-- Writing the actual blog articles (I can draft — you approve/edit)
-
----
-
-Approve karo aur main Phase 1 se implementation shuru kar deta hu. Ya specific phase se start karna hai batao.
+- Auth passwords are the only thing that genuinely cannot be transferred; the script handles this by creating confirmed users and generating reset links.
+- `src/integrations/supabase/client.ts`, `auth-middleware.ts` and `client.server.ts` already read `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SERVICE_ROLE_KEY`, so no application code changes are needed for the database swap.
+- `AuthForms.tsx` will need Google sign-in switched from the Lovable broker to `supabase.auth.signInWithOAuth` with your own Google client credentials — flagged in `07-env.md`, not changed by this plan.
+- Storage policies on `storage.objects` already exist in two of the migration files, so `supabase db push` reproduces them.
