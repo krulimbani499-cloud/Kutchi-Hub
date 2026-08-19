@@ -27,11 +27,13 @@ import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save, Plus, Image as ImageIcon, BadgeCheck, Flag } from "lucide-react";
+import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save, Plus, Image as ImageIcon, BadgeCheck, Flag, Upload, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { BANNER_IMAGES_BUCKET, BANNER_IMAGE_MAX_BYTES } from "@/lib/banner-images";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
@@ -610,6 +612,36 @@ function BannersAdmin() {
   const deleteFn = useServerFn(adminDeleteBannerAd);
   const [form, setForm] = useState<BannerFormState>(emptyBanner);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const handleImageUpload = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadError("");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setUploadError("Please upload a JPG, PNG or WebP image.");
+      return;
+    }
+    if (file.size > BANNER_IMAGE_MAX_BYTES) {
+      setUploadError("Image is larger than 5MB. Please upload a smaller file.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const key = `${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(BANNER_IMAGES_BUCKET)
+        .upload(key, file, { cacheControl: "3600", upsert: false });
+      if (upErr) throw new Error(upErr.message);
+      const { data } = supabase.storage.from(BANNER_IMAGES_BUCKET).getPublicUrl(key);
+      setForm({ ...form, image_url: data.publicUrl });
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const startEdit = (b: Tables<"banner_ads">) => {
     setForm({
@@ -707,12 +739,34 @@ function BannersAdmin() {
               />
             </div>
             <div className="sm:col-span-2">
-              <Label className="text-xs">Image URL *</Label>
-              <Input
-                value={form.image_url}
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                placeholder="https://…"
-              />
+              <Label className="text-xs">Banner image *</Label>
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                <label
+                  className={`inline-flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted px-4 py-2 text-sm font-medium text-foreground ${
+                    uploading ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-accent"
+                  }`}
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  <span>{uploading ? "Uploading…" : form.image_url ? "Replace image" : "Upload image"}</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      void handleImageUpload(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <span className="text-xs text-muted-foreground">JPG, PNG or WebP · up to 5MB</span>
+              </div>
+              {uploadError && <p className="mt-1 text-xs text-destructive">{uploadError}</p>}
+              {form.image_url && (
+                <div className="mt-2 h-28 w-48 overflow-hidden rounded-md border border-border bg-muted">
+                  <img src={form.image_url} alt="Banner preview" className="h-full w-full object-cover" />
+                </div>
+              )}
             </div>
             <div>
               <Label className="text-xs">CTA label</Label>
