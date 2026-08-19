@@ -171,11 +171,46 @@ function HomePage() {
       {/* Location-aware sponsored banner */}
       <Suspense fallback={null}><MarketingBanner /></Suspense>
 
-      {/* Recently viewed (localStorage) */}
-      <Suspense fallback={null}><RecentlyViewed /></Suspense>
+      {/* Featured Businesses */}
+      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+        <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.featuredBusinesses")}{city ? ` ${t("home.in")} ${city}` : ""}</h2>
+          <Link to="/search" className="text-sm font-medium text-primary hover:underline">
+            {t("home.browseAll")}
+          </Link>
+        </div>
+        {home && home.featured.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {home.featured.map((business, i) => (
+              <Reveal key={business.id} delay={i * 70} y={12}>
+                <BusinessCard business={business} />
+              </Reveal>
+            ))}
+          </div>
+        ) : !home ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-64 animate-pulse rounded-xl bg-muted" />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border p-8 text-center">
+            <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
+            <p className="mt-3 text-muted-foreground">{t("home.noFeatured")}</p>
+            <Button className="mt-4 bg-primary text-primary-foreground" asChild>
+              <Link to="/business/new">{t("home.addBusiness")}</Link>
+            </Button>
+          </div>
+        )}
+        </div>
+      </Reveal>
 
       {/* Nearby businesses (uses device location) */}
       <Suspense fallback={null}><NearbyBusinesses /></Suspense>
+
+      {/* Recently viewed (localStorage) */}
+      <Suspense fallback={null}><RecentlyViewed /></Suspense>
 
       {/* Personalized recommendations */}
       <Suspense fallback={null}><ForYou /></Suspense>
@@ -249,41 +284,6 @@ function HomePage() {
               ))}
             </div>
           )}
-        </div>
-      </Reveal>
-
-      {/* Featured Businesses */}
-      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
-        <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.featuredBusinesses")}{city ? ` ${t("home.in")} ${city}` : ""}</h2>
-          <Link to="/search" className="text-sm font-medium text-primary hover:underline">
-            {t("home.browseAll")}
-          </Link>
-        </div>
-        {home && home.featured.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {home.featured.map((business, i) => (
-              <Reveal key={business.id} delay={i * 70} y={12}>
-                <BusinessCard business={business} />
-              </Reveal>
-            ))}
-          </div>
-        ) : !home ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-64 animate-pulse rounded-xl bg-muted" />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-border p-8 text-center">
-            <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 text-muted-foreground">{t("home.noFeatured")}</p>
-            <Button className="mt-4 bg-primary text-primary-foreground" asChild>
-              <Link to="/business/new">{t("home.addBusiness")}</Link>
-            </Button>
-          </div>
-        )}
         </div>
       </Reveal>
 
