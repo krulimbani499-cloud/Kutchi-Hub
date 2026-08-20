@@ -211,6 +211,43 @@ export const assignPlanToBusiness = createServerFn({ method: "POST" })
     return sub;
   });
 
+const updateSubSchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  billingCycle: z.enum(["monthly", "yearly"]),
+  expiresAt: z.string().optional().nullable(),
+  amountPaid: z.number().min(0).optional().nullable(),
+  paymentRef: z.string().trim().max(120).optional().nullable(),
+  notes: z.string().trim().max(1000).optional().nullable(),
+});
+
+export const updateBusinessSubscription = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => updateSubSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const payload = {
+      plan_id: data.planId,
+      billing_cycle: data.billingCycle,
+      expires_at: data.expiresAt ? new Date(data.expiresAt).toISOString() : null,
+      amount_paid: data.amountPaid ?? null,
+      payment_ref: data.paymentRef ?? null,
+      notes: data.notes ?? null,
+    } as never;
+    const { data: sub, error } = await context.supabase
+      .from("business_subscriptions" as never)
+      .update(payload)
+      .eq("id", data.id)
+      .select("business_id, status")
+      .single();
+    if (error) throw new Error(error.message);
+    const row = sub as unknown as { business_id: string; status: string };
+    if (row.status === "active") {
+      await context.supabase.from("businesses").update({ current_plan_id: data.planId } as never).eq("id", row.business_id);
+    }
+    return { success: true };
+  });
+
 export const cancelBusinessSubscription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))

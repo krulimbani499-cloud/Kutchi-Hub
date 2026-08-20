@@ -6,6 +6,7 @@ import {
   adminListBusinessesForSubs,
   adminListSubscriptions,
   assignPlanToBusiness,
+  updateBusinessSubscription,
   cancelBusinessSubscription,
 } from "@/lib/plans.functions";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Ban } from "lucide-react";
+import { Plus, X, Ban, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 export function SubscriptionsManager() {
@@ -22,19 +23,62 @@ export function SubscriptionsManager() {
   const { data: businesses = [] } = useQuery({ queryKey: ["admin", "subs-businesses"], queryFn: () => adminListBusinessesForSubs() });
   const { data: subs = [], refetch } = useQuery({ queryKey: ["admin", "subscriptions"], queryFn: () => adminListSubscriptions() });
   const assignFn = useServerFn(assignPlanToBusiness);
+  const updateFn = useServerFn(updateBusinessSubscription);
   const cancelFn = useServerFn(cancelBusinessSubscription);
 
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
+  const emptyForm = {
+    id: null as string | null,
     businessId: "", planId: "", billingCycle: "monthly" as "monthly" | "yearly",
     expiresAt: "", amountPaid: "", paymentRef: "", notes: "",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [editingBusinessName, setEditingBusinessName] = useState("");
 
   const filteredBiz = businesses.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
 
+  const resetForm = () => {
+    setShowForm(false);
+    setForm(emptyForm);
+    setEditingBusinessName("");
+    setSearch("");
+  };
+
+  const startEdit = (s: (typeof subs)[number]) => {
+    setForm({
+      id: s.id,
+      businessId: s.business_id,
+      planId: s.plan_id,
+      billingCycle: (s.billing_cycle as "monthly" | "yearly") ?? "monthly",
+      expiresAt: s.expires_at ? s.expires_at.slice(0, 16) : "",
+      amountPaid: s.amount_paid != null ? String(s.amount_paid) : "",
+      paymentRef: s.payment_ref ?? "",
+      notes: s.notes ?? "",
+    });
+    setEditingBusinessName(s.business?.name ?? "");
+    setShowForm(true);
+  };
+
   const assign = async () => {
+    if (form.id) {
+      if (!form.planId) { toast.error("Pick a plan"); return; }
+      setSaving(true);
+      try {
+        await updateFn({ data: {
+          id: form.id, planId: form.planId, billingCycle: form.billingCycle,
+          expiresAt: form.expiresAt || null,
+          amountPaid: form.amountPaid ? Number(form.amountPaid) : null,
+          paymentRef: form.paymentRef || null, notes: form.notes || null,
+        }});
+        toast.success("Subscription updated");
+        resetForm();
+        await refetch();
+      } catch (e: any) { toast.error(e?.message || "Failed"); }
+      finally { setSaving(false); }
+      return;
+    }
     if (!form.businessId || !form.planId) { toast.error("Pick a business and plan"); return; }
     setSaving(true);
     try {
@@ -46,8 +90,7 @@ export function SubscriptionsManager() {
         status: "active",
       }});
       toast.success("Plan assigned");
-      setShowForm(false);
-      setForm({ businessId: "", planId: "", billingCycle: "monthly", expiresAt: "", amountPaid: "", paymentRef: "", notes: "" });
+      resetForm();
       await refetch();
     } catch (e: any) { toast.error(e?.message || "Failed"); }
     finally { setSaving(false); }
@@ -72,19 +115,25 @@ export function SubscriptionsManager() {
       {showForm && (
         <Card>
           <CardContent className="space-y-3 p-4">
-            <div>
-              <Label>Search business</Label>
-              <Input placeholder="Type business name..." value={search} onChange={(e) => setSearch(e.target.value)} />
-              <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border">
-                {filteredBiz.slice(0, 20).map((b) => (
-                  <button key={b.id} type="button"
-                    onClick={() => setForm((f) => ({ ...f, businessId: b.id }))}
-                    className={`block w-full px-3 py-2 text-left text-sm hover:bg-muted ${form.businessId === b.id ? "bg-muted font-medium" : ""}`}>
-                    {b.name} {b.city && <span className="text-xs text-muted-foreground">— {b.city}</span>}
-                  </button>
-                ))}
+            {form.id ? (
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                Editing subscription for <span className="font-medium text-foreground">{editingBusinessName || "—"}</span>
               </div>
-            </div>
+            ) : (
+              <div>
+                <Label>Search business</Label>
+                <Input placeholder="Type business name..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border">
+                  {filteredBiz.slice(0, 20).map((b) => (
+                    <button key={b.id} type="button"
+                      onClick={() => setForm((f) => ({ ...f, businessId: b.id }))}
+                      className={`block w-full px-3 py-2 text-left text-sm hover:bg-muted ${form.businessId === b.id ? "bg-muted font-medium" : ""}`}>
+                      {b.name} {b.city && <span className="text-xs text-muted-foreground">— {b.city}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label>Plan *</Label>
@@ -106,8 +155,10 @@ export function SubscriptionsManager() {
               <div className="sm:col-span-2"><Label>Notes</Label><Textarea rows={2} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
             </div>
             <div className="flex gap-2">
-              <Button onClick={assign} disabled={saving}>{saving ? "Saving..." : "Assign"}</Button>
-              <Button variant="outline" onClick={() => setShowForm(false)}><X className="mr-1 h-4 w-4" /> Cancel</Button>
+              <Button onClick={assign} disabled={saving}>
+                {saving ? "Saving..." : form.id ? "Save changes" : "Assign"}
+              </Button>
+              <Button variant="outline" onClick={resetForm}><X className="mr-1 h-4 w-4" /> Cancel</Button>
             </div>
           </CardContent>
         </Card>
@@ -132,9 +183,12 @@ export function SubscriptionsManager() {
                 </div>
                 {s.notes && <div className="mt-1 text-xs text-muted-foreground">Note: {s.notes}</div>}
               </div>
-              {s.status === "active" && (
-                <Button size="sm" variant="outline" onClick={() => cancelSub(s.id)}><Ban className="mr-1 h-3.5 w-3.5" /> Cancel</Button>
-              )}
+              <div className="flex shrink-0 gap-2">
+                <Button size="sm" variant="outline" onClick={() => startEdit(s)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button>
+                {s.status === "active" && (
+                  <Button size="sm" variant="outline" onClick={() => cancelSub(s.id)}><Ban className="mr-1 h-3.5 w-3.5" /> Cancel</Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
