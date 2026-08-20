@@ -39,7 +39,7 @@ export function MarketingBanner({ intervalMs = 4500 }: Props) {
           rel={current.cta_url ? "noreferrer" : undefined}
           className="block"
         >
-          <div className="relative aspect-[4/3] w-full bg-muted sm:aspect-[16/5] md:aspect-[16/4]">
+          <div className="relative aspect-[21/9] w-full bg-muted">
             <img
               src={current.image_url}
               alt={current.title}
