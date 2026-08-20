@@ -3,6 +3,7 @@ import { Facebook, Instagram, Twitter, Mail } from "lucide-react";
 import logoUrl from "@/assets/kutchi-hub-logo.png";
 import { useT } from "@/lib/i18n";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
+import { CONTACT_EMAIL } from "@/lib/contact";
 
 const TOP_CATEGORIES = [
   { slug: "restaurants", key: "cat.restaurants" },
@@ -65,7 +66,7 @@ export function SiteFooter() {
             <a href="https://instagram.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-primary"><Instagram className="h-5 w-5" /></a>
             <a href="https://facebook.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-primary"><Facebook className="h-5 w-5" /></a>
             <a href="https://x.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="hover:text-primary"><Twitter className="h-5 w-5" /></a>
-            <a href="mailto:hello@kutchihub.com" aria-label="Email" className="hover:text-primary"><Mail className="h-5 w-5" /></a>
+            <a href={`mailto:${CONTACT_EMAIL}`} aria-label="Email" className="hover:text-primary"><Mail className="h-5 w-5" /></a>
           </div>
         </div>
       </div>
