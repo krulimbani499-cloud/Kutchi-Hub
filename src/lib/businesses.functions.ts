@@ -356,9 +356,14 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
     // Only show banners for the selected city. If no city is selected,
     // return nothing so city-specific banners don't leak across locations.
     if (!data.city) return [];
+    const now = new Date().toISOString();
     let query = supabase
       .from("banner_ads")
       .select("id, business_id, title, subtitle, image_url, cta_label, cta_url, city, priority")
+      .is("category_id", null)
+      .eq("active", true)
+      .lte("start_at", now)
+      .or(`end_at.is.null,end_at.gte.${now}`)
       .order("priority", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(10);
@@ -371,8 +376,31 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
     }));
   });
 
+export const getBannerAdsForCategory = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ categoryId: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    const now = new Date().toISOString();
+    const { data: banners, error } = await supabase
+      .from("banner_ads")
+      .select("id, business_id, title, subtitle, image_url, cta_label, cta_url, city, priority")
+      .eq("category_id", data.categoryId)
+      .eq("active", true)
+      .lte("start_at", now)
+      .or(`end_at.is.null,end_at.gte.${now}`)
+      .order("priority", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (error) throw new Error(error.message);
+    return (banners ?? []).map((banner) => ({
+      ...banner,
+      image_url: normalizeBannerImageUrl(banner.image_url),
+    }));
+  });
+
 const bannerInputSchema = z.object({
   business_id: z.string().uuid().nullable().optional(),
+  category_id: z.string().uuid().nullable().optional(),
   title: z.string().trim().min(2).max(120),
   subtitle: z.string().trim().max(200).nullable().optional(),
   image_url: z.string().trim().url().max(500),
@@ -407,6 +435,7 @@ export const adminCreateBannerAd = createServerFn({ method: "POST" })
       .from("banner_ads")
       .insert({
         business_id: data.business_id ?? null,
+        category_id: data.category_id ?? null,
         owner_id: context.userId,
         title: data.title,
         subtitle: data.subtitle ?? null,
@@ -435,6 +464,7 @@ export const adminUpdateBannerAd = createServerFn({ method: "POST" })
       .from("banner_ads")
       .update({
         business_id: rest.business_id ?? null,
+        category_id: rest.category_id ?? null,
         title: rest.title,
         subtitle: rest.subtitle ?? null,
         image_url: normalizeBannerImageUrl(rest.image_url),

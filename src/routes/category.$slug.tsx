@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getCategoryPageData } from "@/lib/businesses.functions";
 import { BusinessCard } from "@/components/business/BusinessCard";
+import { CategoryBanner } from "@/components/category/CategoryBanner";
 import { MapPin } from "lucide-react";
 import { BASE_URL, breadcrumbLd, itemListLd, faqLd, ldScript } from "@/lib/seo";
 
@@ -98,6 +99,8 @@ function CategoryPage() {
         <span>›</span>
         <span className="text-foreground">{category.name}</span>
       </div>
+
+      <CategoryBanner categoryId={category.id} />
 
       <div className="mb-8 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-primary/5 p-6">
         <h1 className="text-3xl font-extrabold text-foreground">{category.name}</h1>

@@ -587,6 +587,7 @@ type BannerFormState = {
   cta_label: string;
   cta_url: string;
   city: string;
+  category_id: string;
   priority: number;
   active: boolean;
   end_at: string;
@@ -600,6 +601,7 @@ const emptyBanner: BannerFormState = {
   cta_label: "",
   cta_url: "",
   city: "",
+  category_id: "",
   priority: 0,
   active: true,
   end_at: "",
@@ -607,6 +609,7 @@ const emptyBanner: BannerFormState = {
 
 function BannersAdmin() {
   const { data: banners, refetch } = useSuspenseQuery(bannersAdminQueryOptions);
+  const { data: categories } = useSuspenseQuery(categoriesAdminQueryOptions);
   const createFn = useServerFn(adminCreateBannerAd);
   const updateFn = useServerFn(adminUpdateBannerAd);
   const deleteFn = useServerFn(adminDeleteBannerAd);
@@ -652,6 +655,7 @@ function BannersAdmin() {
       cta_label: b.cta_label ?? "",
       cta_url: b.cta_url ?? "",
       city: b.city,
+      category_id: b.category_id ?? "",
       priority: b.priority,
       active: b.active,
       end_at: b.end_at ? b.end_at.slice(0, 16) : "",
@@ -672,6 +676,7 @@ function BannersAdmin() {
         cta_label: form.cta_label.trim() || null,
         cta_url: form.cta_url.trim() || null,
         city: form.city.trim(),
+        category_id: form.category_id || null,
         priority: Number(form.priority) || 0,
         active: form.active,
         end_at: form.end_at ? new Date(form.end_at).toISOString() : null,
@@ -791,6 +796,19 @@ function BannersAdmin() {
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
                 placeholder="Ahmedabad"
               />
+            </div>
+            <div>
+              <Label className="text-xs">Category (optional)</Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={form.category_id}
+                onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+              >
+                <option value="">None — shows on homepage</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <Label className="text-xs">Priority</Label>

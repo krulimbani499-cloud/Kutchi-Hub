@@ -87,6 +87,7 @@ export type Database = {
         Row: {
           active: boolean
           business_id: string | null
+          category_id: string | null
           city: string
           created_at: string
           cta_label: string | null
@@ -104,6 +105,7 @@ export type Database = {
         Insert: {
           active?: boolean
           business_id?: string | null
+          category_id?: string | null
           city: string
           created_at?: string
           cta_label?: string | null
@@ -121,6 +123,7 @@ export type Database = {
         Update: {
           active?: boolean
           business_id?: string | null
+          category_id?: string | null
           city?: string
           created_at?: string
           cta_label?: string | null
@@ -141,6 +144,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banner_ads_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
         ]
