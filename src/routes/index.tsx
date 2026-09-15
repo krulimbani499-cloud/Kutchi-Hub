@@ -12,6 +12,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
+import { JanmashtamiBanner } from "@/components/home/JanmashtamiBanner";
 
 // Lazy-load below-the-fold sections to speed up initial paint
 const MarketingBanner = lazy(() =>
@@ -106,6 +107,9 @@ function HomePage() {
 
   return (
     <div className="flex flex-col bg-muted/30">
+      {/* Janmashtami campaign strip — normal flow, above the search header, never overlays it */}
+      <JanmashtamiBanner />
+
       {/* Search header — JustDial-style, clean white */}
       <section className="bg-background border-b border-border">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">

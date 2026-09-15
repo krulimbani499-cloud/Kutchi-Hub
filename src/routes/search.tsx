@@ -18,6 +18,7 @@ import {
 import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X, Tag } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCity } from "@/hooks/useCity";
+import { CategoryBanner } from "@/components/category/CategoryBanner";
 
 const searchQueryOptions = (q: string, category: string, city: string, sort: string, hasDiscount: boolean) =>
   queryOptions({
@@ -111,6 +112,11 @@ function SearchPage() {
     return list;
   }, [results, chipVerified, chipOpenNow, chipTopRated]);
   const anyChip = chipVerified || chipOpenNow || chipTopRated || chipDiscount;
+
+  const activeCategory = useMemo(
+    () => categories.find((c) => c.slug === applied.category) ?? null,
+    [categories, applied.category],
+  );
 
   const applyFilters = () => {
     const normalized = {
@@ -239,6 +245,7 @@ function SearchPage() {
         </aside>
 
         <div className="lg:col-span-3">
+          {activeCategory && <CategoryBanner categoryId={activeCategory.id} />}
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {isLoading
