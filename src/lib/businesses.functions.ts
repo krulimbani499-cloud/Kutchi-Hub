@@ -275,7 +275,7 @@ const updateCategorySchema = z.object({
   name: z.string().trim().min(2).max(80),
   slug: z.string().trim().min(2).max(80).regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and dashes only"),
   icon: z.string().trim().max(60).nullable().optional(),
-  icon_url: z.string().trim().max(200000).nullable().optional(),
+  icon_url: z.string().trim().max(500).nullable().optional(),
   color: z.string().trim().max(30).nullable().optional(),
   display_order: z.coerce.number().int().min(0).max(9999).optional(),
   popular_image_url: z.string().trim().max(600000).nullable().optional(),

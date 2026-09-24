@@ -277,6 +277,7 @@ function CategoriesAdmin() {
   const deleteFn = useServerFn(adminDeleteCategory);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [uploadingIcon, setUploadingIcon] = useState(false);
   const [form, setForm] = useState<{
     name: string;
     slug: string;
@@ -330,7 +331,13 @@ function CategoriesAdmin() {
     }
   };
 
-  const handleIconFile = async (file: File) => {
+  const extractCategoryIconPath = (url: string): string | null => {
+    const marker = "/category-icons/";
+    const idx = url.indexOf(marker);
+    return idx === -1 ? null : url.slice(idx + marker.length);
+  };
+
+  const handleIconFile = async (file: File, categoryId: string) => {
     if (!file.type.startsWith("image/")) {
       toast.error("Please choose an image file (PNG/JPG/SVG)");
       return;
@@ -339,13 +346,25 @@ function CategoriesAdmin() {
       toast.error("Icon too large. Please use an image under 500 KB.");
       return;
     }
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsDataURL(file);
-    });
-    setForm((f) => ({ ...f, icon_url: dataUrl }));
+    setUploadingIcon(true);
+    try {
+      const oldPath = form.icon_url ? extractCategoryIconPath(form.icon_url) : null;
+      if (oldPath) {
+        await supabase.storage.from("category-icons").remove([oldPath]);
+      }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `${categoryId}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("category-icons")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+      if (upErr) throw new Error(upErr.message);
+      const { data } = supabase.storage.from("category-icons").getPublicUrl(path);
+      setForm((f) => ({ ...f, icon_url: data.publicUrl }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Icon upload failed");
+    } finally {
+      setUploadingIcon(false);
+    }
   };
 
   const handlePopularImageFile = async (file: File) => {
@@ -432,13 +451,15 @@ function CategoriesAdmin() {
                           <Input
                             type="file"
                             accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                            disabled={uploadingIcon}
                             onChange={(e) => {
                               const f = e.target.files?.[0];
-                              if (f) handleIconFile(f);
+                              if (f) handleIconFile(f, c.id);
                               e.target.value = "";
                             }}
                           />
-                          {form.icon_url ? (
+                          {uploadingIcon && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
+                          {form.icon_url && !uploadingIcon ? (
                             <Button
                               type="button"
                               size="sm"
