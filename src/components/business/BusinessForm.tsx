@@ -39,6 +39,7 @@ const businessFormSchema = z.object({
   instagram_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
   facebook_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
   youtube_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
+  google_maps_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
   featured_image: z.string().max(1000).optional(),
   hours: z.record(z.string()).optional(),
   app_discount_percent: z
@@ -90,6 +91,7 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     instagram_url: (initial as any)?.instagram_url ?? "",
     facebook_url: (initial as any)?.facebook_url ?? "",
     youtube_url: (initial as any)?.youtube_url ?? "",
+    google_maps_url: initial?.google_maps_url ?? "",
     featured_image: initial?.featured_image ?? "",
     app_discount_percent:
       initial?.app_discount_percent != null ? String(initial.app_discount_percent) : "",
@@ -477,24 +479,19 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
             lat={coords.lat}
             lng={coords.lng}
             onChange={(lat, lng) => setCoords({ lat, lng })}
-            onAddressResolved={(parts) => {
-              // Prevent the auto-geocode effect from re-running on these values.
-              const composed = [parts.address, parts.city ?? "", parts.state ?? "", parts.pincode ?? ""]
-                .map((v) => v.trim())
-                .filter(Boolean)
-                .join(", ");
-              lastGeocodedRef.current = composed;
-              setForm((f) => ({
-                ...f,
-                address: parts.address || f.address,
-                city: parts.city ?? f.city,
-                state: parts.state ?? f.state,
-                pincode: parts.pincode ?? f.pincode,
-              }));
-              setFormMessage("Address filled from map pin — edit if needed.");
-            }}
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="google_maps_url">Google Maps Link (optional)</Label>
+        <Input
+          id="google_maps_url"
+          placeholder="Paste your Google Maps share link here"
+          value={form.google_maps_url}
+          onChange={(e) => setForm((f) => ({ ...f, google_maps_url: e.target.value }))}
+        />
+        {errors.google_maps_url && <p className="text-xs text-destructive">{errors.google_maps_url}</p>}
       </div>
 
       {!initial && (

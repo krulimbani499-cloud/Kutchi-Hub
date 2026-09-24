@@ -7,7 +7,7 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import { Button } from "@/components/ui/button";
 import { Crosshair, Loader2 } from "lucide-react";
-import { getCurrentLocation, reverseGeocode, extractCity } from "@/lib/geolocation";
+import { getCurrentLocation } from "@/lib/geolocation";
 
 // Vite doesn't preserve Leaflet's relative default-icon URLs — point them
 // at the bundled asset URLs explicitly.
@@ -26,12 +26,6 @@ interface Props {
   lat: number | null;
   lng: number | null;
   onChange: (lat: number, lng: number) => void;
-  onAddressResolved?: (parts: {
-    address: string;
-    city: string | null;
-    state?: string;
-    pincode?: string;
-  }) => void;
 }
 
 function RecenterOnChange({ lat, lng }: { lat: number; lng: number }) {
@@ -52,35 +46,12 @@ function ClickToPlace({ onPlace }: { onPlace: (lat: number, lng: number) => void
   return null;
 }
 
-export function LocationPicker({ lat, lng, onChange, onAddressResolved }: Props) {
+export function LocationPicker({ lat, lng, onChange }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
-  const [resolving, setResolving] = useState(false);
-
-  const resolveAddress = async (la: number, ln: number) => {
-    if (!onAddressResolved) return;
-    setResolving(true);
-    try {
-      const rg = await reverseGeocode(la, ln);
-      const road = rg.address.road ?? "";
-      const suburb = rg.address.suburb ?? "";
-      const composed = [road, suburb].filter(Boolean).join(", ") || rg.display_name;
-      onAddressResolved({
-        address: composed,
-        city: extractCity(rg),
-        state: rg.address.state,
-        pincode: rg.address.postcode,
-      });
-    } catch {
-      // silent — pin coords still saved
-    } finally {
-      setResolving(false);
-    }
-  };
 
   const placePin = (la: number, ln: number) => {
     onChange(la, ln);
-    void resolveAddress(la, ln);
   };
 
   const useMyLocation = async () => {
@@ -107,7 +78,7 @@ export function LocationPicker({ lat, lng, onChange, onAddressResolved }: Props)
           Use my current location
         </Button>
         <span className="text-xs text-muted-foreground">
-          {resolving ? "Fetching address…" : "Drag the pin or tap the map to fine-tune. Address auto-fills."}
+          Drag the pin or tap the map to fine-tune the pinned location.
         </span>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}

@@ -135,9 +135,11 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const todayHours = hours[today];
   const isOpen = isOpenNow(business.hours) === true;
   const addressLine = [business.address, business.city, business.state, business.pincode].filter(Boolean).join(", ");
-  const mapsHref = business.latitude != null && business.longitude != null
-    ? `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`
-    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + " " + addressLine)}`;
+  const mapsHref = business.google_maps_url
+    ? business.google_maps_url
+    : business.latitude != null && business.longitude != null
+      ? `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + " " + addressLine)}`;
   const galleryPhotos = photos.slice(0, 4);
   const featuredImageSrc = business.featured_image_url ?? business.featured_image;
   const discountActive =
@@ -454,6 +456,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   lng={business.longitude}
                   name={business.name}
                   address={[business.address, business.city, business.state].filter(Boolean).join(", ")}
+                  googleMapsUrl={business.google_maps_url}
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -707,6 +710,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 lng={business.longitude}
                 name={business.name}
                 address={[business.address, business.city].filter(Boolean).join(", ")}
+                googleMapsUrl={business.google_maps_url}
               />
             </div>
           </div>

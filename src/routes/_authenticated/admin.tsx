@@ -33,7 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { BANNER_IMAGES_BUCKET, BANNER_IMAGE_MAX_BYTES } from "@/lib/banner-images";
+import { BANNER_IMAGES_BUCKET, BANNER_IMAGE_MAX_BYTES, BANNER_IMAGE_WIDTH, BANNER_IMAGE_HEIGHT } from "@/lib/banner-images";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
@@ -607,6 +607,22 @@ const emptyBanner: BannerFormState = {
   end_at: "",
 };
 
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read image dimensions"));
+    };
+    img.src = url;
+  });
+}
+
 function BannersAdmin() {
   const { data: banners, refetch } = useSuspenseQuery(bannersAdminQueryOptions);
   const { data: categories } = useSuspenseQuery(categoriesAdminQueryOptions);
@@ -631,6 +647,13 @@ function BannersAdmin() {
     }
     setUploading(true);
     try {
+      const { width, height } = await readImageDimensions(file);
+      if (width !== BANNER_IMAGE_WIDTH || height !== BANNER_IMAGE_HEIGHT) {
+        setUploadError(
+          `Image must be exactly ${BANNER_IMAGE_WIDTH} × ${BANNER_IMAGE_HEIGHT}px (3:1 ratio). This image is ${width} × ${height}px.`,
+        );
+        return;
+      }
       const ext = file.name.split(".").pop() ?? "jpg";
       const key = `${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
@@ -764,7 +787,7 @@ function BannersAdmin() {
                     }}
                   />
                 </label>
-                <span className="text-xs text-muted-foreground">JPG, PNG or WebP · up to 5MB</span>
+                <span className="text-xs text-muted-foreground">JPG, PNG or WebP · up to 5MB · exactly 1200 × 400px</span>
               </div>
               {uploadError && <p className="mt-1 text-xs text-destructive">{uploadError}</p>}
               {form.image_url && (

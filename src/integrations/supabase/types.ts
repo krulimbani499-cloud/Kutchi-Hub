@@ -583,6 +583,7 @@ export type Database = {
           email: string | null
           facebook_url: string | null
           featured_image: string | null
+          google_maps_url: string | null
           hours: Json | null
           id: string
           instagram_url: string | null
@@ -618,6 +619,7 @@ export type Database = {
           email?: string | null
           facebook_url?: string | null
           featured_image?: string | null
+          google_maps_url?: string | null
           hours?: Json | null
           id?: string
           instagram_url?: string | null
@@ -653,6 +655,7 @@ export type Database = {
           email?: string | null
           facebook_url?: string | null
           featured_image?: string | null
+          google_maps_url?: string | null
           hours?: Json | null
           id?: string
           instagram_url?: string | null

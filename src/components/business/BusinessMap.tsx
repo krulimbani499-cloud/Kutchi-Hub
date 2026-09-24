@@ -6,13 +6,14 @@ interface BusinessMapProps {
   lng: number | null;
   name: string;
   address?: string | null;
+  googleMapsUrl?: string | null;
 }
 
-export function BusinessMap({ lat, lng, name, address }: BusinessMapProps) {
+export function BusinessMap({ lat, lng, name, address, googleMapsUrl }: BusinessMapProps) {
   const hasCoords = lat != null && lng != null;
   const query = hasCoords ? `${lat},${lng}` : encodeURIComponent(address?.trim() || name);
-  const viewUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+  const viewUrl = googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
+  const directionsUrl = googleMapsUrl || `https://www.google.com/maps/dir/?api=1&destination=${query}`;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-orange-50/60 to-card">
