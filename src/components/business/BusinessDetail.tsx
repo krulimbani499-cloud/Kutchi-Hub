@@ -135,11 +135,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const todayHours = hours[today];
   const isOpen = isOpenNow(business.hours) === true;
   const addressLine = [business.address, business.city, business.state, business.pincode].filter(Boolean).join(", ");
-  const mapsHref = business.google_maps_url
-    ? business.google_maps_url
-    : business.latitude != null && business.longitude != null
-      ? `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + " " + addressLine)}`;
+  const mapsHref = business.google_maps_url;
   const galleryPhotos = photos.slice(0, 4);
   const featuredImageSrc = business.featured_image_url ?? business.featured_image;
   const discountActive =
@@ -362,12 +358,14 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   </a>
                 </Button>
               )}
-              <Button asChild variant="outline" className="h-10 min-w-0 px-2 sm:h-11">
-                <a href={mapsHref} target="_blank" rel="noreferrer" onClick={() => trackClick("direction_click")} className="flex items-center justify-center">
-                  <Navigation className="mr-1 h-4 w-4 shrink-0" />
-                  <span className="truncate text-xs sm:text-sm">Directions</span>
-                </a>
-              </Button>
+              {mapsHref && (
+                <Button asChild variant="outline" className="h-10 min-w-0 px-2 sm:h-11">
+                  <a href={mapsHref} target="_blank" rel="noreferrer" onClick={() => trackClick("direction_click")} className="flex items-center justify-center">
+                    <Navigation className="mr-1 h-4 w-4 shrink-0" />
+                    <span className="truncate text-xs sm:text-sm">Directions</span>
+                  </a>
+                </Button>
+              )}
               {business.website ? (
                 <Button asChild variant="outline" className="h-10 min-w-0 px-2 sm:h-11">
                   <a href={business.website} target="_blank" rel="noreferrer" onClick={() => trackClick("website_click")} className="flex items-center justify-center">
@@ -451,13 +449,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
             <section>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Location & Hours</h2>
               <div className="mb-4">
-                <BusinessMap
-                  lat={business.latitude}
-                  lng={business.longitude}
-                  name={business.name}
-                  address={[business.address, business.city, business.state].filter(Boolean).join(", ")}
-                  googleMapsUrl={business.google_maps_url}
-                />
+                <BusinessMap googleMapsUrl={business.google_maps_url} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 text-sm">
@@ -705,13 +697,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               </div>
             </div>
             <div className="mt-4">
-              <BusinessMap
-                lat={business.latitude}
-                lng={business.longitude}
-                name={business.name}
-                address={[business.address, business.city].filter(Boolean).join(", ")}
-                googleMapsUrl={business.google_maps_url}
-              />
+              <BusinessMap googleMapsUrl={business.google_maps_url} />
             </div>
           </div>
         </aside>

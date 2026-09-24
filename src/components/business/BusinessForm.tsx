@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { MapPin, Loader2, Plus, Upload, X } from "lucide-react";
+import { Loader2, Plus, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -16,10 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createBusiness, updateBusiness, createCategory } from "@/lib/businesses.functions";
-import { geocodeAddress } from "@/lib/maps.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { CatalogUploader } from "./CatalogUploader";
-import { LocationPicker } from "./LocationPicker";
 import { ServicesManager } from "./ServicesManager";
 import { ProductsManager } from "./ProductsManager";
 import type { Tables } from "@/integrations/supabase/types";
@@ -39,7 +37,7 @@ const businessFormSchema = z.object({
   instagram_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
   facebook_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
   youtube_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
-  google_maps_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
+  google_maps_url: z.string().url("Enter a valid Google Maps link").max(500),
   featured_image: z.string().max(1000).optional(),
   hours: z.record(z.string()).optional(),
   app_discount_percent: z
@@ -59,20 +57,14 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
   const navigate = useNavigate();
   const createFn = useServerFn(createBusiness);
   const updateFn = useServerFn(updateBusiness);
-  const geocodeFn = useServerFn(geocodeAddress);
   const createCategoryFn = useServerFn(createCategory);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
-  const [geocoding, setGeocoding] = useState(false);
   const [categoryList, setCategoryList] = useState(categories);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
-  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({
-    lat: initial?.latitude ?? null,
-    lng: initial?.longitude ?? null,
-  });
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
 
@@ -137,10 +129,10 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
       };
       const payload = businessFormSchema.parse({ ...normalized, hours });
       if (initial) {
-        await updateFn({ data: { ...payload, id: initial.id, latitude: coords.lat, longitude: coords.lng } });
+        await updateFn({ data: { ...payload, id: initial.id, latitude: null, longitude: null } });
         setFormMessage("Business updated successfully.");
       } else {
-        const result = await createFn({ data: { ...payload, latitude: coords.lat, longitude: coords.lng } });
+        const result = await createFn({ data: { ...payload, latitude: null, longitude: null } });
         // Upload pending image (if any) into the newly created business folder
         if (pendingFile) {
           try {
@@ -194,59 +186,6 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     setPendingPreview(URL.createObjectURL(file));
     setFormMessage("");
   };
-
-  const handleGeocode = async () => {
-    const composed = [form.address, form.city, form.state, form.pincode].filter(Boolean).join(", ");
-    if (!composed) {
-      setFormMessage("Enter an address or city first.");
-      return;
-    }
-    setGeocoding(true);
-    setFormMessage("");
-    try {
-      const res = await geocodeFn({ data: { address: composed } });
-      if (!res.found) {
-        setFormMessage("Could not find that address on the map.");
-      } else {
-        setCoords({ lat: res.latitude, lng: res.longitude });
-        setFormMessage(`Location found: ${res.formatted_address}`);
-      }
-    } catch (err) {
-      setFormMessage(err instanceof Error ? err.message : "Geocoding failed.");
-    } finally {
-      setGeocoding(false);
-    }
-  };
-
-  // Auto-geocode ONLY when no pin has been set yet. Once the client pins a
-  // location (drag/tap/GPS/geocode), we never move it automatically — even if
-  // the address text is edited later. They must explicitly re-pin.
-  const lastGeocodedRef = useRef<string>("");
-  useEffect(() => {
-    if (coords.lat != null && coords.lng != null) return;
-    const composed = [form.address, form.city, form.state, form.pincode]
-      .map((v) => v.trim())
-      .filter(Boolean)
-      .join(", ");
-    if (!composed || !form.city.trim()) return;
-    if (composed === lastGeocodedRef.current) return;
-    const handle = setTimeout(async () => {
-      lastGeocodedRef.current = composed;
-      setGeocoding(true);
-      try {
-        const res = await geocodeFn({ data: { address: composed } });
-        if (res.found) {
-          setCoords({ lat: res.latitude, lng: res.longitude });
-        }
-      } catch {
-        // silent — user can still click "Find on map"
-      } finally {
-        setGeocoding(false);
-      }
-    }, 900);
-    return () => clearTimeout(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.address, form.city, form.state, form.pincode]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -461,35 +400,14 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
 
       <HoursEditor hours={hours} onChange={setHours} />
 
-      <div className="rounded-lg border border-border bg-muted/50 p-4">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <Label>Map location</Label>
-          <Button type="button" variant="outline" size="sm" onClick={handleGeocode} disabled={geocoding}>
-            {geocoding ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <MapPin className="mr-2 h-3.5 w-3.5" />}
-            Find on map
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {coords.lat != null && coords.lng != null
-            ? `Pinned at ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)} — drag the pin or tap "Find on map" to change it.`
-            : "Type the address, city and pincode — the map will auto-locate."}
-        </p>
-        <div className="mt-3">
-          <LocationPicker
-            lat={coords.lat}
-            lng={coords.lng}
-            onChange={(lat, lng) => setCoords({ lat, lng })}
-          />
-        </div>
-      </div>
-
       <div className="space-y-2">
-        <Label htmlFor="google_maps_url">Google Maps Link (optional)</Label>
+        <Label htmlFor="google_maps_url">Google Maps Link</Label>
         <Input
           id="google_maps_url"
-          placeholder="Paste your Google Maps share link here"
+          placeholder="https://maps.app.goo.gl/..."
           value={form.google_maps_url}
           onChange={(e) => setForm((f) => ({ ...f, google_maps_url: e.target.value }))}
+          required
         />
         {errors.google_maps_url && <p className="text-xs text-destructive">{errors.google_maps_url}</p>}
       </div>

@@ -675,7 +675,7 @@ const businessFormSchema = z.object({
   instagram_url: z.string().url().max(500).optional().or(z.literal("")),
   facebook_url: z.string().url().max(500).optional().or(z.literal("")),
   youtube_url: z.string().url().max(500).optional().or(z.literal("")),
-  google_maps_url: z.string().url().max(500).optional().or(z.literal("")),
+  google_maps_url: z.string().url().max(500),
   latitude: z.coerce.number().nullable().optional(),
   longitude: z.coerce.number().nullable().optional(),
   hours: z.record(z.string()).optional(),
