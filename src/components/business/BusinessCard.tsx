@@ -51,12 +51,12 @@ export function BusinessCard({ business }: BusinessCardProps) {
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
       <Link to="/business/$slug" params={{ slug: business.slug }} className="absolute inset-0 z-10" />
-      <div className="relative h-32 overflow-hidden bg-muted sm:h-40">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
         {imageSrc ? (
           <BusinessPhotoImage
             src={imageSrc}
             alt={business.name}
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            className="h-full w-full object-contain transition-transform group-hover:scale-105"
             loading="lazy"
           />
         ) : (
