@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Trophy, Medal } from "lucide-react";
 import { getLeaderboard } from "@/lib/gamification.functions";
-import { Reveal } from "@/components/Reveal";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 function initials(name: string | null) {
   if (!name) return "?";
@@ -17,6 +18,7 @@ const RANK_STYLES = [
 ];
 
 export function LeaderboardSection() {
+  const sectionRef = useScrollAnimation<HTMLElement>();
   const fetchFn = useServerFn(getLeaderboard);
   const { data } = useQuery({
     queryKey: ["leaderboard", 10],
@@ -27,7 +29,7 @@ export function LeaderboardSection() {
   if (!data || data.length === 0) return null;
 
   return (
-    <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+    <section ref={sectionRef} className="animate-on-scroll mx-auto w-full max-w-7xl px-4 py-6">
       <div className="rounded-2xl border-2 border-[#ff6a00]/20 bg-gradient-to-br from-orange-50/60 via-background to-background p-5 sm:p-6">
         <div className="mb-5 flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-base font-bold text-foreground sm:text-lg">
@@ -43,7 +45,7 @@ export function LeaderboardSection() {
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {data.map((row, i) => (
-            <Reveal key={row.user_id} delay={i * 40} y={8}>
+            <ScrollReveal key={row.user_id} delayMs={i * 40}>
               <div className="flex items-center gap-3 rounded-xl border border-border bg-background p-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
                 <div
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
@@ -75,10 +77,10 @@ export function LeaderboardSection() {
                   <div className="text-[9px] font-semibold uppercase text-muted-foreground">pts</div>
                 </div>
               </div>
-            </Reveal>
+            </ScrollReveal>
           ))}
         </div>
       </div>
-    </Reveal>
+    </section>
   );
 }

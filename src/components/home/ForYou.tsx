@@ -6,9 +6,10 @@ import { getRecommendations } from "@/lib/businesses.functions";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { useCity } from "@/hooks/useCity";
 import { BusinessCard } from "@/components/business/BusinessCard";
-import { Reveal } from "@/components/Reveal";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
 export function ForYou() {
+  const sectionRef = useScrollAnimation<HTMLElement>();
   const recent = useRecentlyViewed();
   const { city } = useCity();
   const fetchRecs = useServerFn(getRecommendations);
@@ -39,7 +40,7 @@ export function ForYou() {
   if (categorySlugs.length === 0 || !data || data.length === 0) return null;
 
   return (
-    <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+    <section ref={sectionRef} className="animate-on-scroll mx-auto w-full max-w-7xl px-4 py-6">
       <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-orange-50/60 via-background to-background p-5 sm:p-6">
         <div className="mb-5 flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-base font-bold text-foreground sm:text-lg">
@@ -57,12 +58,10 @@ export function ForYou() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {data.map((business, i) => (
-            <Reveal key={business.id} delay={i * 70} y={12}>
-              <BusinessCard business={business} />
-            </Reveal>
+            <BusinessCard key={business.id} business={business} delayMs={i * 100} />
           ))}
         </div>
       </div>
-    </Reveal>
+    </section>
   );
 }

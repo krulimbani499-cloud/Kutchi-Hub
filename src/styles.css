@@ -143,6 +143,25 @@
   .janmashtami-matki-animate .janmashtami-droplet-4 { animation: none !important; }
 }
 
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  transition-delay: var(--delay, 0ms);
+}
+.animate-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-on-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none !important;
+  }
+}
+
 /*
  * Design system definition.
  *

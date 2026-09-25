@@ -257,8 +257,8 @@ function SearchPage() {
           </div>
           {filteredResults.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredResults.map((business) => (
-                <BusinessCard key={business.id} business={business} />
+              {filteredResults.map((business, i) => (
+                <BusinessCard key={business.id} business={business} delayMs={i * 100} />
               ))}
             </div>
           ) : (

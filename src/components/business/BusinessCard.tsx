@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { FavoriteButton } from "./FavoriteButton";
 import { isOpenNow, hasAnyHours } from "@/lib/business-hours";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
 interface BusinessCardProps {
   business: {
@@ -27,9 +28,12 @@ interface BusinessCardProps {
     app_discount_valid_until?: string | null;
     categories: { id: string; name: string; slug: string; color: string | null } | null;
   };
+  delayMs?: number;
 }
 
-export function BusinessCard({ business }: BusinessCardProps) {
+export function BusinessCard({ business, delayMs }: BusinessCardProps) {
+  const animateOnScroll = delayMs !== undefined;
+  const cardRef = useScrollAnimation<HTMLDivElement>({ enabled: animateOnScroll });
   const imageSrc = business.featured_image_url ?? business.featured_image;
   const hasHours = hasAnyHours(business.hours);
   const [mounted, setMounted] = useState(false);
@@ -49,7 +53,11 @@ export function BusinessCard({ business }: BusinessCardProps) {
     : "";
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
+    <div
+      ref={cardRef}
+      className={`group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md${animateOnScroll ? " animate-on-scroll" : ""}`}
+      style={animateOnScroll ? ({ "--delay": `${delayMs}ms` } as CSSProperties) : undefined}
+    >
       <Link to="/business/$slug" params={{ slug: business.slug }} className="absolute inset-0 z-10" />
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
         {imageSrc ? (

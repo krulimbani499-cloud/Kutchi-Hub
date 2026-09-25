@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { getNearbyBusinesses } from "@/lib/businesses.functions";
 import { getCurrentLocation } from "@/lib/geolocation";
 import { BusinessCard } from "@/components/business/BusinessCard";
-import { Reveal } from "@/components/Reveal";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 export function NearbyBusinesses() {
+  const sectionRef = useScrollAnimation<HTMLElement>();
   const fetchNearby = useServerFn(getNearbyBusinesses);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
@@ -48,7 +50,7 @@ export function NearbyBusinesses() {
   });
 
   return (
-    <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+    <section ref={sectionRef} className="animate-on-scroll mx-auto w-full max-w-7xl px-4 py-6">
       <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-base font-bold text-foreground sm:text-lg">
@@ -92,7 +94,7 @@ export function NearbyBusinesses() {
         {data && data.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {data.map((b, i) => (
-              <Reveal key={b.id} delay={i * 60} y={12}>
+              <ScrollReveal key={b.id} delayMs={i * 100}>
                 <div className="relative">
                   <BusinessCard business={b} />
                   <span className="absolute right-2 top-2 z-10 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-semibold text-foreground shadow">
@@ -101,11 +103,11 @@ export function NearbyBusinesses() {
                       : `${b.distanceKm.toFixed(1)} km`}
                   </span>
                 </div>
-              </Reveal>
+              </ScrollReveal>
             ))}
           </div>
         )}
       </div>
-    </Reveal>
+    </section>
   );
 }

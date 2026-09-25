@@ -38,7 +38,7 @@ import tileRepairs from "@/assets/tile-repairs.jpg";
 import tileRealEstate from "@/assets/tile-realestate.jpg";
 import tileDoctors from "@/assets/tile-doctors.jpg";
 import { useCity } from "@/hooks/useCity";
-import { Reveal } from "@/components/Reveal";
+import { ScrollReveal } from "@/components/ScrollReveal";
 import { BASE_URL, ldScript, breadcrumbLd } from "@/lib/seo";
 import { useT } from "@/lib/i18n";
 
@@ -111,7 +111,7 @@ function HomePage() {
       <JanmashtamiBanner />
 
       {/* Search header — JustDial-style, clean white */}
-      <section className="bg-background border-b border-border">
+      <ScrollReveal as="section" className="bg-background border-b border-border">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
           <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
             <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
@@ -170,13 +170,13 @@ function HomePage() {
             </div>
           </form>
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* Location-aware sponsored banner */}
       <Suspense fallback={null}><MarketingBanner /></Suspense>
 
       {/* Featured Businesses */}
-      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+      <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.featuredBusinesses")}{city ? ` ${t("home.in")} ${city}` : ""}</h2>
@@ -187,9 +187,7 @@ function HomePage() {
         {home && home.featured.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {home.featured.map((business, i) => (
-              <Reveal key={business.id} delay={i * 70} y={12}>
-                <BusinessCard business={business} />
-              </Reveal>
+              <BusinessCard key={business.id} business={business} delayMs={i * 100} />
             ))}
           </div>
         ) : !home ? (
@@ -208,7 +206,7 @@ function HomePage() {
           </div>
         )}
         </div>
-      </Reveal>
+      </ScrollReveal>
 
       {/* Nearby businesses (uses device location) */}
       <Suspense fallback={null}><NearbyBusinesses /></Suspense>
@@ -220,7 +218,7 @@ function HomePage() {
       <Suspense fallback={null}><ForYou /></Suspense>
 
       {/* Promo banner + feature tiles row */}
-      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+      <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           {/* Promo banner */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-100 via-orange-50 to-orange-100 animate-gradient-pan p-6 sm:p-8">
@@ -244,9 +242,8 @@ function HomePage() {
           {/* Feature tiles */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {featureTiles.map((t, i) => (
-              <Reveal key={t.key} delay={i * 80} y={12} className="h-full">
+              <ScrollReveal key={t.key} delayMs={i * 80} className="h-full">
                 <Link
-                key={t.key}
                 to="/categories"
                 className={`group relative flex h-full flex-col overflow-hidden rounded-2xl bg-gradient-to-br ${t.bg} p-4 text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`}
               >
@@ -264,14 +261,14 @@ function HomePage() {
                   className="pointer-events-none absolute -bottom-2 -right-2 h-24 w-24 object-contain opacity-90 mix-blend-luminosity transition-transform duration-500 group-hover:scale-110 sm:h-28 sm:w-28"
                 />
                 </Link>
-              </Reveal>
+              </ScrollReveal>
             ))}
           </div>
         </div>
-      </Reveal>
+      </ScrollReveal>
 
       {/* Categories — clean icon grid, JD style */}
-      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+      <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.popularCategories")}</h2>
@@ -289,11 +286,11 @@ function HomePage() {
             </div>
           )}
         </div>
-      </Reveal>
+      </ScrollReveal>
 
       {/* Platinum Spotlight — auto-showcase for Platinum/Enterprise plans */}
       {home && home.platinumSpotlight && home.platinumSpotlight.length > 0 && (
-        <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+        <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
           <div className="rounded-2xl border-2 border-amber-400/40 bg-gradient-to-br from-amber-50 via-orange-50 to-background p-5 sm:p-6">
             <div className="mb-5 flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-base font-bold text-foreground sm:text-lg">
@@ -306,18 +303,16 @@ function HomePage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {home.platinumSpotlight.map((business, i) => (
-                <Reveal key={business.id} delay={i * 70} y={12}>
-                  <BusinessCard business={business} />
-                </Reveal>
+                <BusinessCard key={business.id} business={business} delayMs={i * 100} />
               ))}
             </div>
           </div>
-        </Reveal>
+        </ScrollReveal>
       )}
 
       {/* Top Offers */}
       {home && home.topOffers && home.topOffers.length > 0 && (
-        <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+        <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
           <div className="rounded-2xl border-2 border-[#ff6a00]/20 bg-gradient-to-br from-[#fff4ea] to-background p-5 sm:p-6">
             <div className="mb-5 flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-base font-bold text-foreground sm:text-lg">
@@ -335,27 +330,25 @@ function HomePage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {home.topOffers.map((business, i) => (
-                <Reveal key={business.id} delay={i * 70} y={12}>
-                  <BusinessCard business={business} />
-                </Reveal>
+                <BusinessCard key={business.id} business={business} delayMs={i * 100} />
               ))}
             </div>
           </div>
-        </Reveal>
+        </ScrollReveal>
       )}
 
       {/* Curated collections */}
       <UpcomingEventsSection />
-      <Suspense fallback={null}><Reveal><CollectionsSection /></Reveal></Suspense>
+      <Suspense fallback={null}><ScrollReveal><CollectionsSection /></ScrollReveal></Suspense>
 
       {/* Travel bookings */}
-      <Suspense fallback={null}><Reveal><TravelBookingsSection /></Reveal></Suspense>
+      <Suspense fallback={null}><ScrollReveal><TravelBookingsSection /></ScrollReveal></Suspense>
 
       {/* Top Contributors leaderboard - temporarily hidden */}
       {/* <LeaderboardSection /> */}
 
       {/* Bottom CTA — subtle */}
-      <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-8">
+      <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-8">
         <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-background p-6 sm:flex-row sm:items-center">
           <div>
             <h2 className="text-lg font-extrabold text-foreground">{t("home.ownBusiness")}</h2>
@@ -367,7 +360,7 @@ function HomePage() {
             <Link to="/business/new">{t("home.addYourBusiness")}</Link>
           </Button>
         </div>
-      </Reveal>
+      </ScrollReveal>
     </div>
   );
 }
@@ -380,7 +373,7 @@ function UpcomingEventsSection() {
   });
   if (events.length === 0) return null;
   return (
-    <Reveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+    <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
       <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-bold text-foreground sm:text-lg">
@@ -411,6 +404,6 @@ function UpcomingEventsSection() {
           ))}
         </div>
       </div>
-    </Reveal>
+    </ScrollReveal>
   );
 }

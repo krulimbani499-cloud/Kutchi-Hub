@@ -149,8 +149,8 @@ function CategoryPage() {
         <>
           <h2 className="mb-4 text-lg font-semibold text-foreground">{businesses.length} listings</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {businesses.map((b) => (
-              <BusinessCard key={b.id} business={b} />
+            {businesses.map((b, i) => (
+              <BusinessCard key={b.id} business={b} delayMs={i * 100} />
             ))}
           </div>
         </>
