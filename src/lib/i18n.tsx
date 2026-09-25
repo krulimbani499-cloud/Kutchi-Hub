@@ -61,7 +61,7 @@ const en: Dict = {
   "home.in": "in",
   // footer
   "footer.about":
-    "Kutchi Hub is Kutch's own local business directory — restaurants, doctors, grocery, shops and services in one place. With trusted listings, real reviews and direct contact we connect local businesses to customers and digitally empower the Kutchi community.",
+    "Kutchi Hub is Kutchi Patel Samaj's trusted business directory — restaurants, doctors, grocery, shops and services in one place. With verified listings, real reviews and direct contact, we connect Kutchi businesses to customers across Gujarat.",
   "footer.explore": "Explore",
   "footer.allCategories": "All Categories",
   "footer.events": "Events",
@@ -122,7 +122,7 @@ const gu: Dict = {
   "home.addYourBusiness": "તમારો વ્યવસાય ઉમેરો",
   "home.in": "માં",
   "footer.about":
-    "કચ્છી હબ એ કચ્છનું પોતાનું લોકલ બિઝનેસ ડિરેક્ટરી છે — રેસ્ટોરન્ટ, ડોક્ટર, કરિયાણું, દુકાનો અને સેવાઓ એક જ જગ્યાએ. વિશ્વસનીય લિસ્ટિંગ, સાચા રિવ્યુ અને સીધા સંપર્ક સાથે અમે સ્થાનિક વ્યવસાયોને ગ્રાહકો સાથે જોડીએ છીએ.",
+    "કચ્છી હબ એ કચ્છી પટેલ સમાજની વિશ્વસનીય બિઝનેસ ડિરેક્ટરી છે — રેસ્તોરાં, ડૉક્ટર, કરિયાણું, દુકાનો અને સેવાઓ એક જ જગ્યાએ. વેરિફાઇડ લિસ્ટિંગ અને સીધા સંપર્ક સાથે આખા ગુજરાતમાં કચ્છી બિઝનેસને ગ્રાહકો સાથે જોડીએ છીએ.",
   "footer.explore": "એક્સપ્લોર",
   "footer.allCategories": "બધી શ્રેણીઓ",
   "footer.events": "ઇવેન્ટ્સ",
@@ -183,7 +183,7 @@ const hi: Dict = {
   "home.addYourBusiness": "अपना व्यवसाय जोड़ें",
   "home.in": "में",
   "footer.about":
-    "कच्छी हब कच्छ की अपनी लोकल बिजनेस डायरेक्टरी है — रेस्टोरेंट, डॉक्टर, किराना, दुकानें और सेवाएँ एक ही जगह। भरोसेमंद लिस्टिंग, असली रिव्यू और सीधे संपर्क के साथ हम लोकल व्यवसायों को ग्राहकों से जोड़ते हैं।",
+    "कच्छी हब, कच्छी पटेल समाज की विश्वसनीय बिजनेस डायरेक्टरी है — रेस्टोरेंट, डॉक्टर, किराना, दुकानें और सेवाएं एक ही जगह। वेरिफाइड लिस्टिंग और सीधे संपर्क के साथ पूरे गुजरात में कच्छी व्यवसायों को ग्राहकों से जोड़ते हैं।",
   "footer.explore": "एक्सप्लोर",
   "footer.allCategories": "सभी श्रेणियाँ",
   "footer.events": "इवेंट्स",

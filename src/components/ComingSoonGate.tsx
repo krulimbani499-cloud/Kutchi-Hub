@@ -20,8 +20,8 @@ function ComingSoonScreen({ loading }: { loading: boolean }) {
       </h1>
       <p className="mt-3 text-lg font-semibold text-[#ff6a00]">Coming Soon</p>
       <p className="mt-4 max-w-md text-sm text-muted-foreground sm:text-base">
-        Kutch ka apna local business directory — restaurants, doctors, grocery,
-        shops aur services. Hum jaldi hi launch ho rahe hain. Stay tuned!
+        Kutchi Patel Samaj ki apni business directory — restaurants, doctors,
+        grocery, shops aur services. Hum jaldi hi launch ho rahe hain.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
         <span className="rounded-full border border-border bg-card/60 px-3 py-1">
