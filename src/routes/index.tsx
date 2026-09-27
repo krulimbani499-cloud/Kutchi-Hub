@@ -12,7 +12,6 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
-import { JanmashtamiBanner } from "@/components/home/JanmashtamiBanner";
 
 // Lazy-load below-the-fold sections to speed up initial paint
 const MarketingBanner = lazy(() =>
@@ -104,9 +103,6 @@ function HomePage() {
 
   return (
     <div className="flex flex-col bg-muted/30">
-      {/* Janmashtami campaign strip — normal flow, above the search header, never overlays it */}
-      <JanmashtamiBanner />
-
       {/* Search header — JustDial-style, clean white */}
       <ScrollReveal as="section" className="bg-background border-b border-border">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
@@ -172,48 +168,6 @@ function HomePage() {
       {/* Location-aware sponsored banner */}
       <Suspense fallback={null}><MarketingBanner /></Suspense>
 
-      {/* Featured Businesses */}
-      <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
-        <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.featuredBusinesses")}{city ? ` ${t("home.in")} ${city}` : ""}</h2>
-          <Link to="/search" className="text-sm font-medium text-primary hover:underline">
-            {t("home.browseAll")}
-          </Link>
-        </div>
-        {home && home.featured.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {home.featured.map((business, i) => (
-              <BusinessCard key={business.id} business={business} delayMs={i * 100} />
-            ))}
-          </div>
-        ) : !home ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-64 animate-pulse rounded-xl bg-muted" />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-border p-8 text-center">
-            <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 text-muted-foreground">{t("home.noFeatured")}</p>
-            <Button className="mt-4 bg-primary text-primary-foreground" asChild>
-              <Link to="/business/new">{t("home.addBusiness")}</Link>
-            </Button>
-          </div>
-        )}
-        </div>
-      </ScrollReveal>
-
-      {/* Nearby businesses (uses device location) */}
-      <Suspense fallback={null}><NearbyBusinesses /></Suspense>
-
-      {/* Recently viewed (localStorage) */}
-      <Suspense fallback={null}><RecentlyViewed /></Suspense>
-
-      {/* Personalized recommendations */}
-      <Suspense fallback={null}><ForYou /></Suspense>
-
       {/* Promo banner + feature tiles row */}
       <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
@@ -263,6 +217,48 @@ function HomePage() {
           </div>
         </div>
       </ScrollReveal>
+
+      {/* Featured Businesses */}
+      <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+        <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.featuredBusinesses")}{city ? ` ${t("home.in")} ${city}` : ""}</h2>
+          <Link to="/search" className="text-sm font-medium text-primary hover:underline">
+            {t("home.browseAll")}
+          </Link>
+        </div>
+        {home && home.featured.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {home.featured.map((business, i) => (
+              <BusinessCard key={business.id} business={business} delayMs={i * 100} />
+            ))}
+          </div>
+        ) : !home ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-64 animate-pulse rounded-xl bg-muted" />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border p-8 text-center">
+            <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
+            <p className="mt-3 text-muted-foreground">{t("home.noFeatured")}</p>
+            <Button className="mt-4 bg-primary text-primary-foreground" asChild>
+              <Link to="/business/new">{t("home.addBusiness")}</Link>
+            </Button>
+          </div>
+        )}
+        </div>
+      </ScrollReveal>
+
+      {/* Nearby businesses (uses device location) */}
+      <Suspense fallback={null}><NearbyBusinesses /></Suspense>
+
+      {/* Recently viewed (localStorage) */}
+      <Suspense fallback={null}><RecentlyViewed /></Suspense>
+
+      {/* Personalized recommendations */}
+      <Suspense fallback={null}><ForYou /></Suspense>
 
       {/* Categories — clean icon grid, JD style */}
       <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
