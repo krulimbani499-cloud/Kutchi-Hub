@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getBannerAdsForCity } from "@/lib/businesses.functions";
 import { useCity } from "@/hooks/useCity";
-import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
 interface Props {
   intervalMs?: number;
@@ -11,7 +10,6 @@ interface Props {
 
 export function MarketingBanner({ intervalMs = 4500 }: Props) {
   const { city } = useCity();
-  const ref = useScrollAnimation<HTMLElement>();
   const { data: banners = [] } = useQuery({
     queryKey: ["banner-ads", city ?? "all"],
     queryFn: () => getBannerAdsForCity({ data: { city: city ?? undefined } }),
@@ -33,7 +31,7 @@ export function MarketingBanner({ intervalMs = 4500 }: Props) {
   const current = banners[index]!;
 
   return (
-    <section ref={ref} className="animate-on-scroll mx-auto w-full max-w-7xl px-4 pt-4">
+    <section className="mx-auto w-full max-w-7xl px-4 pt-4">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <a
           href={current.cta_url ?? "#"}

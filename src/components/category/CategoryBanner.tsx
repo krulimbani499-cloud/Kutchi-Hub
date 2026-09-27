@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getBannerAdsForCategory } from "@/lib/businesses.functions";
-import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
 interface Props {
   categoryId: string;
@@ -10,7 +9,6 @@ interface Props {
 }
 
 export function CategoryBanner({ categoryId, intervalMs = 4500 }: Props) {
-  const ref = useScrollAnimation<HTMLElement>();
   const { data: banners = [] } = useQuery({
     queryKey: ["category-banner-ads", categoryId],
     queryFn: () => getBannerAdsForCategory({ data: { categoryId } }),
@@ -32,7 +30,7 @@ export function CategoryBanner({ categoryId, intervalMs = 4500 }: Props) {
   const current = banners[index]!;
 
   return (
-    <section ref={ref} className="animate-on-scroll mb-8">
+    <section className="mb-8">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <a
           href={current.cta_url ?? "#"}
