@@ -18,9 +18,6 @@ import { JanmashtamiBanner } from "@/components/home/JanmashtamiBanner";
 const MarketingBanner = lazy(() =>
   import("@/components/home/MarketingBanner").then((m) => ({ default: m.MarketingBanner })),
 );
-const CollectionsSection = lazy(() =>
-  import("@/components/home/CollectionsSection").then((m) => ({ default: m.CollectionsSection })),
-);
 const TravelBookingsSection = lazy(() =>
   import("@/components/home/TravelBookingsSection").then((m) => ({ default: m.TravelBookingsSection })),
 );
@@ -268,7 +265,7 @@ function HomePage() {
       </ScrollReveal>
 
       {/* Categories — clean icon grid, JD style */}
-      {/* <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+      <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.popularCategories")}</h2>
@@ -286,7 +283,7 @@ function HomePage() {
             </div>
           )}
         </div>
-      </ScrollReveal> */}
+      </ScrollReveal>
 
       {/* Platinum Spotlight — auto-showcase for Platinum/Enterprise plans */}
       {home && home.platinumSpotlight && home.platinumSpotlight.length > 0 && (
@@ -339,7 +336,6 @@ function HomePage() {
 
       {/* Curated collections */}
       <UpcomingEventsSection />
-      <Suspense fallback={null}><ScrollReveal><CollectionsSection /></ScrollReveal></Suspense>
 
       {/* Travel bookings */}
       <Suspense fallback={null}><ScrollReveal><TravelBookingsSection /></ScrollReveal></Suspense>
