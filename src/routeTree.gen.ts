@@ -9,67 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SearchRouteImport } from './routes/search'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as PricingRouteImport } from './routes/pricing'
-import { Route as ListYourBusinessRouteImport } from './routes/list-your-business'
-import { Route as EventsRouteImport } from './routes/events'
-import { Route as CategoriesRouteImport } from './routes/categories'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TravelFlightBookingRouteImport } from './routes/travel.flight-booking'
-import { Route as CitySlugRouteImport } from './routes/city.$slug'
-import { Route as CategorySlugRouteImport } from './routes/category.$slug'
-import { Route as BusinessSlugRouteImport } from './routes/business.$slug'
-import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CategoriesRouteImport } from './routes/categories'
+import { Route as EventsRouteImport } from './routes/events'
+import { Route as ListYourBusinessRouteImport } from './routes/list-your-business'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
+import { Route as BusinessSlugRouteImport } from './routes/business.$slug'
+import { Route as CategorySlugRouteImport } from './routes/category.$slug'
+import { Route as CitySlugRouteImport } from './routes/city.$slug'
+import { Route as TravelFlightBookingRouteImport } from './routes/travel.flight-booking'
 import { Route as AuthenticatedBusinessNewRouteImport } from './routes/_authenticated/business.new'
-import { Route as CitySlugCategoryCategoryRouteImport } from './routes/city.$slug.category.$category'
-import { Route as AuthenticatedBusinessSlugEditRouteImport } from './routes/_authenticated/business.$slug.edit'
 import { Route as AuthenticatedBusinessSlugClaimRouteImport } from './routes/_authenticated/business.$slug.claim'
+import { Route as AuthenticatedBusinessSlugEditRouteImport } from './routes/_authenticated/business.$slug.edit'
+import { Route as CitySlugCategoryCategoryRouteImport } from './routes/city.$slug.category.$category'
 
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ListYourBusinessRoute = ListYourBusinessRouteImport.update({
-  id: '/list-your-business',
-  path: '/list-your-business',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EventsRoute = EventsRouteImport.update({
-  id: '/events',
-  path: '/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CategoriesRoute = CategoriesRouteImport.update({
-  id: '/categories',
-  path: '/categories',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -77,38 +46,49 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const CategoriesRoute = CategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TravelFlightBookingRoute = TravelFlightBookingRouteImport.update({
-  id: '/travel/flight-booking',
-  path: '/travel/flight-booking',
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CitySlugRoute = CitySlugRouteImport.update({
-  id: '/city/$slug',
-  path: '/city/$slug',
+const ListYourBusinessRoute = ListYourBusinessRouteImport.update({
+  id: '/list-your-business',
+  path: '/list-your-business',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CategorySlugRoute = CategorySlugRouteImport.update({
-  id: '/category/$slug',
-  path: '/category/$slug',
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BusinessSlugRoute = BusinessSlugRouteImport.update({
-  id: '/business/$slug',
-  path: '/business/$slug',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedFavoritesRoute = AuthenticatedFavoritesRouteImport.update({
-  id: '/favorites',
-  path: '/favorites',
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -116,10 +96,30 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthenticatedFavoritesRoute = AuthenticatedFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const BusinessSlugRoute = BusinessSlugRouteImport.update({
+  id: '/business/$slug',
+  path: '/business/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategorySlugRoute = CategorySlugRouteImport.update({
+  id: '/category/$slug',
+  path: '/category/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CitySlugRoute = CitySlugRouteImport.update({
+  id: '/city/$slug',
+  path: '/city/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TravelFlightBookingRoute = TravelFlightBookingRouteImport.update({
+  id: '/travel/flight-booking',
+  path: '/travel/flight-booking',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedBusinessNewRoute =
   AuthenticatedBusinessNewRouteImport.update({
@@ -127,11 +127,11 @@ const AuthenticatedBusinessNewRoute =
     path: '/business/new',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const CitySlugCategoryCategoryRoute =
-  CitySlugCategoryCategoryRouteImport.update({
-    id: '/category/$category',
-    path: '/category/$category',
-    getParentRoute: () => CitySlugRoute,
+const AuthenticatedBusinessSlugClaimRoute =
+  AuthenticatedBusinessSlugClaimRouteImport.update({
+    id: '/business/$slug/claim',
+    path: '/business/$slug/claim',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedBusinessSlugEditRoute =
   AuthenticatedBusinessSlugEditRouteImport.update({
@@ -139,11 +139,11 @@ const AuthenticatedBusinessSlugEditRoute =
     path: '/business/$slug/edit',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedBusinessSlugClaimRoute =
-  AuthenticatedBusinessSlugClaimRouteImport.update({
-    id: '/business/$slug/claim',
-    path: '/business/$slug/claim',
-    getParentRoute: () => AuthenticatedRouteRoute,
+const CitySlugCategoryCategoryRoute =
+  CitySlugCategoryCategoryRouteImport.update({
+    id: '/category/$category',
+    path: '/category/$category',
+    getParentRoute: () => CitySlugRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -310,67 +310,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/list-your-business': {
-      id: '/list-your-business'
-      path: '/list-your-business'
-      fullPath: '/list-your-business'
-      preLoaderRoute: typeof ListYourBusinessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/events': {
-      id: '/events'
-      path: '/events'
-      fullPath: '/events'
-      preLoaderRoute: typeof EventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/categories': {
-      id: '/categories'
-      path: '/categories'
-      fullPath: '/categories'
-      preLoaderRoute: typeof CategoriesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -380,46 +324,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/travel/flight-booking': {
-      id: '/travel/flight-booking'
-      path: '/travel/flight-booking'
-      fullPath: '/travel/flight-booking'
-      preLoaderRoute: typeof TravelFlightBookingRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/city/$slug': {
-      id: '/city/$slug'
-      path: '/city/$slug'
-      fullPath: '/city/$slug'
-      preLoaderRoute: typeof CitySlugRouteImport
+    '/categories': {
+      id: '/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof CategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/category/$slug': {
-      id: '/category/$slug'
-      path: '/category/$slug'
-      fullPath: '/category/$slug'
-      preLoaderRoute: typeof CategorySlugRouteImport
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/business/$slug': {
-      id: '/business/$slug'
-      path: '/business/$slug'
-      fullPath: '/business/$slug'
-      preLoaderRoute: typeof BusinessSlugRouteImport
+    '/list-your-business': {
+      id: '/list-your-business'
+      path: '/list-your-business'
+      fullPath: '/list-your-business'
+      preLoaderRoute: typeof ListYourBusinessRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/favorites': {
-      id: '/_authenticated/favorites'
-      path: '/favorites'
-      fullPath: '/favorites'
-      preLoaderRoute: typeof AuthenticatedFavoritesRouteImport
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -429,12 +401,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+    '/_authenticated/favorites': {
+      id: '/_authenticated/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof AuthenticatedFavoritesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/business/$slug': {
+      id: '/business/$slug'
+      path: '/business/$slug'
+      fullPath: '/business/$slug'
+      preLoaderRoute: typeof BusinessSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/category/$slug': {
+      id: '/category/$slug'
+      path: '/category/$slug'
+      fullPath: '/category/$slug'
+      preLoaderRoute: typeof CategorySlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/city/$slug': {
+      id: '/city/$slug'
+      path: '/city/$slug'
+      fullPath: '/city/$slug'
+      preLoaderRoute: typeof CitySlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/travel/flight-booking': {
+      id: '/travel/flight-booking'
+      path: '/travel/flight-booking'
+      fullPath: '/travel/flight-booking'
+      preLoaderRoute: typeof TravelFlightBookingRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/business/new': {
       id: '/_authenticated/business/new'
@@ -443,12 +443,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBusinessNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/city/$slug/category/$category': {
-      id: '/city/$slug/category/$category'
-      path: '/category/$category'
-      fullPath: '/city/$slug/category/$category'
-      preLoaderRoute: typeof CitySlugCategoryCategoryRouteImport
-      parentRoute: typeof CitySlugRoute
+    '/_authenticated/business/$slug/claim': {
+      id: '/_authenticated/business/$slug/claim'
+      path: '/business/$slug/claim'
+      fullPath: '/business/$slug/claim'
+      preLoaderRoute: typeof AuthenticatedBusinessSlugClaimRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/business/$slug/edit': {
       id: '/_authenticated/business/$slug/edit'
@@ -457,12 +457,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBusinessSlugEditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/business/$slug/claim': {
-      id: '/_authenticated/business/$slug/claim'
-      path: '/business/$slug/claim'
-      fullPath: '/business/$slug/claim'
-      preLoaderRoute: typeof AuthenticatedBusinessSlugClaimRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/city/$slug/category/$category': {
+      id: '/city/$slug/category/$category'
+      path: '/category/$category'
+      fullPath: '/city/$slug/category/$category'
+      preLoaderRoute: typeof CitySlugCategoryCategoryRouteImport
+      parentRoute: typeof CitySlugRoute
     }
   }
 }
