@@ -43,7 +43,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -87,13 +87,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Kutchi Hub — Kutchi Patel Samaj Business Directory" },
-      { name: "description", content: "Kutchi Hub — Kutchi Patel Samaj's business directory. Find trusted local businesses in Dahegam, Naroda, Kapadvanj and across Gujarat." },
+      { name: "description", content: "Kutchi Hub — Kutchi Patel Samaj's business directory. Find trusted local businesses in Dahegam, Naroda, Kapadvanj and across India." },
       { name: "author", content: "Kutchi Hub" },
       { name: "google-site-verification", content: "MQzK7pzfxlreZYVwzU_wgDRGwj70BJ1xBgc6O2aOHds" },
       { property: "og:site_name", content: SITE_NAME },
       { property: "og:locale", content: "en_IN" },
       { property: "og:title", content: "Kutchi Hub — Kutchi Patel Samaj Business Directory" },
-      { property: "og:description", content: "Kutchi Hub — Kutchi Patel Samaj's business directory. Find trusted local businesses in Dahegam, Naroda, Kapadvanj and across Gujarat." },
+      { property: "og:description", content: "Kutchi Hub — Kutchi Patel Samaj's business directory. Find trusted local businesses in Dahegam, Naroda, Kapadvanj and across India." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: BASE_URL },
       { name: "twitter:card", content: "summary_large_image" },

@@ -42,7 +42,7 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-12 text-center">
-      <p className="text-sm text-destructive">Failed to load pricing: {error.message}</p>
+      <p className="text-sm text-destructive">Failed to load pricing: {error instanceof Error ? error.message : String(error)}</p>
     </div>
   ),
   notFoundComponent: () => <div className="p-8 text-center">Not found</div>,

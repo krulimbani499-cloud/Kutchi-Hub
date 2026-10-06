@@ -48,9 +48,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Kutchi Hub — Find Local Businesses, Reviews & Contacts" },
-      { name: "description", content: "Find the best restaurants, doctors, grocery, shops and services in Kutch. Read verified reviews, view hours and get directions on Kutchi Hub." },
+      { name: "description", content: "Kutchi Hub — Kutch Kadva Patidar Samaj's business directory. Find trusted businesses, reviews and contacts across India." },
       { property: "og:title", content: "Kutchi Hub — Find Local Businesses, Reviews & Contacts" },
-      { property: "og:description", content: "Find the best restaurants, doctors, grocery, shops and services in Kutch. Read verified reviews, view hours and get directions on Kutchi Hub." },
+      { property: "og:description", content: "Kutchi Hub — Kutch Kadva Patidar Samaj's business directory. Find trusted businesses, reviews and contacts across India." },
       { property: "og:url", content: BASE_URL },
       { property: "og:image", content: `${BASE_URL}${ogImage}` },
       { name: "twitter:image", content: `${BASE_URL}${ogImage}` },

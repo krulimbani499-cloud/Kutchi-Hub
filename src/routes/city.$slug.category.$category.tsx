@@ -71,7 +71,7 @@ export const Route = createFileRoute("/city/$slug/category/$category")({
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center">
       <h1 className="text-xl font-semibold">Page unavailable</h1>
-      <p className="mt-2 text-muted-foreground">{error.message}</p>
+      <p className="mt-2 text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
       <Link to="/categories" className="mt-4 inline-block text-primary underline">
         Browse all categories
       </Link>

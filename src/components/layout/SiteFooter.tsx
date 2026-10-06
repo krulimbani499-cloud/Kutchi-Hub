@@ -70,8 +70,12 @@ export function SiteFooter() {
           </div>
         </div>
       </div>
-      <div className="border-t border-border py-4 text-center text-xs text-muted-foreground">
-        &copy; {year} Kutchi Hub. {t("footer.rights")}
+      <div className="flex flex-col items-center justify-center gap-2 border-t border-border px-4 py-4 text-xs text-muted-foreground sm:flex-row sm:gap-4">
+        <span>&copy; {year} Kutchi Hub. {t("footer.rights")}</span>
+        <span className="flex items-center gap-4">
+          <Link to="/privacy" className="hover:text-primary">{t("footer.privacy")}</Link>
+          <Link to="/delete-account" className="hover:text-primary">{t("footer.deleteAccount")}</Link>
+        </span>
       </div>
     </footer>
   );

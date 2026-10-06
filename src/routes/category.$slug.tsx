@@ -54,7 +54,7 @@ export const Route = createFileRoute("/category/$slug")({
           faqLd([
             {
               q: `How many ${name.toLowerCase()} are listed on Kutchi Hub?`,
-              a: `Kutchi Hub currently has ${count} verified ${name.toLowerCase()} listings${topCity ? ` with ${topCity} and nearby cities` : ""} across Kutch and Gujarat.`,
+              a: `Kutchi Hub currently has ${count} verified ${name.toLowerCase()} listings${topCity ? ` with ${topCity} and nearby cities` : ""} across India.`,
             },
             {
               q: `How do I find the best ${name.toLowerCase()} near me?`,
@@ -73,7 +73,7 @@ export const Route = createFileRoute("/category/$slug")({
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center">
       <h1 className="text-xl font-semibold">Category not found</h1>
-      <p className="mt-2 text-muted-foreground">{error.message}</p>
+      <p className="mt-2 text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
       <Link to="/categories" className="mt-4 inline-block text-primary underline">Browse all categories</Link>
     </div>
   ),

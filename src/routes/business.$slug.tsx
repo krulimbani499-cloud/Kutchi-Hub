@@ -204,7 +204,7 @@ function BusinessInReview({ slug }: { slug: string }) {
   );
 }
 
-function BusinessError({ reset }: { error: Error; reset: () => void }) {
+function BusinessError({ reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
   return (
     <div className="mx-auto max-w-xl px-4 py-20 text-center">

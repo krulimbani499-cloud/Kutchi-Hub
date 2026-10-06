@@ -26,7 +26,7 @@ export const Route = createFileRoute("/events")({
   component: EventsPage,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-12 text-center">
-      <p className="text-sm text-destructive">Failed to load events: {error.message}</p>
+      <p className="text-sm text-destructive">Failed to load events: {error instanceof Error ? error.message : String(error)}</p>
     </div>
   ),
   notFoundComponent: () => <div className="p-8 text-center">Not found</div>,
