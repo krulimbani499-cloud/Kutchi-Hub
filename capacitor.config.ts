@@ -5,8 +5,9 @@ const config: CapacitorConfig = {
   appName: 'Kutchi Hub',
   webDir: 'dist',
   server: {
-    url: 'https://kutchi-hub-rose.vercel.app',
+    url: 'https://www.kutchihub.com',
     cleartext: false,
+    allowNavigation: ['kutchihub.com', 'www.kutchihub.com'],
   },
 };
 

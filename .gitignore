@@ -34,3 +34,8 @@ dist-ssr
 # Backend migration workspace (secrets + exported data)
 migration/.env
 migration/data/
+
+# Android signing keys — never commit
+*.jks
+*.keystore
+key.properties
