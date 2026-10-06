@@ -175,7 +175,25 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
 
     const { data: business, error } = await query.maybeSingle();
     if (error) throw new Error(error.message);
-    if (!business) throw notFound();
+    if (!business) {
+      // Not published. If it's merely awaiting review, say so (and nothing more);
+      // rejected or missing businesses stay a plain not-found.
+      let inReview = false;
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        let pendingQuery = supabaseAdmin
+          .from("businesses")
+          .select("status")
+          .eq("slug", data.slug)
+          .eq("status", "pending");
+        if (data.city) pendingQuery = pendingQuery.eq("city", data.city);
+        const { data: pending } = await pendingQuery.limit(1);
+        inReview = !!pending && pending.length > 0;
+      } catch {
+        // lookup unavailable — fall back to plain not-found
+      }
+      throw inReview ? notFound({ data: { inReview: true } }) : notFound();
+    }
 
     const { data: reviews } = await supabase
       .from("business_reviews")

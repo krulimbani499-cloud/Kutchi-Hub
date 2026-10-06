@@ -1,9 +1,12 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { getBusinessBySlug } from "@/lib/businesses.functions";
 import { BusinessDetail } from "@/components/business/BusinessDetail";
 import { BASE_URL, breadcrumbLd, ldScript } from "@/lib/seo";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
 
 const businessQueryOptions = (slug: string) =>
   queryOptions({
@@ -153,8 +156,11 @@ export const Route = createFileRoute("/business/$slug")({
   notFoundComponent: BusinessNotFound,
 });
 
-function BusinessNotFound() {
+function BusinessNotFound({ data }: { data?: unknown }) {
   const { slug } = Route.useParams();
+  if ((data as { inReview?: boolean } | undefined)?.inReview) {
+    return <BusinessInReview slug={slug} />;
+  }
   return (
     <div className="mx-auto max-w-xl px-4 py-20 text-center">
       <h1 className="mb-2 text-2xl font-bold text-foreground">Business not found</h1>
@@ -163,6 +169,36 @@ function BusinessNotFound() {
       </p>
       <Link to="/" className="text-primary underline">
         Back to home
+      </Link>
+    </div>
+  );
+}
+
+function BusinessInReview({ slug }: { slug: string }) {
+  const t = useT();
+  const { user } = useAuth();
+  const { data: isOwner } = useQuery({
+    queryKey: ["business-in-review-owner", slug, user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("slug", slug)
+        .eq("status", "pending")
+        .eq("owner_id", user!.id)
+        .limit(1);
+      return (data ?? []).length > 0;
+    },
+  });
+  return (
+    <div className="mx-auto max-w-xl px-4 py-20 text-center">
+      <h1 className="mb-2 text-2xl font-bold text-foreground">{t("business.inReview.title")}</h1>
+      <p className="mb-6 text-muted-foreground">
+        {isOwner ? t("business.inReview.ownerText") : t("business.inReview.text")}
+      </p>
+      <Link to="/" className="text-primary underline">
+        {t("business.backHome")}
       </Link>
     </div>
   );

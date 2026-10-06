@@ -60,6 +60,10 @@ const en: Dict = {
   "home.ownBusinessDesc": "List free on Kutchi Hub and reach local customers.",
   "home.addYourBusiness": "Add Your Business",
   "home.in": "in",
+  "business.inReview.title": "Business in review",
+  "business.inReview.text": "This business has been submitted and is being verified by the Kutchi Hub team. It will be live soon.",
+  "business.inReview.ownerText": "Your business is under review. Our team will verify it shortly. You'll be able to see it live once approved.",
+  "business.backHome": "Back to home",
   // footer
   "footer.about":
     "Kutchi Hub is Kutchi Patel Samaj's trusted business directory — restaurants, doctors, grocery, shops and services in one place. With verified listings, real reviews and direct contact, we connect Kutchi businesses to customers across Gujarat.",
@@ -123,6 +127,10 @@ const gu: Dict = {
   "home.ownBusinessDesc": "કચ્છી હબ પર મફત લિસ્ટ કરો અને સ્થાનિક ગ્રાહકો સુધી પહોંચો.",
   "home.addYourBusiness": "તમારો વ્યવસાય ઉમેરો",
   "home.in": "માં",
+  "business.inReview.title": "વ્યવસાય સમીક્ષા હેઠળ છે",
+  "business.inReview.text": "આ વ્યવસાય સબમિટ કરવામાં આવ્યો છે અને કચ્છી હબ ટીમ દ્વારા તેની ચકાસણી થઈ રહી છે. તે ટૂંક સમયમાં લાઇવ થશે.",
+  "business.inReview.ownerText": "તમારો વ્યવસાય સમીક્ષા હેઠળ છે. અમારી ટીમ ટૂંક સમયમાં તેની ચકાસણી કરશે. મંજૂરી મળ્યા પછી તમે તેને લાઇવ જોઈ શકશો.",
+  "business.backHome": "હોમ પર પાછા જાઓ",
   "footer.about":
     "કચ્છી હબ એ કચ્છી પટેલ સમાજની વિશ્વસનીય બિઝનેસ ડિરેક્ટરી છે — રેસ્તોરાં, ડૉક્ટર, કરિયાણું, દુકાનો અને સેવાઓ એક જ જગ્યાએ. વેરિફાઇડ લિસ્ટિંગ અને સીધા સંપર્ક સાથે આખા ગુજરાતમાં કચ્છી બિઝનેસને ગ્રાહકો સાથે જોડીએ છીએ.",
   "footer.explore": "એક્સપ્લોર",
@@ -185,6 +193,10 @@ const hi: Dict = {
   "home.ownBusinessDesc": "कच्छी हब पर मुफ्त लिस्ट करें और लोकल ग्राहकों तक पहुँचें।",
   "home.addYourBusiness": "अपना व्यवसाय जोड़ें",
   "home.in": "में",
+  "business.inReview.title": "व्यवसाय की समीक्षा जारी है",
+  "business.inReview.text": "यह व्यवसाय सबमिट किया गया है और कच्छी हब टीम द्वारा इसका सत्यापन किया जा रहा है। यह जल्द ही लाइव होगा।",
+  "business.inReview.ownerText": "आपका व्यवसाय समीक्षा में है। हमारी टीम जल्द ही इसका सत्यापन करेगी। स्वीकृति मिलने के बाद आप इसे लाइव देख सकेंगे।",
+  "business.backHome": "होम पर वापस जाएँ",
   "footer.about":
     "कच्छी हब, कच्छी पटेल समाज की विश्वसनीय बिजनेस डायरेक्टरी है — रेस्टोरेंट, डॉक्टर, किराना, दुकानें और सेवाएं एक ही जगह। वेरिफाइड लिस्टिंग और सीधे संपर्क के साथ पूरे गुजरात में कच्छी व्यवसायों को ग्राहकों से जोड़ते हैं।",
   "footer.explore": "एक्सप्लोर",
