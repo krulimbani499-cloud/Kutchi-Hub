@@ -245,7 +245,7 @@ function SearchPage() {
         </aside>
 
         <div className="lg:col-span-3">
-          {activeCategory && <CategoryBanner categoryId={activeCategory.id} />}
+          {activeCategory && <CategoryBanner categoryId={activeCategory.id} city={applied.city} />}
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {isLoading

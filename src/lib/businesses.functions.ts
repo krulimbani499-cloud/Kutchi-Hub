@@ -375,6 +375,10 @@ const normalizeBannerImageUrl = (url: string) => {
   return trimmed.startsWith("/__l5e/") ? `https://kutchi-hub.lovable.app${trimmed}` : trimmed;
 };
 
+// Exact, case-insensitive match via ilike: escape LIKE wildcards (% and _), and drop "*"
+// because PostgREST treats it as "%". No real city name contains any of these.
+const exactIlike = (value: string) => value.replace(/\*/g, "").replace(/[\\%_]/g, "\\$&");
+
 export const getBannerAdsForCity = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ city: z.string().trim().min(1).max(80).optional() }).parse(input ?? {}))
   .handler(async ({ data }) => {
@@ -393,7 +397,7 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
       .order("priority", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(10);
-    query = query.ilike("city", data.city);
+    query = query.ilike("city", exactIlike(data.city));
     const { data: banners, error } = await query;
     if (error) throw new Error(error.message);
     return (banners ?? []).map((banner) => ({
@@ -403,17 +407,24 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
   });
 
 export const getBannerAdsForCategory = createServerFn({ method: "GET" })
-  .inputValidator((input) => z.object({ categoryId: z.string().uuid() }).parse(input))
+  .inputValidator((input) =>
+    z
+      .object({ categoryId: z.string().uuid(), city: z.string().trim().min(1).max(80).optional() })
+      .parse(input),
+  )
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
     const now = new Date().toISOString();
-    const { data: banners, error } = await supabase
+    let query = supabase
       .from("banner_ads")
       .select("id, business_id, title, subtitle, image_url, cta_label, cta_url, city, priority")
       .eq("category_id", data.categoryId)
       .eq("active", true)
       .lte("start_at", now)
-      .or(`end_at.is.null,end_at.gte.${now}`)
+      .or(`end_at.is.null,end_at.gte.${now}`);
+    // No city given => banners from all cities (unchanged behaviour).
+    if (data.city) query = query.ilike("city", exactIlike(data.city));
+    const { data: banners, error } = await query
       .order("priority", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(10);

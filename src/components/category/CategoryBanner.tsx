@@ -2,16 +2,25 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getBannerAdsForCategory } from "@/lib/businesses.functions";
+import { useCity } from "@/hooks/useCity";
 
 interface Props {
   categoryId: string;
+  city?: string | null;
   intervalMs?: number;
 }
 
-export function CategoryBanner({ categoryId, intervalMs = 4500 }: Props) {
+export function CategoryBanner({ categoryId, city, intervalMs = 4500 }: Props) {
+  const { city: selectedCity } = useCity();
+  // useCity() is null until it has read the stored choice (right after mount), so wait one
+  // tick before fetching; otherwise banners from every city would load and flash first.
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  const activeCity = city?.trim() || selectedCity?.trim() || null;
   const { data: banners = [] } = useQuery({
-    queryKey: ["category-banner-ads", categoryId],
-    queryFn: () => getBannerAdsForCategory({ data: { categoryId } }),
+    queryKey: ["category-banner-ads", categoryId, activeCity?.toLowerCase() ?? "all"],
+    queryFn: () => getBannerAdsForCategory({ data: { categoryId, city: activeCity ?? undefined } }),
+    enabled: ready,
     staleTime: 60_000,
   });
   const [index, setIndex] = useState(0);
