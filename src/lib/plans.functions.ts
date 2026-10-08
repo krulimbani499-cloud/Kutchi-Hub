@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
+import { slugify } from "./slug";
 
 export const listActivePlans = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = createServerSupabaseClient();
@@ -50,7 +51,7 @@ export const adminListAdSlots = createServerFn({ method: "GET" })
 const planSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(2).max(80),
-  slug: z.string().trim().min(2).max(60).regex(/^[a-z0-9-]+$/, "Lowercase letters, digits and dashes only"),
+  slug: z.string().transform((s) => slugify(s, 60)).pipe(z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, "Lowercase letters, digits and dashes only")),
   tier_order: z.number().int().min(0).max(999).default(0),
   price_monthly: z.number().min(0).default(0),
   price_yearly: z.number().min(0).default(0),

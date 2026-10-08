@@ -3,6 +3,7 @@ import { notFound } from "@tanstack/react-router";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
+import { slugify, ensureSlug } from "./slug";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -158,7 +159,14 @@ export const searchBusinesses = createServerFn({ method: "GET" })
   });
 
 export const getBusinessBySlug = createServerFn({ method: "GET" })
-  .inputValidator((input) => z.object({ slug: z.string(), city: z.string().optional() }).parse(input))
+  .inputValidator((input) =>
+    z
+      .object({
+        slug: z.string().transform((s) => s.trim().toLowerCase()),
+        city: z.string().optional(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
     let query = supabase
@@ -291,7 +299,7 @@ export const createCategory = createServerFn({ method: "POST" })
 const updateCategorySchema = z.object({
   id: z.string().uuid(),
   name: z.string().trim().min(2).max(80),
-  slug: z.string().trim().min(2).max(80).regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and dashes only"),
+  slug: z.string().transform((s) => slugify(s, 80)).pipe(z.string().min(2).max(80).regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and dashes only")),
   icon: z.string().trim().max(60).nullable().optional(),
   icon_url: z.string().trim().max(500).nullable().optional(),
   color: z.string().trim().max(30).nullable().optional(),
@@ -680,7 +688,7 @@ export const getRecommendations = createServerFn({ method: "GET" })
 const businessFormSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2).max(120),
-  slug: z.string().min(2).max(120),
+  slug: z.string().transform((s) => ensureSlug(s)).pipe(z.string().min(2).max(120)),
   category_id: z.string().uuid(),
   description: z.string().max(2000).optional(),
   address: z.string().max(500).optional(),

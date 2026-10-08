@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Save, X } from "lucide-react";
+import { slugify, slugifyInput } from "@/lib/slug";
 import { toast } from "sonner";
 
 type Form = {
@@ -84,7 +85,7 @@ export function PlansManager() {
       const features = form.featuresText.split("\n").map((s) => s.trim()).filter(Boolean);
       await upsertFn({
         data: {
-          id: form.id, name: form.name, slug: form.slug, tier_order: form.tier_order,
+          id: form.id, name: form.name, slug: slugify(form.slug, 60), tier_order: form.tier_order,
           price_monthly: Number(form.price_monthly) || 0, price_yearly: Number(form.price_yearly) || 0,
           description: form.description || null, features,
           color: form.color, icon: form.icon,
@@ -127,7 +128,7 @@ export function PlansManager() {
           <CardContent className="space-y-3 p-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
-              <div><Label>Slug *</Label><Input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase() }))} /></div>
+              <div><Label>Slug *</Label><Input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: slugifyInput(e.target.value) }))} onBlur={() => setForm((f) => ({ ...f, slug: slugify(f.slug, 60) }))} /></div>
               <div><Label>Tier order</Label><Input type="number" value={form.tier_order} onChange={(e) => setForm((f) => ({ ...f, tier_order: Number(e.target.value) }))} /></div>
               <div><Label>Icon</Label>
                 <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.icon} onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}>

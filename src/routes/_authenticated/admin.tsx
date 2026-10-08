@@ -37,6 +37,7 @@ import { BANNER_IMAGES_BUCKET, BANNER_IMAGE_MAX_BYTES, BANNER_IMAGE_WIDTH, BANNE
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { slugify, slugifyInput } from "@/lib/slug";
 
 const pendingQueryOptions = queryOptions({
   queryKey: ["admin", "pending-businesses"],
@@ -312,7 +313,7 @@ function CategoriesAdmin() {
         data: {
           id,
           name: form.name,
-          slug: form.slug,
+          slug: slugify(form.slug, 80),
           icon: form.icon,
           icon_url: form.icon_url || null,
           color: form.color,
@@ -424,7 +425,11 @@ function CategoriesAdmin() {
                       </div>
                       <div>
                         <Label className="text-xs">Slug</Label>
-                        <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+                        <Input
+                          value={form.slug}
+                          onChange={(e) => setForm({ ...form, slug: slugifyInput(e.target.value) })}
+                          onBlur={() => setForm((f) => ({ ...f, slug: slugify(f.slug, 80) }))}
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Icon key</Label>

@@ -21,10 +21,11 @@ import { CatalogUploader } from "./CatalogUploader";
 import { ServicesManager } from "./ServicesManager";
 import { ProductsManager } from "./ProductsManager";
 import type { Tables } from "@/integrations/supabase/types";
+import { slugify, slugifyInput, ensureSlug } from "@/lib/slug";
 
 const businessFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(120),
-  slug: z.string().min(2).max(120),
+  slug: z.string().min(2).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers and hyphens only"),
   category_id: z.string().uuid("Select a category"),
   description: z.string().max(2000).optional(),
   address: z.string().max(500).optional(),
@@ -99,14 +100,6 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     return {};
   });
 
-  const slugify = (value: string) =>
-    value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .substring(0, 120);
-
   const updateName = (value: string) => {
     const name = value;
     const slug = initial ? form.slug : slugify(name);
@@ -127,7 +120,11 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         app_discount_label: form.app_discount_label || undefined,
         app_discount_valid_until: form.app_discount_valid_until || undefined,
       };
-      const payload = businessFormSchema.parse({ ...normalized, hours });
+      const payload = businessFormSchema.parse({
+        ...normalized,
+        slug: ensureSlug(form.slug.trim() ? form.slug : form.name),
+        hours,
+      });
       if (initial) {
         await updateFn({ data: { ...payload, id: initial.id, latitude: null, longitude: null } });
         setFormMessage("Business updated successfully.");
@@ -202,7 +199,13 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         </div>
         <div className="space-y-2">
           <Label htmlFor="slug">Slug</Label>
-          <Input id="slug" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} required />
+          <Input
+            id="slug"
+            value={form.slug}
+            onChange={(e) => setForm((f) => ({ ...f, slug: slugifyInput(e.target.value) }))}
+            onBlur={() => setForm((f) => ({ ...f, slug: slugify(f.slug) }))}
+            placeholder="Auto-generated if left empty"
+          />
         </div>
       </div>
 
