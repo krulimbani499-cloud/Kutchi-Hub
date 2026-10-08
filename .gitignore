@@ -35,6 +35,12 @@ dist-ssr
 migration/.env
 migration/data/
 
+# Local environment file (never commit)
+.env
+
+# Backup of the old Lovable-era environment file
+.env.lovable-old
+
 # Android signing keys — never commit
 *.jks
 *.keystore
