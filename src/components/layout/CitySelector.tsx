@@ -10,7 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { INDIAN_CITIES } from "@/lib/cities";
+import { CITIES_BY_STATE, INDIAN_CITIES } from "@/lib/cities";
 import { useCity } from "@/hooks/useCity";
 import { getCurrentLocation, reverseGeocode, extractCity } from "@/lib/geolocation";
 import { toast } from "sonner";
@@ -93,21 +93,23 @@ export function CitySelector({ className, compact }: CitySelectorProps) {
           <CommandInput placeholder="Search city..." />
           <CommandList>
             <CommandEmpty>No matching city.</CommandEmpty>
-            <CommandGroup heading="Cities">
-              {INDIAN_CITIES.map((c) => (
-                <CommandItem
-                  key={c}
-                  value={c}
-                  onSelect={() => {
-                    setCity(c);
-                    setOpen(false);
-                  }}
-                >
-                  {c}
-                  {city === c && <Check className="ml-auto h-4 w-4 text-primary" />}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {CITIES_BY_STATE.map((group) => (
+              <CommandGroup key={group.state} heading={group.state}>
+                {group.cities.map((c) => (
+                  <CommandItem
+                    key={c}
+                    value={c}
+                    onSelect={() => {
+                      setCity(c);
+                      setOpen(false);
+                    }}
+                  >
+                    {c}
+                    {city === c && <Check className="ml-auto h-4 w-4 text-primary" />}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
           </CommandList>
         </Command>
       </PopoverContent>

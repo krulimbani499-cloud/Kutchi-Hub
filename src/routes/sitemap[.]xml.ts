@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { getSitemapData } from "@/lib/businesses.functions";
-import { INDIAN_CITIES } from "@/lib/cities";
 import { BASE_URL } from "@/lib/seo";
 
 interface SitemapEntry {
@@ -35,16 +34,11 @@ export const Route = createFileRoute("/sitemap.xml")({
             entries.push({ path: `/category/${slug}`, changefreq: "weekly", priority: "0.8" });
           }
 
-          // Union of DB cities + full curated city list so every city gets an
-          // indexable landing page + city×category combos, not just cities
-          // that already have listings.
+          // Only cities with at least one published business get landing pages
+          // (data.cities is built from published businesses).
           const citySlugs = new Set<string>();
           for (const city of data.cities ?? []) {
             const s = toSlug(String(city));
-            if (s) citySlugs.add(s);
-          }
-          for (const city of INDIAN_CITIES) {
-            const s = toSlug(city);
             if (s) citySlugs.add(s);
           }
           for (const slug of citySlugs) {
