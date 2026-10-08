@@ -44,14 +44,14 @@ export const Route = createFileRoute("/sitemap.xml")({
           for (const slug of citySlugs) {
             entries.push({ path: `/city/${slug}`, changefreq: "weekly", priority: "0.7" });
           }
-          for (const citySlug of citySlugs) {
-            for (const catSlug of categorySlugs) {
-              entries.push({
-                path: `/city/${citySlug}/category/${catSlug}`,
-                changefreq: "weekly",
-                priority: "0.6",
-              });
-            }
+          // Only city + category pairs that have at least one published business
+          // (data.combos is built from published businesses).
+          for (const { city, category } of data.combos ?? []) {
+            entries.push({
+              path: `/city/${city}/category/${category}`,
+              changefreq: "weekly",
+              priority: "0.6",
+            });
           }
           for (const b of data.businesses) {
             entries.push({
