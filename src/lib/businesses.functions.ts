@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
+import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -715,11 +716,11 @@ const businessFormSchema = z.object({
     .refine((v) => v === "" || isValidIndianMobile(v), PHONE_ERROR)
     .optional(),
   email: z.string().email().max(255).optional().or(z.literal("")),
-  website: z.string().url().max(500).optional().or(z.literal("")),
-  instagram_url: z.string().url().max(500).optional().or(z.literal("")),
-  facebook_url: z.string().url().max(500).optional().or(z.literal("")),
-  youtube_url: z.string().url().max(500).optional().or(z.literal("")),
-  google_maps_url: z.string().url().max(500),
+  website: optionalUrl(WEBSITE_ERROR),
+  instagram_url: optionalUrl(SOCIAL_ERROR),
+  facebook_url: optionalUrl(SOCIAL_ERROR),
+  youtube_url: optionalUrl(SOCIAL_ERROR),
+  google_maps_url: requiredUrl(MAPS_ERROR),
   latitude: z.coerce.number().nullable().optional(),
   longitude: z.coerce.number().nullable().optional(),
   hours: z.record(z.string()).optional(),

@@ -23,6 +23,7 @@ import { ProductsManager } from "./ProductsManager";
 import type { Tables } from "@/integrations/supabase/types";
 import { slugify, slugifyInput, ensureSlug } from "@/lib/slug";
 import { isValidIndianMobile, PHONE_ERROR } from "@/lib/phone";
+import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "@/lib/url";
 
 const businessFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(120),
@@ -41,11 +42,11 @@ const businessFormSchema = z.object({
     .refine((v) => v === "" || isValidIndianMobile(v), PHONE_ERROR)
     .optional(),
   email: z.union([z.string().email().max(255), z.literal("")]).optional(),
-  website: z.union([z.string().url().max(500), z.literal("")]).optional(),
-  instagram_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
-  facebook_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
-  youtube_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
-  google_maps_url: z.string().url("Enter a valid Google Maps link").max(500),
+  website: optionalUrl(WEBSITE_ERROR),
+  instagram_url: optionalUrl(SOCIAL_ERROR),
+  facebook_url: optionalUrl(SOCIAL_ERROR),
+  youtube_url: optionalUrl(SOCIAL_ERROR),
+  google_maps_url: requiredUrl(MAPS_ERROR),
   featured_image: z.string().max(1000).optional(),
   hours: z.record(z.string()).optional(),
   app_discount_percent: z
