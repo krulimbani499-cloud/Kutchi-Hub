@@ -26,8 +26,10 @@ export const searchBusinesses = createServerFn({ method: "GET" })
 
     let query = supabase
       .from("businesses")
+      // categories is an inner join so the category filter below needs no separate lookup, and the
+      // reviews come back embedded so ratings need no second query over the whole reviews table.
       .select(
-        "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, featured_image, hours, status, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, featured_image, hours, status, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id!inner(id, name, slug, color), business_reviews(rating)",
       )
       .eq("status", "published");
 
@@ -38,15 +40,13 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     if (data.q) {
       const term = data.q.trim();
       if (term) {
-        const { data: cats } = await supabase
-          .from("categories")
-          .select("id")
-          .or(`name.ilike.%${term}%,slug.ilike.%${term}%`);
-        matchingCategoryIds = (cats ?? []).map((c) => c.id);
-
-        // Match businesses selling a product/service that matches the term.
+        // Match categories and businesses selling a matching product/service, all at once.
         const likeTerm = `%${term.replace(/[,()]/g, " ")}%`;
-        const [{ data: prodRows }, { data: svcRows }] = await Promise.all([
+        const [{ data: cats }, { data: prodRows }, { data: svcRows }] = await Promise.all([
+          supabase
+            .from("categories")
+            .select("id")
+            .or(`name.ilike.%${term}%,slug.ilike.%${term}%`),
           supabase
             .from("business_products")
             .select("business_id")
@@ -57,6 +57,7 @@ export const searchBusinesses = createServerFn({ method: "GET" })
             .select("business_id")
             .or(`name.ilike.${likeTerm},description.ilike.${likeTerm}`),
         ]);
+        matchingCategoryIds = (cats ?? []).map((c) => c.id);
         const ids = new Set<string>();
         for (const r of prodRows ?? []) ids.add(r.business_id);
         for (const r of svcRows ?? []) ids.add(r.business_id);
@@ -84,15 +85,8 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     }
 
     if (data.category && data.category !== "all") {
-      const { data: cat } = await supabase
-        .from("categories")
-        .select("id")
-        .eq("slug", data.category)
-        .maybeSingle();
-      if (!cat) {
-        return [];
-      }
-      query = query.eq("category_id", cat.id);
+      // Inner join on categories: an unknown slug simply yields no rows.
+      query = query.eq("categories.slug", data.category);
     }
 
     if (data.city && data.city !== "all") {
@@ -115,24 +109,13 @@ export const searchBusinesses = createServerFn({ method: "GET" })
 
     if (error) throw new Error(error.message);
 
-    const { data: counts } = await supabase
-      .from("business_reviews")
-      .select("business_id, rating");
-
-    const ratings = new Map<string, { count: number; sum: number }>();
-    for (const r of counts ?? []) {
-      const entry = ratings.get(r.business_id) ?? { count: 0, sum: 0 };
-      entry.count += 1;
-      entry.sum += r.rating;
-      ratings.set(r.business_id, entry);
-    }
-
-    const results = (businesses ?? []).map((b) => {
-      const rating = ratings.get(b.id);
+    const results = (businesses ?? []).map(({ business_reviews, ...b }) => {
+      const reviews = business_reviews ?? [];
+      const sum = reviews.reduce((total, r) => total + r.rating, 0);
       return {
         ...b,
-        avgRating: rating ? Number((rating.sum / rating.count).toFixed(1)) : 0,
-        reviewCount: rating?.count ?? 0,
+        avgRating: reviews.length ? Number((sum / reviews.length).toFixed(1)) : 0,
+        reviewCount: reviews.length,
       };
     });
 

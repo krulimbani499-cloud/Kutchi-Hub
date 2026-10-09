@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { queryOptions } from "@tanstack/react-query";
+import { useQuery, queryOptions, keepPreviousData } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { getCategories, searchBusinesses } from "@/lib/businesses.functions";
 import { isOpenNow } from "@/lib/business-hours";
@@ -19,6 +18,8 @@ import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X, Tag } from "luci
 import { useEffect, useMemo, useState } from "react";
 import { useCity } from "@/hooks/useCity";
 import { CategoryBanner } from "@/components/category/CategoryBanner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BusinessCardSkeletonGrid, ListingPageSkeleton } from "@/components/layout/PageSkeleton";
 
 const searchQueryOptions = (q: string, category: string, city: string, sort: string, hasDiscount: boolean) =>
   queryOptions({
@@ -43,7 +44,11 @@ export const Route = createFileRoute("/search")({
       { name: "robots", content: "noindex,follow" },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions),
+  // Start loading categories but don't wait: the page renders at once and fills in as data arrives.
+  loader: ({ context }) => {
+    void context.queryClient.prefetchQuery(categoriesQueryOptions);
+  },
+  pendingComponent: ListingPageSkeleton,
   component: SearchPage,
 });
 
@@ -54,7 +59,8 @@ function SearchPage() {
     city?: string;
     sort?: string;
   };
-  const { data: categories } = useSuspenseQuery(categoriesQueryOptions);
+  const { data: categoriesData, isPending: categoriesPending } = useQuery(categoriesQueryOptions);
+  const categories = useMemo(() => categoriesData ?? [], [categoriesData]);
   const { city: selectedCity } = useCity();
   const initialCity = city ?? selectedCity ?? "";
   const [filters, setFilters] = useState({
@@ -94,9 +100,15 @@ function SearchPage() {
   }, [q, category, city, sort]);
 
   const [chipDiscount, setChipDiscount] = useState(false);
-  const { data: results, isLoading } = useSuspenseQuery(
-    searchQueryOptions(applied.q, applied.category, applied.city, applied.sort, chipDiscount),
-  );
+  // keepPreviousData: changing a filter keeps showing the old results (dimmed) until the new ones arrive.
+  const {
+    data: results,
+    isPending: resultsPending,
+    isPlaceholderData: resultsStale,
+  } = useQuery({
+    ...searchQueryOptions(applied.q, applied.category, applied.city, applied.sort, chipDiscount),
+    placeholderData: keepPreviousData,
+  });
 
   const [chipVerified, setChipVerified] = useState(false);
   const [chipOpenNow, setChipOpenNow] = useState(false);
@@ -165,19 +177,23 @@ function SearchPage() {
         </div>
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Select value={filters.category} onValueChange={(value) => setFilters((f) => ({ ...f, category: value }))}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.slug}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {categoriesPending ? (
+            <Skeleton className="h-10 w-full sm:w-48" />
+          ) : (
+            <Select value={filters.category} onValueChange={(value) => setFilters((f) => ({ ...f, category: value }))}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.slug}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Select value={filters.sort} onValueChange={(value) => setFilters((f) => ({ ...f, sort: value }))}>
             <SelectTrigger className="w-full sm:w-40">
@@ -240,7 +256,15 @@ function SearchPage() {
         <aside className="hidden lg:block">
           <div className="rounded-2xl border border-border bg-card p-4">
             <h3 className="mb-3 font-semibold text-foreground">Categories</h3>
-            <CategoryGrid categories={categories} size="sm" />
+            {categoriesPending ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <Skeleton key={i} className="h-24 rounded-2xl" />
+                ))}
+              </div>
+            ) : (
+              <CategoryGrid categories={categories} size="sm" />
+            )}
           </div>
         </aside>
 
@@ -248,15 +272,17 @@ function SearchPage() {
           {activeCategory && <CategoryBanner categoryId={activeCategory.id} city={applied.city} />}
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {isLoading
+              {resultsPending || resultsStale
                 ? "Loading..."
                 : `${filteredResults.length} ${filteredResults.length === 1 ? "result" : "results"}${
                     anyChip && results ? ` of ${results.length}` : ""
                   }`}
             </p>
           </div>
-          {filteredResults.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {resultsPending ? (
+            <BusinessCardSkeletonGrid count={4} />
+          ) : filteredResults.length > 0 ? (
+            <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 transition-opacity ${resultsStale ? "opacity-60" : ""}`}>
               {filteredResults.map((business, i) => (
                 <BusinessCard key={business.id} business={business} delayMs={i * 100} />
               ))}

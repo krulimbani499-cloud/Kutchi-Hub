@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ListingPageSkeleton } from "@/components/layout/PageSkeleton";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getCityPageData } from "@/lib/businesses.functions";
 import { BusinessCard } from "@/components/business/BusinessCard";
@@ -59,6 +60,7 @@ export const Route = createFileRoute("/city/$slug")({
       ],
     };
   },
+  pendingComponent: ListingPageSkeleton,
   component: CityPage,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center">
