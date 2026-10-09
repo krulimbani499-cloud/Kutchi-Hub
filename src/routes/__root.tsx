@@ -19,6 +19,7 @@ import logoIcon from "@/assets/kutchi-hub-logo.png";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BASE_URL, SITE_NAME, ldScript, organizationLd, websiteLd } from "@/lib/seo";
 import { ComingSoonGate } from "@/components/ComingSoonGate";
+import { NativeBackButton } from "@/components/NativeBackButton";
 import { LanguageProvider } from "@/lib/i18n";
 
 function NotFoundComponent() {
@@ -184,6 +185,7 @@ function RootComponent() {
           </main>
           <MobileBottomNav />
           <SiteFooter />
+          <NativeBackButton />
         </div>
         </ComingSoonGate>
       </LanguageProvider>
