@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/command";
 import { CITIES_BY_STATE, INDIAN_CITIES } from "@/lib/cities";
 import { useCity } from "@/hooks/useCity";
-import { getCurrentLocation, reverseGeocode, extractCity } from "@/lib/geolocation";
+import {
+  getCurrentLocation,
+  reverseGeocode,
+  extractCity,
+  resolveListedCity,
+  LOCATION_UNAVAILABLE,
+} from "@/lib/geolocation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -31,27 +37,20 @@ export function CitySelector({ className, compact }: CitySelectorProps) {
     try {
       const loc = await getCurrentLocation();
       const rg = await reverseGeocode(loc.latitude, loc.longitude);
-      // Prefer any address field that matches our known cities list (so a
-      // suburb like "Hanspura" wins over the parent city "Ahmedabad").
-      const candidates = [
-        rg.address.suburb,
-        rg.address.village,
-        rg.address.town,
-        rg.address.city,
-      ].filter(Boolean) as string[];
-      const knownMatch = candidates
-        .map((c) => INDIAN_CITIES.find((k) => k.toLowerCase() === c.toLowerCase()))
-        .find(Boolean);
-      const detected = knownMatch ?? extractCity(rg);
+      // Prefer a listed city from any address field (a suburb like "Hanspura" wins
+      // over "Ahmedabad"; a village falls back to its taluka), else the raw name.
+      const detected = resolveListedCity(rg.address, INDIAN_CITIES) ?? extractCity(rg);
       if (!detected) {
-        toast.error("Couldn't detect city from your location");
+        toast.error(LOCATION_UNAVAILABLE);
+        setOpen(true);
         return;
       }
       setCity(detected);
       toast.success(`Location set to ${detected}`);
       setOpen(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to detect location");
+    } catch {
+      toast.error(LOCATION_UNAVAILABLE);
+      setOpen(true);
     } finally {
       setDetecting(false);
     }

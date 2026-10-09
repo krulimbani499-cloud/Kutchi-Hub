@@ -14,9 +14,14 @@ export interface ReverseGeocodeResult {
   address: {
     road?: string;
     suburb?: string;
+    hamlet?: string;
     city?: string;
     town?: string;
     village?: string;
+    municipality?: string;
+    city_district?: string;
+    county?: string;
+    state_district?: string;
     state?: string;
     postcode?: string;
     country?: string;
@@ -131,6 +136,54 @@ export async function reverseGeocode(lat: number, lon: number): Promise<ReverseG
 
   console.warn("[geolocation] Reverse geocoding failed after all retries.", lastError);
   throw new Error("Couldn't detect location — please select your city manually.");
+}
+
+export const LOCATION_UNAVAILABLE = "Location not available — please select your city";
+
+// Common spelling variants, keyed by the cleaned name (see cleanPlaceName).
+const CITY_ALIASES: Record<string, string> = {
+  dehgam: "Dahegam",
+  himmatnagar: "Himatnagar",
+  ahmadabad: "Ahmedabad",
+  amdavad: "Ahmedabad",
+  kapadwanj: "Kapadvanj",
+  baroda: "Vadodara",
+};
+
+// Most specific first, so a listed suburb/village wins over its parent city,
+// and a taluka/district is only a last resort for villages we don't list.
+const ADDRESS_FIELDS = [
+  "suburb",
+  "hamlet",
+  "village",
+  "town",
+  "city",
+  "municipality",
+  "city_district",
+  "county",
+  "state_district",
+] as const;
+
+function cleanPlaceName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\b(taluka|taluk|tehsil|tahsil|district|dist|municipal corporation|nagar palika|city)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+export function resolveListedCity(address: ReverseGeocodeResult["address"], cities: string[]): string | null {
+  const byName = new Map(cities.map((c) => [cleanPlaceName(c), c]));
+  for (const field of ADDRESS_FIELDS) {
+    const raw = address[field];
+    if (!raw) continue;
+    const key = cleanPlaceName(raw);
+    const match = byName.get(key) ?? CITY_ALIASES[key];
+    if (match) return match;
+  }
+  return null;
 }
 
 export function extractCity(rg: ReverseGeocodeResult): string | null {
