@@ -20,6 +20,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BASE_URL, SITE_NAME, ldScript, organizationLd, websiteLd } from "@/lib/seo";
 import { ComingSoonGate } from "@/components/ComingSoonGate";
 import { NativeBackButton } from "@/components/NativeBackButton";
+import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/lib/i18n";
 
 function NotFoundComponent() {
@@ -186,6 +187,7 @@ function RootComponent() {
           <MobileBottomNav />
           <SiteFooter />
           <NativeBackButton />
+          <Toaster position="top-center" />
         </div>
         </ComingSoonGate>
       </LanguageProvider>

@@ -63,15 +63,23 @@ export function ReferralCard() {
   };
 
   const handleApply = async () => {
-    if (!codeInput.trim()) return;
+    const code = codeInput.trim();
+    if (!code) return;
+    // Same bounds as the server (4-12 characters); avoids showing a raw validation error.
+    if (code.length < 4 || code.length > 12) {
+      toast.error("Enter a valid referral code");
+      return;
+    }
     setSubmitting(true);
     try {
-      await applyCode({ data: { code: codeInput.trim() } });
+      await applyCode({ data: { code } });
       toast.success("Referral applied! You & your friend got bonus points 🎉");
       setCodeInput("");
       await refetch();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to apply code");
+      const message = e instanceof Error ? e.message : "";
+      // "Not authenticated" (database) and "Unauthorized: …" (sign-in check) both mean the session expired.
+      toast.error(/^(not authenticated|unauthorized)/i.test(message) ? "Please sign in again" : message || "Failed to apply code");
     } finally {
       setSubmitting(false);
     }

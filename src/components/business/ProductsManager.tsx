@@ -147,7 +147,8 @@ export function ProductsManager({ businessId }: Props) {
       const msg = e instanceof Error ? e.message : "Could not save product.";
       console.error("[ProductsManager] upsert failed:", e);
       setError(msg);
-      toast.error(`Could not save: ${msg}`);
+      // Plan-limit text is written for owners; anything else (database errors) stays out of the toast.
+      toast.error(msg.startsWith("Plan limit reached") ? msg : "Could not save product. Please try again.");
     } finally {
       setBusy(false);
     }
