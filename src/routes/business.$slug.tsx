@@ -25,6 +25,7 @@ export const Route = createFileRoute("/business/$slug")({
             pincode?: string;
             address?: string;
             phone?: string;
+            phone_secondary?: string | null;
             description?: string;
             featured_image?: string;
             featured_image_url?: string;
@@ -82,7 +83,10 @@ export const Route = createFileRoute("/business/$slug")({
         postalCode: b?.pincode ?? undefined,
         addressCountry: "IN",
       } : undefined,
-      telephone: b?.phone ?? undefined,
+      telephone: (() => {
+        const t = [b?.phone, b?.phone_secondary].filter((n): n is string => !!n);
+        return t.length === 0 ? undefined : t.length === 1 ? t[0] : t;
+      })(),
       image: image ?? undefined,
     };
     if (typeof b?.latitude === "number" && typeof b?.longitude === "number") {

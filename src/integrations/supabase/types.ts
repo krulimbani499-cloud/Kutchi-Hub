@@ -592,6 +592,7 @@ export type Database = {
           name: string
           owner_id: string | null
           phone: string | null
+          phone_secondary: string | null
           pincode: string | null
           plan_featured: boolean
           plan_tier_order: number
@@ -628,6 +629,7 @@ export type Database = {
           name: string
           owner_id?: string | null
           phone?: string | null
+          phone_secondary?: string | null
           pincode?: string | null
           plan_featured?: boolean
           plan_tier_order?: number
@@ -664,6 +666,7 @@ export type Database = {
           name?: string
           owner_id?: string | null
           phone?: string | null
+          phone_secondary?: string | null
           pincode?: string | null
           plan_featured?: boolean
           plan_tier_order?: number

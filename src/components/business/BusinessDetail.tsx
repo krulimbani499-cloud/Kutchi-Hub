@@ -28,6 +28,8 @@ import { StarRating } from "./StarRating";
 import { BusinessMap } from "./BusinessMap";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { telHref } from "@/lib/phone";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import { addReview } from "@/lib/businesses.functions";
@@ -134,6 +136,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const today = new Date().toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
   const todayHours = hours[today];
   const isOpen = isOpenNow(business.hours) === true;
+  const callNumbers = [business.phone, business.phone_secondary].filter((n): n is string => !!n);
   const addressLine = [business.address, business.city, business.state, business.pincode].filter(Boolean).join(", ");
   const mapsHref = business.google_maps_url;
   const galleryPhotos = photos.slice(0, 4);
@@ -336,14 +339,36 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {business.phone && (
+              {callNumbers.length === 2 ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button className="h-10 min-w-0 bg-[#ff6a00] px-2 text-white hover:bg-[#e65a00] sm:h-11">
+                      <Phone className="mr-1 h-4 w-4 shrink-0" />
+                      <span className="truncate text-xs sm:text-sm">Call</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-56 p-1">
+                    {callNumbers.map((n) => (
+                      <a
+                        key={n}
+                        href={telHref(n)}
+                        onClick={() => trackClick("call_click")}
+                        className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent"
+                      >
+                        <Phone className="h-4 w-4 shrink-0 text-[#ff6a00]" />
+                        {n}
+                      </a>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              ) : callNumbers.length === 1 ? (
                 <Button asChild className="h-10 min-w-0 bg-[#ff6a00] px-2 text-white hover:bg-[#e65a00] sm:h-11">
-                  <a href={`tel:${business.phone}`} onClick={() => trackClick("call_click")} className="flex items-center justify-center">
+                  <a href={`tel:${callNumbers[0]}`} onClick={() => trackClick("call_click")} className="flex items-center justify-center">
                     <Phone className="mr-1 h-4 w-4 shrink-0" />
                     <span className="truncate text-xs sm:text-sm">Call</span>
                   </a>
                 </Button>
-              )}
+              ) : null}
               {business.phone && (
                 <Button asChild variant="outline" className="h-10 min-w-0 border-green-600 px-2 text-green-700 hover:bg-green-50 sm:h-11">
                   <a
@@ -461,6 +486,12 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Phone className="h-4 w-4 shrink-0" />
                       <span>{business.phone}</span>
+                    </div>
+                  )}
+                  {business.phone_secondary && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-4 w-4 shrink-0" />
+                      <span>{business.phone_secondary}</span>
                     </div>
                   )}
                 </div>
@@ -621,6 +652,12 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Phone className="h-4 w-4 shrink-0" />
                   <a href={`tel:${business.phone}`} className="text-foreground hover:underline">{business.phone}</a>
+                </div>
+              )}
+              {business.phone_secondary && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Phone className="h-4 w-4 shrink-0" />
+                  <a href={telHref(business.phone_secondary)} className="text-foreground hover:underline">{business.phone_secondary}</a>
                 </div>
               )}
               {business.email && (

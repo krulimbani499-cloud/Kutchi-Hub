@@ -22,6 +22,7 @@ import { ServicesManager } from "./ServicesManager";
 import { ProductsManager } from "./ProductsManager";
 import type { Tables } from "@/integrations/supabase/types";
 import { slugify, slugifyInput, ensureSlug } from "@/lib/slug";
+import { isValidIndianMobile, PHONE_ERROR } from "@/lib/phone";
 
 const businessFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(120),
@@ -33,6 +34,12 @@ const businessFormSchema = z.object({
   state: z.string().max(120).optional(),
   pincode: z.string().max(20).optional(),
   phone: z.string().max(30).optional(),
+  phone_secondary: z
+    .string()
+    .trim()
+    .max(30)
+    .refine((v) => v === "" || isValidIndianMobile(v), PHONE_ERROR)
+    .optional(),
   email: z.union([z.string().email().max(255), z.literal("")]).optional(),
   website: z.union([z.string().url().max(500), z.literal("")]).optional(),
   instagram_url: z.union([z.string().url().max(500), z.literal("")]).optional(),
@@ -79,6 +86,7 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
     state: initial?.state ?? "",
     pincode: initial?.pincode ?? "",
     phone: initial?.phone ?? "",
+    phone_secondary: initial?.phone_secondary ?? "",
     email: initial?.email ?? "",
     website: initial?.website ?? "",
     instagram_url: (initial as any)?.instagram_url ?? "",
@@ -311,6 +319,18 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
           <Input id="phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+          <div className="space-y-2 pt-3">
+            <Label htmlFor="phone_secondary">Second mobile number (optional)</Label>
+            <Input
+              id="phone_secondary"
+              type="tel"
+              inputMode="tel"
+              placeholder="+91 98xxxxxxxx"
+              value={form.phone_secondary}
+              onChange={(e) => setForm((f) => ({ ...f, phone_secondary: e.target.value }))}
+            />
+            {errors.phone_secondary && <p className="text-xs text-destructive">{errors.phone_secondary}</p>}
+          </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>

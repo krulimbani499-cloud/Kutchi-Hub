@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
 import { slugify, ensureSlug } from "./slug";
+import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -707,6 +708,12 @@ const businessFormSchema = z.object({
   state: z.string().max(120).optional(),
   pincode: z.string().max(20).optional(),
   phone: z.string().max(30).optional(),
+  phone_secondary: z
+    .string()
+    .trim()
+    .max(30)
+    .refine((v) => v === "" || isValidIndianMobile(v), PHONE_ERROR)
+    .optional(),
   email: z.string().email().max(255).optional().or(z.literal("")),
   website: z.string().url().max(500).optional().or(z.literal("")),
   instagram_url: z.string().url().max(500).optional().or(z.literal("")),
@@ -744,6 +751,7 @@ export const createBusiness = createServerFn({ method: "POST" })
         ...data,
         owner_id: userId,
         status: "pending",
+        phone_secondary: data.phone_secondary || null,
         website: data.website || null,
         email: data.email || null,
         instagram_url: data.instagram_url || null,
@@ -795,6 +803,7 @@ export const updateBusiness = createServerFn({ method: "POST" })
       .from("businesses")
       .update({
         ...rest,
+        phone_secondary: rest.phone_secondary || null,
         website: rest.website || null,
         email: rest.email || null,
         instagram_url: rest.instagram_url || null,
