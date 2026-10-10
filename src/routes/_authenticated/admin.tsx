@@ -24,6 +24,7 @@ import { EventsManager } from "@/components/admin/EventsManager";
 import { PlansManager } from "@/components/admin/PlansManager";
 import { AdSlotsManager } from "@/components/admin/AdSlotsManager";
 import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
+import { PlansRevenueOverview } from "@/components/admin/PlansRevenueOverview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -102,6 +103,8 @@ function AdminPage() {
   const { data: pending, refetch } = useSuspenseQuery(pendingQueryOptions);
   const reviewFn = useServerFn(reviewBusinessSubmission);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [tab, setTab] = useState("overview");
+  const [subsPlanFilter, setSubsPlanFilter] = useState<{ planId: string; planName: string } | null>(null);
 
   const handleAction = async (id: string, action: "approve" | "reject") => {
     setBusyId(id);
@@ -126,7 +129,14 @@ function AdminPage() {
         <Badge variant="secondary">{pending.length} pending</Badge>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs
+        value={tab}
+        onValueChange={(next) => {
+          setTab(next);
+          if (next !== "subs") setSubsPlanFilter(null);
+        }}
+        className="w-full"
+      >
         <TabsList className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 bg-muted p-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="pending">
@@ -147,6 +157,13 @@ function AdminPage() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-0">
+          <PlansRevenueOverview
+            onOpenSubscriptions={(plan) => {
+              setSubsPlanFilter({ planId: plan.id, planName: plan.name });
+              setTab("subs");
+            }}
+            onOpenPending={() => setTab("pending")}
+          />
           <OverviewAdmin />
         </TabsContent>
 
@@ -262,7 +279,7 @@ function AdminPage() {
           <AdSlotsManager />
         </TabsContent>
         <TabsContent value="subs" className="mt-0">
-          <SubscriptionsManager />
+          <SubscriptionsManager planFilter={subsPlanFilter} onClearFilter={() => setSubsPlanFilter(null)} />
         </TabsContent>
         <TabsContent value="audit" className="mt-0">
           <AuditLogsAdmin />

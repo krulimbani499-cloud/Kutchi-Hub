@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
 import { slugify } from "./slug";
+import { buildPlanOverview, type OverviewBusinessInput, type OverviewPlanInput, type OverviewSubInput } from "./subscription-utils";
 
 export const listActivePlans = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = createServerSupabaseClient();
@@ -173,6 +174,35 @@ export const adminListSubscriptions = createServerFn({ method: "GET" })
     return (rows ?? []) as unknown as SubscriptionRow[];
   });
 
+// Overview for the admin dashboard: plan counts, businesses without a plan, revenue, renewals.
+// All the maths lives in buildPlanOverview (subscription-utils) so it can be tested on its own.
+export const adminPlanOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context as never);
+    const [plansRes, subsRes, publishedRes, pendingRes] = await Promise.all([
+      context.supabase
+        .from("plans" as never)
+        .select("id, name, slug, color, tier_order, is_active, price_yearly, price_monthly")
+        .order("tier_order", { ascending: true }),
+      context.supabase
+        .from("business_subscriptions" as never)
+        .select("id, business_id, plan_id, status, billing_cycle, started_at, expires_at, amount_paid, business:businesses(name, city)")
+        .limit(1000),
+      context.supabase.from("businesses").select("id, name, city").eq("status", "published").order("name", { ascending: true }).limit(1000),
+      context.supabase.from("businesses").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    ]);
+    for (const r of [plansRes, subsRes, publishedRes, pendingRes]) {
+      if (r.error) throw new Error(r.error.message);
+    }
+    return buildPlanOverview({
+      plans: (plansRes.data ?? []) as unknown as OverviewPlanInput[],
+      subs: (subsRes.data ?? []) as unknown as OverviewSubInput[],
+      publishedBusinesses: (publishedRes.data ?? []) as unknown as OverviewBusinessInput[],
+      pendingCount: pendingRes.count ?? 0,
+    });
+  });
+
 const subSchema = z.object({
   businessId: z.string().uuid(),
   planId: z.string().uuid(),
@@ -190,6 +220,10 @@ export const assignPlanToBusiness = createServerFn({ method: "POST" })
   .inputValidator((input) => subSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
+    // New assignments and renewals must record what was paid (editing an old row stays optional).
+    if (data.status === "active" && data.amountPaid == null) {
+      throw new Error("Amount paid is required");
+    }
     // insert subscription
     const payload = {
       business_id: data.businessId,
