@@ -1,7 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { fetchGoogleCandidates, isInIndia } from "./geocode";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_maps";
+
+/**
+ * "Use my location" / city auto-detect. The Google key stays on the server (never sent to the
+ * browser); the browser only sends coordinates and receives place names. Every call goes to Google.
+ */
+export const reverseGeocodeCity = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const key = process.env.GOOGLE_MAPS_API_KEY;
+    if (!key) throw new Error("Location lookup is not configured");
+    if (!isInIndia(data.lat, data.lng)) throw new Error("Location is outside India");
+    return fetchGoogleCandidates(data.lat, data.lng, key);
+  });
 
 export const geocodeAddress = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ address: z.string().min(3).max(500) }).parse(input))

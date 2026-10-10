@@ -12,13 +12,8 @@ import {
 } from "@/components/ui/command";
 import { CITIES_BY_STATE, INDIAN_CITIES } from "@/lib/cities";
 import { useCity } from "@/hooks/useCity";
-import {
-  getCurrentLocation,
-  reverseGeocode,
-  extractCity,
-  resolveListedCity,
-  LOCATION_UNAVAILABLE,
-} from "@/lib/geolocation";
+import { getCurrentLocation, resolveListedCity, LOCATION_UNAVAILABLE } from "@/lib/geolocation";
+import { reverseGeocodeCity } from "@/lib/maps.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -36,10 +31,11 @@ export function CitySelector({ className, compact }: CitySelectorProps) {
     setDetecting(true);
     try {
       const loc = await getCurrentLocation();
-      const rg = await reverseGeocode(loc.latitude, loc.longitude);
-      // Prefer a listed city from any address field (a suburb like "Hanspura" wins
-      // over "Ahmedabad"; a village falls back to its taluka), else the raw name.
-      const detected = resolveListedCity(rg.address, INDIAN_CITIES) ?? extractCity(rg);
+      // Google lookup runs on the server (the key never reaches the browser).
+      const place = await reverseGeocodeCity({ data: { lat: loc.latitude, lng: loc.longitude } });
+      // Prefer a listed city, most specific first (a suburb like "Hanspura" wins over
+      // "Ahmedabad"; a village falls back to its taluka), else Google's locality name.
+      const detected = resolveListedCity(place, INDIAN_CITIES) ?? place.fallback;
       if (!detected) {
         toast.error(LOCATION_UNAVAILABLE);
         setOpen(true);

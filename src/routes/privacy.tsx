@@ -82,7 +82,7 @@ function PrivacyPage() {
           <H2>Sharing</H2>
           <p>
             We do not sell your data. We use trusted service providers to run the platform: Supabase (database, login
-            and file storage, servers in Mumbai, India), Vercel (website hosting), Zoho (email), and OpenStreetMap (to
+            and file storage, servers in Mumbai, India), Vercel (website hosting), Zoho (email), and Google Maps (to
             find your city from your location, only if you allow location access). We may disclose data if required by
             law.
           </p>

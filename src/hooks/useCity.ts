@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { getCurrentLocation, reverseGeocode, extractCity, resolveListedCity } from "@/lib/geolocation";
+import { getCurrentLocation, resolveListedCity } from "@/lib/geolocation";
+import { reverseGeocodeCity } from "@/lib/maps.functions";
 import { INDIAN_CITIES } from "@/lib/cities";
 
 const KEY = "kutchi-hub:city";
@@ -27,10 +28,9 @@ export function useCity() {
       (async () => {
         try {
           const loc = await getCurrentLocation();
-          const rg = await reverseGeocode(loc.latitude, loc.longitude);
-          const detected = extractCity(rg);
-          if (!detected) return;
-          const next = resolveListedCity(rg.address, INDIAN_CITIES) ?? detected;
+          const place = await reverseGeocodeCity({ data: { lat: loc.latitude, lng: loc.longitude } });
+          const next = resolveListedCity(place, INDIAN_CITIES) ?? place.fallback;
+          if (!next) return;
           window.localStorage.setItem(KEY, next);
           window.dispatchEvent(new Event(EVT));
         } catch {

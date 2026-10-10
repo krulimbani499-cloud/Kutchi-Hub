@@ -1,5 +1,7 @@
-// Browser geolocation + reverse geocoding via OpenStreetMap Nominatim.
+// Browser geolocation + matching of Google place names to our city list.
+// The reverse geocoding itself runs on the server (reverseGeocodeCity in maps.functions.ts).
 // Client-only: never call from a loader or server function.
+import type { GeocodeCandidates } from "./geocode";
 
 export interface GeolocationResult {
   latitude: number;
@@ -7,25 +9,6 @@ export interface GeolocationResult {
   accuracy: number;
   source: "gps" | "ip";
   warning?: string;
-}
-
-export interface ReverseGeocodeResult {
-  display_name: string;
-  address: {
-    road?: string;
-    suburb?: string;
-    hamlet?: string;
-    city?: string;
-    town?: string;
-    village?: string;
-    municipality?: string;
-    city_district?: string;
-    county?: string;
-    state_district?: string;
-    state?: string;
-    postcode?: string;
-    country?: string;
-  };
 }
 
 function formatBrowserLocationError(error: GeolocationPositionError): string {
@@ -99,45 +82,6 @@ export async function getCurrentLocation(): Promise<GeolocationResult> {
   });
 }
 
-const NOMINATIM_RETRY_ATTEMPTS = 3;
-const NOMINATIM_RETRY_DELAY_MS = 700;
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export async function reverseGeocode(lat: number, lon: number): Promise<ReverseGeocodeResult> {
-  // Browsers forbid client-side JS from setting the User-Agent or Referer
-  // headers (Fetch spec's forbidden-header list) — the browser already
-  // attaches its own UA and the page's Referer/origin automatically on
-  // every request, which is what satisfies Nominatim's "identify your app"
-  // usage policy. We can't improve on that from client-side fetch, so
-  // instead we make the request itself resilient to transient failures.
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= NOMINATIM_RETRY_ATTEMPTS; attempt++) {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
-        { headers: { "Accept-Language": "en" } },
-      );
-      if (!res.ok) {
-        throw new Error(`Nominatim responded with ${res.status}`);
-      }
-      return await res.json();
-    } catch (err) {
-      lastError = err;
-      console.warn(`[geolocation] Reverse geocode attempt ${attempt}/${NOMINATIM_RETRY_ATTEMPTS} failed:`, err);
-      if (attempt < NOMINATIM_RETRY_ATTEMPTS) {
-        await sleep(NOMINATIM_RETRY_DELAY_MS);
-      }
-    }
-  }
-
-  console.warn("[geolocation] Reverse geocoding failed after all retries.", lastError);
-  throw new Error("Couldn't detect location — please select your city manually.");
-}
-
 export const LOCATION_UNAVAILABLE = "Location not available — please select your city";
 
 // Common spelling variants, keyed by the cleaned name (see cleanPlaceName).
@@ -150,19 +94,12 @@ const CITY_ALIASES: Record<string, string> = {
   baroda: "Vadodara",
 };
 
-// Most specific first, so a listed suburb/village wins over its parent city,
-// and a taluka/district is only a last resort for villages we don't list.
-const ADDRESS_FIELDS = [
-  "suburb",
-  "hamlet",
-  "village",
-  "town",
-  "city",
-  "municipality",
-  "city_district",
-  "county",
-  "state_district",
-] as const;
+// Spellings that only mean one of our entries inside a given district (cleaned names).
+// "Vadagam"/"Vadgam" are different villages in Aravalli and Banaskantha, so the district decides.
+const DISTRICT_ALIASES: Record<string, { district: string; city: string }> = {
+  vadagam: { district: "aravalli", city: "Vadagam (Aravalli)" },
+  vadgam: { district: "aravalli", city: "Vadagam (Aravalli)" },
+};
 
 function cleanPlaceName(value: string): string {
   return value
@@ -174,24 +111,23 @@ function cleanPlaceName(value: string): string {
     .trim();
 }
 
-export function resolveListedCity(address: ReverseGeocodeResult["address"], cities: string[]): string | null {
+/**
+ * Picks the first place name (they arrive most specific first: sublocality, neighbourhood, locality,
+ * taluka, district) that is in our city list, so a listed village or suburb wins over the town, city
+ * or taluka around it. Returns null when nothing matches.
+ */
+export function resolveListedCity(
+  { names, district }: Pick<GeocodeCandidates, "names" | "district">,
+  cities: string[],
+): string | null {
   const byName = new Map(cities.map((c) => [cleanPlaceName(c), c]));
-  for (const field of ADDRESS_FIELDS) {
-    const raw = address[field];
-    if (!raw) continue;
+  const districtKey = district ? cleanPlaceName(district) : "";
+  for (const raw of names) {
     const key = cleanPlaceName(raw);
+    const scoped = DISTRICT_ALIASES[key];
+    if (scoped && scoped.district === districtKey && cities.includes(scoped.city)) return scoped.city;
     const match = byName.get(key) ?? CITY_ALIASES[key];
     if (match) return match;
   }
   return null;
-}
-
-export function extractCity(rg: ReverseGeocodeResult): string | null {
-  return (
-    rg.address.city ||
-    rg.address.town ||
-    rg.address.village ||
-    rg.address.suburb ||
-    null
-  );
 }

@@ -31,6 +31,8 @@ const GUJARAT_CITIES = [
   "Ambaji", "Iqbalgadh",
   // Gujarat — Sabarkantha / Aravalli extra
   "Prantij", "Talod", "Poshina", "Vijaynagar", "Dhansura", "Bhiloda",
+  // Vadagam (Aravalli, near Dhansura) is a different place from Vadgam (Banaskantha) above.
+  "Vadagam (Aravalli)",
   // Gujarat — Ahmedabad district extra
   "Bagodara", "Rekhiyal", "Chaloda", "Nal Sarovar", "Vatva", "Naroda", "Bopal", "Ghatlodia", "Chandkheda",
   // Gujarat — Kheda / Anand / Mahisagar extra
