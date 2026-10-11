@@ -35,6 +35,7 @@ import tileRealEstate from "@/assets/tile-realestate.jpg";
 import tileDoctors from "@/assets/tile-doctors.jpg";
 import { useCity } from "@/hooks/useCity";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { HorizontalCardRow } from "@/components/home/HorizontalCardRow";
 import { BASE_URL, ldScript, breadcrumbLd } from "@/lib/seo";
 import { useT } from "@/lib/i18n";
 
@@ -218,8 +219,8 @@ function HomePage() {
         </div>
       </ScrollReveal>
 
-      {/* Featured Businesses */}
-      <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
+      {/* Featured Businesses — a swipeable row. No per-card scroll-reveal (delayMs): cards off-screen to the right would stay invisible until swiped to. */}
+      <ScrollReveal as="section" ariaLabel="Featured businesses" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.featuredBusinesses")}{city ? ` ${t("home.in")} ${city}` : ""}</h2>
@@ -228,17 +229,17 @@ function HomePage() {
           </Link>
         </div>
         {home && home.featured.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {home.featured.map((business, i) => (
-              <BusinessCard key={business.id} business={business} delayMs={i * 100} />
+          <HorizontalCardRow>
+            {home.featured.map((business) => (
+              <BusinessCard key={business.id} business={business} />
             ))}
-          </div>
+          </HorizontalCardRow>
         ) : !home ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <HorizontalCardRow>
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-64 animate-pulse rounded-xl bg-muted" />
             ))}
-          </div>
+          </HorizontalCardRow>
         ) : (
           <div className="rounded-xl border border-dashed border-border p-8 text-center">
             <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
