@@ -39,7 +39,7 @@ function PrivacyPage() {
         <section>
           <H2>Who we are</H2>
           <p>
-            Kutchi Hub (kutchihub.com) is operated by Krutarth Patel and Parth Patel, Kapadvanj, Gujarat, India.
+            Kutchi Hub (kutchihub.com) is operated by the Kutchi Hub Team, Kapadvanj, Gujarat, India.
             Contact: <Email />
           </p>
         </section>
@@ -112,7 +112,7 @@ function PrivacyPage() {
         <section>
           <H2>Contact</H2>
           <p>
-            <Email />
+            Kutchi Hub Team, Kapadvanj, Gujarat – <Email />
           </p>
         </section>
       </div>

@@ -5,9 +5,9 @@ export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
       { title: "About Us — Kutchi Hub" },
-      { name: "description", content: "Learn about Kutchi Hub — a business directory built for the Kutch Kadva Patidar Samaj community by Krutarth Patel and Parth Patel from Kapadvanj, Gujarat." },
+      { name: "description", content: "Learn about Kutchi Hub — a business directory built for the Kutch Kadva Patidar Samaj community by the Kutchi Hub Team from Kapadvanj, Gujarat." },
       { property: "og:title", content: "About Us — Kutchi Hub" },
-      { property: "og:description", content: "Learn about Kutchi Hub — a business directory built for the Kutch Kadva Patidar Samaj community by Krutarth Patel and Parth Patel from Kapadvanj, Gujarat." },
+      { property: "og:description", content: "Learn about Kutchi Hub — a business directory built for the Kutch Kadva Patidar Samaj community by the Kutchi Hub Team from Kapadvanj, Gujarat." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: `${BASE_URL}/about` },
     ],
@@ -22,10 +22,10 @@ function AboutPage() {
       <h1 className="mb-6 text-2xl font-bold text-foreground">About Kutchi Hub</h1>
       <div className="space-y-4 rounded-2xl border border-border bg-card p-5 text-muted-foreground sm:p-6">
         <p>
-          Kutchi Hub is a business directory built for the Kutch Kadva Patidar Samaj community — by two Kutchi Patels.
+          Kutchi Hub is a business directory built for the Kutch Kadva Patidar Samaj community.
         </p>
         <p>
-          We are Krutarth Patel and Parth Patel, from Kapadvanj, Gujarat. We saw that Kutch Kadva Patidar Samaj
+          Kutchi Hub is run by the Kutchi Hub Team, based in Kapadvanj, Gujarat. We saw that Kutch Kadva Patidar Samaj
           businesses were scattered across India — with no single place where our community could find and support
           each other.
         </p>
