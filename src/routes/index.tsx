@@ -192,7 +192,8 @@ function HomePage() {
           </div>
 
           {/* Feature tiles */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {/* TEMP: hidden on mobile (Oct 2026). Remove "hidden md:" to show again. */}
+          <div className="hidden md:grid grid-cols-2 gap-3 sm:grid-cols-4">
             {featureTiles.map((t, i) => (
               <ScrollReveal key={t.key} delayMs={i * 80} className="h-full">
                 <Link
