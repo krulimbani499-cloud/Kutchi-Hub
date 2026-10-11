@@ -42,9 +42,9 @@ function isOAuthSupportedHost() {
   );
 }
 
-export function AuthForms() {
+export function AuthForms({ initialMode }: { initialMode?: "signin" | "signup" }) {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "reset">(initialMode ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [referral, setReferral] = useState("");

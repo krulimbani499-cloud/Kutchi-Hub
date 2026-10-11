@@ -64,6 +64,11 @@ const en: Dict = {
   "business.inReview.text": "This business has been submitted and is being verified by the Kutchi Hub team. It will be live soon.",
   "business.inReview.ownerText": "Your business is under review. Our team will verify it shortly. You'll be able to see it live once approved.",
   "business.backHome": "Back to home",
+  "welcome.skip": "Skip",
+  "welcome.headline": "Kutch Kadva Patidar Samaj ni Business Directory",
+  "welcome.createAccount": "Create account",
+  "welcome.agreePrefix": "By continuing you agree to our",
+  "welcome.agreeSuffix": ".",
   // footer
   "footer.about":
     "Kutchi Hub is Kutchi Patel Samaj's trusted business directory — restaurants, doctors, grocery, shops and services in one place. With verified listings, real reviews and direct contact, we connect Kutchi businesses to customers across India.",
@@ -133,6 +138,11 @@ const gu: Dict = {
   "business.inReview.text": "આ વ્યવસાય સબમિટ કરવામાં આવ્યો છે અને કચ્છી હબ ટીમ દ્વારા તેની ચકાસણી થઈ રહી છે. તે ટૂંક સમયમાં લાઇવ થશે.",
   "business.inReview.ownerText": "તમારો વ્યવસાય સમીક્ષા હેઠળ છે. અમારી ટીમ ટૂંક સમયમાં તેની ચકાસણી કરશે. મંજૂરી મળ્યા પછી તમે તેને લાઇવ જોઈ શકશો.",
   "business.backHome": "હોમ પર પાછા જાઓ",
+  "welcome.skip": "છોડો",
+  "welcome.headline": "કચ્છ કડવા પાટીદાર સમાજની બિઝનેસ ડિરેક્ટરી",
+  "welcome.createAccount": "એકાઉન્ટ બનાવો",
+  "welcome.agreePrefix": "આગળ વધીને તમે અમારી",
+  "welcome.agreeSuffix": "સાથે સંમત થાઓ છો.",
   "footer.about":
     "કચ્છી હબ એ કચ્છી પટેલ સમાજની વિશ્વસનીય બિઝનેસ ડિરેક્ટરી છે — રેસ્તોરાં, ડૉક્ટર, કરિયાણું, દુકાનો અને સેવાઓ એક જ જગ્યાએ. વેરિફાઇડ લિસ્ટિંગ અને સીધા સંપર્ક સાથે આખા ભારતમાં કચ્છી બિઝનેસને ગ્રાહકો સાથે જોડીએ છીએ.",
   "footer.explore": "એક્સપ્લોર",
@@ -201,6 +211,11 @@ const hi: Dict = {
   "business.inReview.text": "यह व्यवसाय सबमिट किया गया है और कच्छी हब टीम द्वारा इसका सत्यापन किया जा रहा है। यह जल्द ही लाइव होगा।",
   "business.inReview.ownerText": "आपका व्यवसाय समीक्षा में है। हमारी टीम जल्द ही इसका सत्यापन करेगी। स्वीकृति मिलने के बाद आप इसे लाइव देख सकेंगे।",
   "business.backHome": "होम पर वापस जाएँ",
+  "welcome.skip": "छोड़ें",
+  "welcome.headline": "कच्छ कडवा पाटीदार समाज की बिज़नेस डायरेक्टरी",
+  "welcome.createAccount": "अकाउंट बनाएँ",
+  "welcome.agreePrefix": "जारी रखकर आप हमारी",
+  "welcome.agreeSuffix": "से सहमत होते हैं।",
   "footer.about":
     "कच्छी हब, कच्छी पटेल समाज की विश्वसनीय बिजनेस डायरेक्टरी है — रेस्टोरेंट, डॉक्टर, किराना, दुकानें और सेवाएं एक ही जगह। वेरिफाइड लिस्टिंग और सीधे संपर्क के साथ पूरे भारत में कच्छी व्यवसायों को ग्राहकों से जोड़ते हैं।",
   "footer.explore": "एक्सप्लोर",

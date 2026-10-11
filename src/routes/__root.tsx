@@ -21,6 +21,7 @@ import { BASE_URL, SITE_NAME, ldScript, organizationLd, websiteLd } from "@/lib/
 import { ComingSoonGate } from "@/components/ComingSoonGate";
 import { NativeBackButton } from "@/components/NativeBackButton";
 import { Toaster } from "@/components/ui/sonner";
+import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { Analytics } from "@vercel/analytics/react";
 import { LanguageProvider } from "@/lib/i18n";
 
@@ -189,6 +190,7 @@ function RootComponent() {
           <SiteFooter />
           <NativeBackButton />
           <Toaster position="top-center" />
+          <WelcomeScreen />
           <Analytics />
         </div>
         </ComingSoonGate>
