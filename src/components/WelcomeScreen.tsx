@@ -9,10 +9,13 @@ import logo from "@/assets/kutchi-hub-logo.png";
 
 type Phase = "idle" | "checking" | "show" | "done";
 
+// Brand tagline (Gujarati), shown the same in every language.
+const WELCOME_TAGLINE = "આપણા લોકો | આપણો ધંધો | એક જ જગ્યા";
+
 /** One of the decorative "shop cards" in the header illustration (our own shapes, no text to translate). */
 function ShopCard({ className, widths }: { className: string; widths: [string, string] }) {
   return (
-    <div className={`absolute w-[7.25rem] rounded-2xl bg-white p-2.5 shadow-lg ${className}`} aria-hidden>
+    <div className={`w-[6rem] shrink-0 rounded-2xl bg-white p-2 shadow-lg ${className}`} aria-hidden>
       <div className="mb-2 flex items-center gap-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ff6a00]/15 text-[#ff6a00]">
           <Store className="h-3.5 w-3.5" />
@@ -106,7 +109,7 @@ export function WelcomeScreen() {
       className="fixed inset-0 z-[9998] flex flex-col overflow-y-auto bg-background"
     >
       {/* Top: brand orange with the logo and our own shop-card illustration */}
-      <div className="relative min-h-[18rem] flex-1 overflow-hidden bg-gradient-to-b from-[#ff6a00] to-[#e65a00] pb-10">
+      <div className="relative flex min-h-[18rem] flex-1 flex-col overflow-hidden bg-gradient-to-b from-[#ff6a00] to-[#e65a00] pb-10">
         <span className="absolute -left-10 top-16 h-40 w-40 rounded-full bg-white/10" aria-hidden />
         <span className="absolute -right-12 bottom-6 h-52 w-52 rounded-full bg-white/10" aria-hidden />
         <span className="absolute left-1/2 top-2 h-24 w-24 -translate-x-1/2 rounded-full bg-white/5" aria-hidden />
@@ -121,12 +124,18 @@ export function WelcomeScreen() {
           </button>
         </div>
 
-        <div className="relative mx-auto mt-2 h-60 w-full max-w-sm">
-          <ShopCard className="left-2 top-6 -rotate-6" widths={["w-4/5", "w-3/5"]} />
-          <ShopCard className="right-2 top-4 rotate-6" widths={["w-3/5", "w-4/5"]} />
-          <ShopCard className="bottom-2 left-1/2 -translate-x-1/2 rotate-1" widths={["w-full", "w-2/3"]} />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[58%] rounded-3xl bg-white p-3 shadow-2xl ring-4 ring-white/30">
-            <img src={logo} alt="Kutchi Hub" className="h-20 w-20 rounded-2xl object-contain" />
+        {/* Logo, name and tagline on top, the three shop cards in a fan below; the group is centred vertically */}
+        <div className="relative flex flex-1 flex-col items-center justify-center px-4 py-3">
+          <div className="flex h-[7.5rem] w-[7.5rem] items-center justify-center rounded-3xl bg-white shadow-2xl ring-4 ring-white/30">
+            <img src={logo} alt="Kutchi Hub" className="h-[5.25rem] w-[5.25rem] object-contain" />
+          </div>
+          <p className="mt-3 text-2xl font-extrabold tracking-wide text-white">KUTCHI HUB</p>
+          <p className="mt-1 text-center text-xs font-medium text-white/90">{WELCOME_TAGLINE}</p>
+
+          <div className="mt-5 flex items-end justify-center gap-2">
+            <ShopCard className="-rotate-6" widths={["w-4/5", "w-3/5"]} />
+            <ShopCard className="-translate-y-2" widths={["w-full", "w-2/3"]} />
+            <ShopCard className="rotate-6" widths={["w-3/5", "w-4/5"]} />
           </div>
         </div>
       </div>
@@ -158,7 +167,7 @@ export function WelcomeScreen() {
           {t("welcome.agreePrefix")}{" "}
           <Link to="/privacy" className="font-medium text-[#ff6a00] underline underline-offset-2">
             {t("footer.privacy")}
-          </Link>{" "}
+          </Link>
           {t("welcome.agreeSuffix")}
         </p>
       </div>
