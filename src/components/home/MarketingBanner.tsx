@@ -31,7 +31,8 @@ export function MarketingBanner({ intervalMs = 4500 }: Props) {
   const current = banners[index]!;
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 pt-4">
+    // Phones: 8px side margins (wider, so taller at the same 3:1 ratio the banner images already have); md+ keeps 16px.
+    <section className="mx-auto w-full max-w-7xl px-2 pt-4 md:px-4">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <a
           href={current.cta_url ?? "#"}

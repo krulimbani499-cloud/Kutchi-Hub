@@ -173,22 +173,23 @@ function HomePage() {
       <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           {/* Promo banner */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-100 via-orange-50 to-orange-100 animate-gradient-pan p-6 sm:p-8">
-            <div className="max-w-[70%]">
+          {/* Phones (below md): one compact row — title on the left, 44px button on the right, no description. md+ is unchanged. */}
+          <div className="relative flex min-h-[92px] items-center justify-between gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-orange-100 via-orange-50 to-orange-100 animate-gradient-pan px-4 py-5 md:block md:min-h-0 md:p-8">
+            <div className="relative z-10 min-w-0 flex-1 md:max-w-[70%] md:flex-none">
               <p className="text-xs font-bold uppercase tracking-wider text-[#ff6a00]">{t("home.featured")}</p>
-              <h3 className="mt-1 text-lg font-extrabold text-foreground sm:text-2xl">
+              <h3 className="mt-0.5 text-base font-extrabold text-foreground md:mt-1 md:text-2xl">
                 {t("home.listYourBusiness")}
               </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 hidden text-sm text-muted-foreground md:block">
                 {t("home.listYourBusinessDesc")}
               </p>
-              <Button size="sm" className="mt-4 rounded-full bg-[#ff6a00] text-white hover:bg-[#e65a00]" asChild>
-                <Link to="/list-your-business">
-                  {t("home.getStarted")} <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
             </div>
-            <Building2 className="absolute -right-4 -bottom-4 h-40 w-40 text-orange-200 animate-float-y" />
+            <Button size="sm" className="relative z-10 h-11 shrink-0 rounded-full bg-[#ff6a00] px-4 text-sm text-white hover:bg-[#e65a00] md:mt-4 md:h-8 md:px-3 md:text-xs" asChild>
+              <Link to="/list-your-business">
+                {t("home.getStarted")} <ArrowRight className="ml-1 hidden h-4 w-4 md:block" />
+              </Link>
+            </Button>
+            <Building2 className="pointer-events-none absolute -bottom-3 -right-2 h-20 w-20 text-orange-200 animate-float-y md:-bottom-4 md:-right-4 md:h-40 md:w-40" />
           </div>
 
           {/* Feature tiles */}
