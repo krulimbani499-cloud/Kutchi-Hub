@@ -34,7 +34,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { BANNER_IMAGES_BUCKET, BANNER_IMAGE_MAX_BYTES, BANNER_IMAGE_WIDTH, BANNER_IMAGE_HEIGHT } from "@/lib/banner-images";
+import {
+  BANNER_IMAGES_BUCKET,
+  BANNER_IMAGE_MAX_BYTES,
+  BANNER_IMAGE_WIDTH,
+  BANNER_IMAGE_HEIGHT,
+  BANNER_MOBILE_IMAGE_WIDTH,
+  BANNER_MOBILE_IMAGE_HEIGHT,
+} from "@/lib/banner-images";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
@@ -627,6 +634,7 @@ type BannerFormState = {
   title: string;
   subtitle: string;
   image_url: string;
+  mobile_image_url: string;
   cta_label: string;
   cta_url: string;
   city: string;
@@ -641,6 +649,7 @@ const emptyBanner: BannerFormState = {
   title: "",
   subtitle: "",
   image_url: "",
+  mobile_image_url: "",
   cta_label: "",
   cta_url: "",
   city: "",
@@ -676,23 +685,37 @@ function BannersAdmin() {
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [uploadingMobile, setUploadingMobile] = useState(false);
+  const [mobileUploadError, setMobileUploadError] = useState("");
 
-  const handleImageUpload = async (file: File | undefined) => {
+  // Same bucket and flow for both images; only the required size differs (desktop 3:1, phone 2:1).
+  const handleImageUpload = async (file: File | undefined, kind: "image" | "mobile" = "image") => {
     if (!file) return;
-    setUploadError("");
+    const mobile = kind === "mobile";
+    const setError = mobile ? setMobileUploadError : setUploadError;
+    const setBusyFlag = mobile ? setUploadingMobile : setUploading;
+    setError("");
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setUploadError("Please upload a JPG, PNG or WebP image.");
+      setError("Please upload a JPG, PNG or WebP image.");
       return;
     }
     if (file.size > BANNER_IMAGE_MAX_BYTES) {
-      setUploadError("Image is larger than 5MB. Please upload a smaller file.");
+      setError("Image is larger than 5MB. Please upload a smaller file.");
       return;
     }
-    setUploading(true);
+    setBusyFlag(true);
     try {
       const { width, height } = await readImageDimensions(file);
-      if (width !== BANNER_IMAGE_WIDTH || height !== BANNER_IMAGE_HEIGHT) {
-        setUploadError(
+      if (mobile) {
+        // 2:1 (1200 × 600 recommended); any exact 2:1 image of at least 600px wide is accepted.
+        if (width !== height * 2 || width < BANNER_MOBILE_IMAGE_WIDTH / 2) {
+          setError(
+            `Mobile image must be 2:1 (${BANNER_MOBILE_IMAGE_WIDTH} × ${BANNER_MOBILE_IMAGE_HEIGHT}px recommended). This image is ${width} × ${height}px.`,
+          );
+          return;
+        }
+      } else if (width !== BANNER_IMAGE_WIDTH || height !== BANNER_IMAGE_HEIGHT) {
+        setError(
           `Image must be exactly ${BANNER_IMAGE_WIDTH} × ${BANNER_IMAGE_HEIGHT}px (3:1 ratio). This image is ${width} × ${height}px.`,
         );
         return;
@@ -704,11 +727,11 @@ function BannersAdmin() {
         .upload(key, file, { cacheControl: "3600", upsert: false });
       if (upErr) throw new Error(upErr.message);
       const { data } = supabase.storage.from(BANNER_IMAGES_BUCKET).getPublicUrl(key);
-      setForm({ ...form, image_url: data.publicUrl });
+      setForm((f) => (mobile ? { ...f, mobile_image_url: data.publicUrl } : { ...f, image_url: data.publicUrl }));
     } catch (e) {
-      setUploadError(e instanceof Error ? e.message : "Upload failed");
+      setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
-      setUploading(false);
+      setBusyFlag(false);
     }
   };
 
@@ -718,6 +741,7 @@ function BannersAdmin() {
       title: b.title,
       subtitle: b.subtitle ?? "",
       image_url: b.image_url,
+      mobile_image_url: b.mobile_image_url ?? "",
       cta_label: b.cta_label ?? "",
       cta_url: b.cta_url ?? "",
       city: b.city,
@@ -739,6 +763,7 @@ function BannersAdmin() {
         title: form.title.trim(),
         subtitle: form.subtitle.trim() || null,
         image_url: form.image_url.trim(),
+        mobile_image_url: form.mobile_image_url.trim() || null,
         cta_label: form.cta_label.trim() || null,
         cta_url: form.cta_url.trim() || null,
         city: form.city.trim(),
@@ -839,6 +864,48 @@ function BannersAdmin() {
                 </div>
               )}
             </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">
+                Mobile banner (1200 × 600 recommended) <span className="font-normal text-muted-foreground">— optional</span>
+              </Label>
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                <label
+                  className={`inline-flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted px-4 py-2 text-sm font-medium text-foreground ${
+                    uploadingMobile ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-accent"
+                  }`}
+                >
+                  {uploadingMobile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  <span>{uploadingMobile ? "Uploading…" : form.mobile_image_url ? "Replace mobile image" : "Upload mobile image"}</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    disabled={uploadingMobile}
+                    onChange={(e) => {
+                      void handleImageUpload(e.target.files?.[0], "mobile");
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <span className="text-xs text-muted-foreground">
+                  JPG, PNG or WebP · up to 5MB · 2:1 · phones only; desktop keeps the main image
+                </span>
+              </div>
+              {mobileUploadError && <p className="mt-1 text-xs text-destructive">{mobileUploadError}</p>}
+              {form.mobile_image_url && (
+                <div className="relative mt-2 h-24 w-48 overflow-hidden rounded-md border border-border bg-muted">
+                  <img src={form.mobile_image_url} alt="Mobile banner preview" className="h-full w-full object-contain" />
+                  <button
+                    type="button"
+                    aria-label="Remove mobile image"
+                    onClick={() => setForm({ ...form, mobile_image_url: "" })}
+                    className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
             <div>
               <Label className="text-xs">CTA label</Label>
               <Input
@@ -935,6 +1002,7 @@ function BannersAdmin() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate font-medium text-foreground">{b.title}</span>
                       <Badge variant="outline" className="text-xs">{b.city}</Badge>
+                      {b.mobile_image_url && <Badge variant="outline" className="text-xs">Mobile image</Badge>}
                       {b.active ? (
                         <Badge className="bg-green-600 text-white hover:bg-green-600">Active</Badge>
                       ) : (

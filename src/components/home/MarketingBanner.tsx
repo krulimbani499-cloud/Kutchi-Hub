@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getBannerAdsForCity } from "@/lib/businesses.functions";
 import { useCity } from "@/hooks/useCity";
+import { BannerImage, bannerCarouselHasMobileImage } from "@/components/BannerImage";
 
 interface Props {
   intervalMs?: number;
@@ -29,6 +30,7 @@ export function MarketingBanner({ intervalMs = 4500 }: Props) {
 
   if (banners.length === 0) return null;
   const current = banners[index]!;
+  const carouselHasMobile = bannerCarouselHasMobileImage(banners);
 
   return (
     // Phones: 8px side margins (wider, so taller at the same 3:1 ratio the banner images already have); md+ keeps 16px.
@@ -40,14 +42,7 @@ export function MarketingBanner({ intervalMs = 4500 }: Props) {
           rel={current.cta_url ? "noreferrer" : undefined}
           className="block"
         >
-          <div className="relative aspect-[3/1] w-full bg-muted">
-            <img
-              src={current.image_url}
-              alt={current.title}
-              className="h-full w-full object-contain transition-opacity duration-500"
-              loading="lazy"
-            />
-          </div>
+          <BannerImage banner={current} carouselHasMobile={carouselHasMobile} />
         </a>
 
         {banners.length > 1 && (

@@ -95,6 +95,7 @@ export type Database = {
           end_at: string | null
           id: string
           image_url: string
+          mobile_image_url: string | null
           owner_id: string | null
           priority: number
           start_at: string
@@ -113,6 +114,7 @@ export type Database = {
           end_at?: string | null
           id?: string
           image_url: string
+          mobile_image_url?: string | null
           owner_id?: string | null
           priority?: number
           start_at?: string
@@ -131,6 +133,7 @@ export type Database = {
           end_at?: string | null
           id?: string
           image_url?: string
+          mobile_image_url?: string | null
           owner_id?: string | null
           priority?: number
           start_at?: string

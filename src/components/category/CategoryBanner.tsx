@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getBannerAdsForCategory } from "@/lib/businesses.functions";
 import { useCity } from "@/hooks/useCity";
+import { BannerImage, bannerCarouselHasMobileImage } from "@/components/BannerImage";
 
 interface Props {
   categoryId: string;
@@ -37,6 +38,7 @@ export function CategoryBanner({ categoryId, city, intervalMs = 4500 }: Props) {
 
   if (banners.length === 0) return null;
   const current = banners[index]!;
+  const carouselHasMobile = bannerCarouselHasMobileImage(banners);
 
   return (
     <section className="mb-8">
@@ -47,14 +49,7 @@ export function CategoryBanner({ categoryId, city, intervalMs = 4500 }: Props) {
           rel={current.cta_url ? "noreferrer" : undefined}
           className="block"
         >
-          <div className="relative aspect-[3/1] w-full bg-muted">
-            <img
-              src={current.image_url}
-              alt={current.title}
-              className="h-full w-full object-contain transition-opacity duration-500"
-              loading="lazy"
-            />
-          </div>
+          <BannerImage banner={current} carouselHasMobile={carouselHasMobile} />
         </a>
 
         {banners.length > 1 && (

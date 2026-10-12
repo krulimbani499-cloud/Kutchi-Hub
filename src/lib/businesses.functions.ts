@@ -374,7 +374,7 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
     const now = new Date().toISOString();
     let query = supabase
       .from("banner_ads")
-      .select("id, business_id, title, subtitle, image_url, cta_label, cta_url, city, priority")
+      .select("id, business_id, title, subtitle, image_url, mobile_image_url, cta_label, cta_url, city, priority")
       .is("category_id", null)
       .eq("active", true)
       .lte("start_at", now)
@@ -388,6 +388,7 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
     return (banners ?? []).map((banner) => ({
       ...banner,
       image_url: normalizeBannerImageUrl(banner.image_url),
+      mobile_image_url: banner.mobile_image_url ? normalizeBannerImageUrl(banner.mobile_image_url) : null,
     }));
   });
 
@@ -402,7 +403,7 @@ export const getBannerAdsForCategory = createServerFn({ method: "GET" })
     const now = new Date().toISOString();
     let query = supabase
       .from("banner_ads")
-      .select("id, business_id, title, subtitle, image_url, cta_label, cta_url, city, priority")
+      .select("id, business_id, title, subtitle, image_url, mobile_image_url, cta_label, cta_url, city, priority")
       .eq("category_id", data.categoryId)
       .eq("active", true)
       .lte("start_at", now)
@@ -417,6 +418,7 @@ export const getBannerAdsForCategory = createServerFn({ method: "GET" })
     return (banners ?? []).map((banner) => ({
       ...banner,
       image_url: normalizeBannerImageUrl(banner.image_url),
+      mobile_image_url: banner.mobile_image_url ? normalizeBannerImageUrl(banner.mobile_image_url) : null,
     }));
   });
 
@@ -426,6 +428,7 @@ const bannerInputSchema = z.object({
   title: z.string().trim().min(2).max(120),
   subtitle: z.string().trim().max(200).nullable().optional(),
   image_url: z.string().trim().url().max(500),
+  mobile_image_url: z.string().trim().url().max(500).nullable().optional(),
   cta_label: z.string().trim().max(40).nullable().optional(),
   cta_url: z.string().trim().url().max(500).nullable().optional(),
   city: z.string().trim().min(1).max(80),
@@ -462,6 +465,7 @@ export const adminCreateBannerAd = createServerFn({ method: "POST" })
         title: data.title,
         subtitle: data.subtitle ?? null,
         image_url: normalizeBannerImageUrl(data.image_url),
+        mobile_image_url: data.mobile_image_url ? normalizeBannerImageUrl(data.mobile_image_url) : null,
         cta_label: data.cta_label ?? null,
         cta_url: data.cta_url ?? null,
         city: data.city,
@@ -490,6 +494,7 @@ export const adminUpdateBannerAd = createServerFn({ method: "POST" })
         title: rest.title,
         subtitle: rest.subtitle ?? null,
         image_url: normalizeBannerImageUrl(rest.image_url),
+        mobile_image_url: rest.mobile_image_url ? normalizeBannerImageUrl(rest.mobile_image_url) : null,
         cta_label: rest.cta_label ?? null,
         cta_url: rest.cta_url ?? null,
         city: rest.city,
