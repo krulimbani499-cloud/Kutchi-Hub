@@ -5,6 +5,8 @@ import { Loader2, Trash2, Star, Upload } from "lucide-react";
 import { BUSINESS_PHOTOS_BUCKET, getBusinessPhotoStorageKey } from "@/lib/business-photos";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import type { Tables } from "@/integrations/supabase/types";
+import { toast } from "sonner";
+import { EDIT_LOCKED_MESSAGE, friendlyEditError, isEditLockedError } from "@/lib/edit-lock";
 
 interface PhotoUploaderProps {
   businessId: string;
@@ -84,7 +86,8 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
         setPhotos((p) => [...p, row]);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
+      setError(friendlyEditError(e, e instanceof Error ? e.message : "Upload failed"));
+      if (isEditLockedError(e)) toast.error(EDIT_LOCKED_MESSAGE);
     } finally {
       setUploading(false);
     }
@@ -93,32 +96,49 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
   const deletePhoto = async (photo: PhotoRow) => {
     setError("");
     try {
+      // Row first: if the database refuses (no active plan) it deletes nothing and we stop before touching the file.
+      const { data: deleted, error: delErr } = await supabase
+        .from("business_photos")
+        .delete()
+        .eq("id", photo.id)
+        .select("id");
+      if (delErr) throw new Error(delErr.message);
+      if (!deleted || deleted.length === 0) throw new Error(EDIT_LOCKED_MESSAGE);
       const key = getBusinessPhotoStorageKey(photo.url);
       if (key) {
         await supabase.storage.from(BUSINESS_PHOTOS_BUCKET).remove([key]);
       }
-      await supabase.from("business_photos").delete().eq("id", photo.id);
       setPhotos((p) => p.filter((x) => x.id !== photo.id));
       if (featured === photo.url) {
         setFeatured(null);
         onFeaturedChange?.("");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      setError(friendlyEditError(e, e instanceof Error ? e.message : "Delete failed"));
+      if (isEditLockedError(e)) toast.error(EDIT_LOCKED_MESSAGE);
     }
   };
 
-  const setAsFeatured = async (photo: PhotoRow) => {
-    setFeatured(photo.url);
-    onFeaturedChange?.(photo.url);
-    await supabase.from("businesses").update({ featured_image: photo.url }).eq("id", businessId);
+  // Setting / clearing the featured image updates the business row; if the database refuses, undo and say why.
+  const saveFeatured = async (value: string | null, previous: string | null) => {
+    setFeatured(value);
+    onFeaturedChange?.(value ?? "");
+    const { data: rows, error: updErr } = await supabase
+      .from("businesses")
+      .update({ featured_image: value })
+      .eq("id", businessId)
+      .select("id");
+    if (updErr || !rows || rows.length === 0) {
+      setFeatured(previous);
+      onFeaturedChange?.(previous ?? "");
+      setError(friendlyEditError(updErr ?? new Error(EDIT_LOCKED_MESSAGE)));
+      toast.error(EDIT_LOCKED_MESSAGE);
+    }
   };
 
-  const clearFeatured = async () => {
-    setFeatured(null);
-    onFeaturedChange?.("");
-    await supabase.from("businesses").update({ featured_image: null }).eq("id", businessId);
-  };
+  const setAsFeatured = async (photo: PhotoRow) => saveFeatured(photo.url, featured);
+
+  const clearFeatured = async () => saveFeatured(null, featured);
 
   return (
     <div className="space-y-4">

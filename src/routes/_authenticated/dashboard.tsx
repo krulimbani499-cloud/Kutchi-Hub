@@ -8,7 +8,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin, Star, Trash2, Edit, MessageSquare, Phone, Mail, Inbox, LogOut, Package, Wrench, ChevronDown, ChevronUp, Gift, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { Building2, MapPin, Star, Trash2, Edit, Lock, MessageSquare, Phone, Mail, Inbox, LogOut, Package, Wrench, ChevronDown, ChevronUp, Gift, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { EditLockedCard } from "@/components/business/EditLockedCard";
 import { BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCard";
@@ -166,16 +167,29 @@ function DashboardPage() {
                         </div>
                         </div>
                         <div className="flex gap-2">
+                        {b.editLocked ? (
+                          <Button variant="ghost" size="icon" disabled aria-label="Editing locked: no active plan" title="Editing locked: no active plan">
+                            <Lock className="h-4 w-4" />
+                          </Button>
+                        ) : (
                         <Button variant="ghost" size="icon" asChild>
                           <Link to="/business/$slug/edit" params={{ slug: b.slug }}>
                             <Edit className="h-4 w-4" />
                           </Link>
                         </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => handleDelete(b.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                         </div>
                       </div>
+                      {b.editLocked ? (
+                        /* Published without an active plan: the database blocks edits, so show the explanation instead of the managers. */
+                        <div className="mt-3">
+                          <EditLockedCard businessName={b.name} compact />
+                        </div>
+                      ) : (
+                      <>
                       <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
                         <Button
                           size="sm"
@@ -205,6 +219,8 @@ function DashboardPage() {
                         <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
                           <ProductsManager businessId={b.id} />
                         </div>
+                      )}
+                      </>
                       )}
                     </div>
                   ))}

@@ -55,6 +55,8 @@ interface BusinessDetailProps {
   business: Tables<"businesses"> & {
     categories: { id: string; name: string; slug: string; color: string | null; icon: string | null } | null;
     featured_image_url?: string | null;
+    /** false = the business's plan does not include the catalog (hide "View catalog"). Missing = show, as before. */
+    catalog_allowed?: boolean;
   };
   reviews: (Tables<"business_reviews"> & {
     profiles: { display_name: string | null; avatar_url: string | null } | null;
@@ -677,7 +679,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   <a href={business.website} target="_blank" rel="noreferrer" className="text-foreground hover:underline">{business.website}</a>
                 </div>
               )}
-              {business.catalog_url && (
+              {business.catalog_url && business.catalog_allowed !== false && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <FileText className="h-4 w-4 shrink-0" />
                   <button

@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from "./businesses.server";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
+import { EDIT_LOCKED_MESSAGE, friendlyEditError } from "./edit-lock";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -222,8 +223,18 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
         ? Number((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1))
         : 0;
 
+    // Show the catalog only while the business's active plan includes it. Nothing is deleted: the file and the
+    // saved values stay, they just are not shown. Fails open (shown, as before) if the database function is missing.
+    let catalogAllowed = true;
+    if (business.catalog_url) {
+      const { data: canCatalog, error: canCatalogError } = await supabase.rpc("business_can_use_catalog", {
+        _business_id: business.id,
+      });
+      catalogAllowed = canCatalogError ? true : canCatalog === true;
+    }
+
     return {
-      business,
+      business: { ...business, catalog_allowed: catalogAllowed },
       reviews: reviewsWithProfiles,
       photos: photos ?? [],
       avgRating,
@@ -788,7 +799,7 @@ export const updateBusiness = createServerFn({ method: "POST" })
     if (existing.owner_id !== userId && !isAdmin) throw new Error("Unauthorized");
 
     const { id, ...rest } = data;
-    const { error } = await supabase
+    const { data: updatedRows, error } = await supabase
       .from("businesses")
       .update({
         ...rest,
@@ -807,8 +818,12 @@ export const updateBusiness = createServerFn({ method: "POST" })
         app_discount_label: rest.app_discount_label ? rest.app_discount_label : null,
         app_discount_valid_until: rest.app_discount_valid_until ? rest.app_discount_valid_until : null,
       })
-      .eq("id", id);
-    if (error) throw new Error(error.message);
+      .eq("id", id)
+      .select("id");
+    if (error) throw new Error(friendlyEditError(error, error.message));
+    // The database silently skips an update the row-level-security policy refuses (owner of a published
+    // business with no active plan): no error, zero rows. Report it instead of pretending it saved.
+    if (!updatedRows || updatedRows.length === 0) throw new Error(EDIT_LOCKED_MESSAGE);
     return { success: true };
   });
 
@@ -1029,7 +1044,23 @@ export const getDashboard = createServerFn({ method: "GET" })
     const { data: claims, error: claimsError } = await claimsQuery;
     if (claimsError) throw new Error(claimsError.message);
 
+    // Which of the owner's businesses are locked for editing (published, no active plan). Admins are never locked.
+    // Fails open if business_owner_can_edit is not installed yet.
+    const lockedIds = new Set<string>();
+    if (!isAdmin) {
+      await Promise.all(
+        (businesses ?? []).map(async (b) => {
+          const id = (b as unknown as { id: string }).id;
+          const { data: canEdit, error: canEditError } = await supabase.rpc("business_owner_can_edit", {
+            _business_id: id,
+          });
+          if (!canEditError && canEdit === false) lockedIds.add(id);
+        }),
+      );
+    }
+
     const typedBusinesses = (businesses ?? []).map((b) => ({
+      editLocked: lockedIds.has((b as unknown as { id: string }).id),
       id: (b as unknown as { id: string }).id,
       name: (b as unknown as { name: string }).name,
       slug: (b as unknown as { slug: string }).slug,
@@ -1127,7 +1158,26 @@ export const getBusinessForEdit = createServerFn({ method: "GET" })
       .eq("business_id", business.id)
       .order("display_order", { ascending: true });
 
-    return { business, photos: photos ?? [] };
+    // Owner of a published business without an active plan: the edit form is replaced by a "plan needed" card.
+    // The database is the source of truth (business_owner_can_edit); if that function is not installed yet
+    // the check is skipped (fails open) and the page behaves as before.
+    let editLocked = false;
+    // Catalog (PDF) is only for plans that allow it. Admins always can; if business_can_use_catalog is not
+    // installed yet (error) the owner keeps the uploader, exactly as before.
+    let catalogAllowed = true;
+    if (!isAdmin) {
+      const { data: canEdit, error: canEditError } = await supabase.rpc("business_owner_can_edit", {
+        _business_id: business.id,
+      });
+      editLocked = !canEditError && canEdit === false;
+
+      const { data: canCatalog, error: canCatalogError } = await supabase.rpc("business_can_use_catalog", {
+        _business_id: business.id,
+      });
+      catalogAllowed = canCatalogError ? true : canCatalog === true;
+    }
+
+    return { business, photos: photos ?? [], editLocked, catalogAllowed };
   });
 
 // -------- Category / City landing page data --------

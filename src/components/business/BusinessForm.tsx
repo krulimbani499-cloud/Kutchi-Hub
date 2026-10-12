@@ -18,12 +18,15 @@ import {
 import { createBusiness, updateBusiness, createCategory } from "@/lib/businesses.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { CatalogUploader } from "./CatalogUploader";
+import { CatalogUpgradeCard } from "./CatalogUpgradeCard";
 import { ServicesManager } from "./ServicesManager";
 import { ProductsManager } from "./ProductsManager";
 import type { Tables } from "@/integrations/supabase/types";
 import { slugify, slugifyInput, ensureSlug } from "@/lib/slug";
 import { isValidIndianMobile, PHONE_ERROR } from "@/lib/phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "@/lib/url";
+import { EDIT_LOCKED_MESSAGE, friendlyEditError, isEditLockedError } from "@/lib/edit-lock";
+import { toast } from "sonner";
 
 const businessFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(120),
@@ -60,9 +63,11 @@ interface BusinessFormProps {
   categories: Tables<"categories">[];
   initial?: Tables<"businesses">;
   photos?: Tables<"business_photos">[];
+  /** False only for an owner whose active plan does not include the catalog. Defaults to true (admins, and before the SQL is applied). */
+  catalogAllowed?: boolean;
 }
 
-export function BusinessForm({ categories, initial, photos = [] }: BusinessFormProps) {
+export function BusinessForm({ categories, initial, photos = [], catalogAllowed = true }: BusinessFormProps) {
   const navigate = useNavigate();
   const createFn = useServerFn(createBusiness);
   const updateFn = useServerFn(updateBusiness);
@@ -165,7 +170,9 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
         }
         setErrors(map);
       } else if (err instanceof Error) {
-        setFormMessage(err.message);
+        // A save the database refuses (published business, no active plan) gets the friendly plan message.
+        setFormMessage(friendlyEditError(err));
+        if (isEditLockedError(err)) toast.error(EDIT_LOCKED_MESSAGE);
       } else {
         setFormMessage("Something went wrong.");
       }
@@ -485,14 +492,21 @@ export function BusinessForm({ categories, initial, photos = [] }: BusinessFormP
       {initial && (
         <div className="rounded-lg border border-border bg-muted/50 p-4">
           <Label className="mb-2 block">Catalog (PDF)</Label>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Upload your product/price catalog as a PDF. Customers can view or download it from your listing.
-          </p>
-          <CatalogUploader
-            businessId={initial.id}
-            initialUrl={initial.catalog_url ?? null}
-            initialName={initial.catalog_name ?? null}
-          />
+          {catalogAllowed ? (
+            <>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Upload your product/price catalog as a PDF. Customers can view or download it from your listing.
+              </p>
+              <CatalogUploader
+                businessId={initial.id}
+                initialUrl={initial.catalog_url ?? null}
+                initialName={initial.catalog_name ?? null}
+              />
+            </>
+          ) : (
+            // Plan without the catalog (Silver): explain instead of offering the uploader. Admins always get the uploader.
+            <CatalogUpgradeCard businessName={initial.name} hasExistingCatalog={!!initial.catalog_url} />
+          )}
         </div>
       )}
 

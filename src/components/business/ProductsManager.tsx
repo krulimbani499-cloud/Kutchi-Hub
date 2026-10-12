@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus, IndianRupee, Upload, X, Package, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { friendlyEditError, isEditLockedError } from "@/lib/edit-lock";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
@@ -148,7 +149,11 @@ export function ProductsManager({ businessId }: Props) {
       console.error("[ProductsManager] upsert failed:", e);
       setError(msg);
       // Plan-limit text is written for owners; anything else (database errors) stays out of the toast.
-      toast.error(msg.startsWith("Plan limit reached") ? msg : "Could not save product. Please try again.");
+      toast.error(
+        msg.startsWith("Plan limit reached") || isEditLockedError(e)
+          ? friendlyEditError(e, msg)
+          : "Could not save product. Please try again.",
+      );
     } finally {
       setBusy(false);
     }

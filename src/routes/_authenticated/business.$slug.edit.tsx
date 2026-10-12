@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { getCategories, getBusinessForEdit } from "@/lib/businesses.functions";
 import { BusinessForm } from "@/components/business/BusinessForm";
+import { EditLockedCard } from "@/components/business/EditLockedCard";
 
 const categoriesQueryOptions = queryOptions({
   queryKey: ["categories"],
@@ -36,12 +37,23 @@ function EditBusinessPage() {
 
   if (!data.business) throw notFound();
 
+  // Published business without an active plan: no edit form, just the "plan needed" card.
+  if (data.editLocked) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-8">
+        <h1 className="mb-2 text-2xl font-bold text-foreground">Edit Business</h1>
+        <p className="mb-6 text-muted-foreground">{data.business.name}</p>
+        <EditLockedCard businessName={data.business.name} />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-2 text-2xl font-bold text-foreground">Edit Business</h1>
       <p className="mb-6 text-muted-foreground">Update your business details below.</p>
       <div className="rounded-2xl border border-border bg-card p-6">
-        <BusinessForm categories={categories} initial={data.business} photos={data.photos} />
+        <BusinessForm categories={categories} initial={data.business} photos={data.photos} catalogAllowed={data.catalogAllowed} />
       </div>
     </div>
   );

@@ -327,6 +327,8 @@ export type PlanRow = {
   priority_support: boolean;
   analytics_access: boolean;
   banner_ad_slots: number;
+  /** Product catalog (PDF) included. Missing until the catalog-gold-only SQL is applied. */
+  allow_catalog?: boolean;
 };
 
 export type AdSlotRow = {

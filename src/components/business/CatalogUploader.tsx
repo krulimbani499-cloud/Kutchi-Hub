@@ -3,6 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { BUSINESS_PHOTOS_BUCKET, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, getBusinessPhotoStorageKey } from "@/lib/business-photos";
+import { toast } from "sonner";
+import {
+  CATALOG_PLAN_MESSAGE,
+  EDIT_LOCKED_MESSAGE,
+  friendlyEditError,
+  isCatalogNotAllowedError,
+  isEditLockedError,
+} from "@/lib/edit-lock";
 
 interface CatalogUploaderProps {
   businessId: string;
@@ -42,11 +50,14 @@ export function CatalogUploader({ businessId, initialUrl, initialName }: Catalog
         .upload(key, file, { cacheControl: "3600", upsert: false, contentType: "application/pdf" });
       if (upErr) throw new Error(upErr.message);
 
-      const { error: rowErr } = await supabase
+      const { data: rows, error: rowErr } = await supabase
         .from("businesses")
         .update({ catalog_url: key, catalog_name: file.name })
-        .eq("id", businessId);
+        .eq("id", businessId)
+        .select("id");
       if (rowErr) throw new Error(rowErr.message);
+      // The database skips an update it refuses (no active plan) without an error: zero rows.
+      if (!rows || rows.length === 0) throw new Error(EDIT_LOCKED_MESSAGE);
 
       const oldKey = getBusinessPhotoStorageKey(catalogUrl);
       if (oldKey) await supabase.storage.from(BUSINESS_PHOTOS_BUCKET).remove([oldKey]);
@@ -54,7 +65,14 @@ export function CatalogUploader({ businessId, initialUrl, initialName }: Catalog
       setCatalogUrl(key);
       setCatalogName(file.name);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
+      // A refused catalog upload on a plan without the catalog (Silver) gets its own message, not the "no plan" one.
+      if (isCatalogNotAllowedError(e) || (isEditLockedError(e) && !(e instanceof Error && e.message.includes(EDIT_LOCKED_MESSAGE)))) {
+        setError(CATALOG_PLAN_MESSAGE);
+        toast.error(CATALOG_PLAN_MESSAGE);
+      } else {
+        setError(friendlyEditError(e, e instanceof Error ? e.message : "Upload failed"));
+        if (isEditLockedError(e)) toast.error(EDIT_LOCKED_MESSAGE);
+      }
     } finally {
       setUploading(false);
     }
@@ -63,13 +81,21 @@ export function CatalogUploader({ businessId, initialUrl, initialName }: Catalog
   const removeCatalog = async () => {
     setError("");
     try {
+      // Business row first: if the database refuses (no active plan) nothing is deleted.
+      const { data: rows, error: rowErr } = await supabase
+        .from("businesses")
+        .update({ catalog_url: null, catalog_name: null })
+        .eq("id", businessId)
+        .select("id");
+      if (rowErr) throw new Error(rowErr.message);
+      if (!rows || rows.length === 0) throw new Error(EDIT_LOCKED_MESSAGE);
       const key = getBusinessPhotoStorageKey(catalogUrl);
       if (key) await supabase.storage.from(BUSINESS_PHOTOS_BUCKET).remove([key]);
-      await supabase.from("businesses").update({ catalog_url: null, catalog_name: null }).eq("id", businessId);
       setCatalogUrl(null);
       setCatalogName(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      setError(friendlyEditError(e, e instanceof Error ? e.message : "Delete failed"));
+      if (isEditLockedError(e)) toast.error(EDIT_LOCKED_MESSAGE);
     }
   };
 

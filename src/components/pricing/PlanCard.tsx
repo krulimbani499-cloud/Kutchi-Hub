@@ -1,4 +1,4 @@
-import { Check, Crown, Award, Shield, Sparkles } from "lucide-react";
+import { Check, Crown, Award, Shield, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { PlanRow } from "@/lib/plans.functions";
@@ -62,6 +62,22 @@ export function PlanCard({ plan, cycle, onSelect }: Props) {
             <span>{f}</span>
           </li>
         ))}
+        {/* Product catalog (PDF): shown from the plan's allow_catalog flag. Hidden when the flag is missing (SQL not applied)
+            or when the feature list already mentions a catalog. */}
+        {plan.allow_catalog !== undefined && !(plan.features ?? []).some((f) => /catalog/i.test(f)) && (
+          plan.allow_catalog ? (
+            <li className="flex items-start gap-2 text-sm text-foreground">
+              <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#ff6a00]" />
+              <span>Product catalog (PDF)</span>
+            </li>
+          ) : (
+            <li className="flex items-start gap-2 text-sm text-muted-foreground">
+              <X className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <span className="line-through">Product catalog (PDF)</span>
+              <span className="sr-only">not included</span>
+            </li>
+          )
+        )}
       </ul>
 
       <Button

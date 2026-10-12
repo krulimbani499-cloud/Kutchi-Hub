@@ -1135,6 +1135,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      business_can_use_catalog: {
+        Args: { _business_id: string }
+        Returns: boolean
+      }
+      business_owner_can_edit: {
+        Args: { _business_id: string }
+        Returns: boolean
+      }
       business_visible_to_caller: {
         Args: { _business_id: string }
         Returns: boolean

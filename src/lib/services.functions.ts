@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
+import { EDIT_LOCKED_MESSAGE, friendlyEditError } from "./edit-lock";
 
 export const listBusinessServices = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
@@ -51,7 +52,8 @@ export const upsertBusinessService = createServerFn({ method: "POST" })
         .eq("id", data.id)
         .select("*")
         .single();
-      if (error) throw new Error(error.message);
+      // An update the database refuses (owner without an active plan) comes back as "no row": friendly message.
+      if (error) throw new Error(friendlyEditError(error, error.message));
       return row;
     }
     const { data: row, error } = await context.supabase
@@ -59,7 +61,7 @@ export const upsertBusinessService = createServerFn({ method: "POST" })
       .insert(payload)
       .select("*")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(friendlyEditError(error, error.message));
     return row;
   });
 
@@ -67,10 +69,16 @@ export const deleteBusinessService = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { data: deleted, error } = await context.supabase
       .from("business_services")
       .delete()
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+      .eq("id", data.id)
+      .select("id");
+    if (error) throw new Error(friendlyEditError(error, error.message));
+    if (!deleted || deleted.length === 0) {
+      // Zero rows: either it is already gone, or the database refused the delete (no active plan).
+      const { data: stillThere } = await context.supabase.from("business_services").select("id").eq("id", data.id).maybeSingle();
+      if (stillThere) throw new Error(EDIT_LOCKED_MESSAGE);
+    }
     return { success: true };
   });

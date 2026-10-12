@@ -5,11 +5,8 @@ import { PlanCard } from "@/components/pricing/PlanCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BASE_URL } from "@/lib/seo";
-import { CONTACT_EMAIL } from "@/lib/contact";
+import { CONTACT_EMAIL, CONTACT_WHATSAPP, CONTACT_PHONE } from "@/lib/contact";
 import { Phone, MessageCircle, Mail, Megaphone } from "lucide-react";
-
-const CONTACT_WHATSAPP = "917359036946"; // Admin can update
-const CONTACT_PHONE = "+91 73590 36946";
 
 const plansQueryOptions = queryOptions({
   queryKey: ["public-plans"],

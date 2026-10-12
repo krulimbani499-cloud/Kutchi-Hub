@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, IndianRupee, Pencil, X } from "lucide-react";
+import { toast } from "sonner";
+import { friendlyEditError } from "@/lib/edit-lock";
 
 type PriceUnit = "fixed" | "starts_at" | "per_hour" | "per_day" | "per_visit" | "per_item";
 
@@ -69,14 +71,21 @@ export function ServicesManager({ businessId }: Props) {
       });
       resetForm();
       await refetch();
+    } catch (e) {
+      // e.g. the database refused the save because the business has no active plan
+      toast.error(friendlyEditError(e, "Could not save service. Please try again."));
     } finally { setBusy(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this service?")) return;
-    await del({ data: { id } });
-    if (editingId === id) resetForm();
-    await refetch();
+    try {
+      await del({ data: { id } });
+      if (editingId === id) resetForm();
+      await refetch();
+    } catch (e) {
+      toast.error(friendlyEditError(e, "Could not delete service. Please try again."));
+    }
   };
 
   return (
