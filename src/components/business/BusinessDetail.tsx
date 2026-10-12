@@ -303,14 +303,15 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                 <div className="min-w-0">
                   <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-xl font-extrabold text-foreground sm:gap-2 sm:text-2xl">
-                    <span className="min-w-0 truncate">{business.name}</span>
+                    {/* Full name, wrapping onto as many lines as it needs (never cut off). */}
+                    <span className="min-w-0 max-w-full break-words">{business.name}</span>
                     {business.verified && (
                       <span className="inline-flex max-w-full shrink-0 items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-200 sm:px-2 sm:text-xs">
                         <BadgeCheck className="h-3.5 w-3.5" /> Verified
                       </span>
                     )}
                   </h1>
-                  <p className="mt-1 truncate text-xs text-muted-foreground sm:text-sm">
+                  <p className="mt-1 break-words text-xs text-muted-foreground sm:text-sm">
                     {business.categories?.name} · {business.city}
                   </p>
                 </div>
@@ -319,7 +320,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   <span className="inline-flex items-center gap-1 rounded-md bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white sm:px-2 sm:py-1 sm:text-sm">
                     {avgRating.toFixed(1)} <Star className="h-3.5 w-3.5 fill-white" />
                   </span>
-                  <span className="max-w-16 truncate text-[11px] text-muted-foreground sm:max-w-none sm:text-xs">{reviewCount} Ratings</span>
+                  <span className="whitespace-nowrap text-[11px] text-muted-foreground sm:text-xs">{reviewCount} Ratings</span>
                 </div>
               </div>
 
@@ -338,13 +339,16 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {/* Action buttons: a 2x2 grid, switching to one row of 4 only when the panel is wide enough (>= 32rem)
+                for every label to fit. Never 3 + 1. */}
+            <div className="@container">
+            <div className="grid grid-cols-2 gap-2 @[32rem]:grid-cols-4">
               {callNumbers.length === 2 ? (
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button className="h-10 min-w-0 bg-[#ff6a00] px-2 text-white hover:bg-[#e65a00] sm:h-11">
                       <Phone className="mr-1 h-4 w-4 shrink-0" />
-                      <span className="truncate text-xs sm:text-sm">Call</span>
+                      <span className="whitespace-nowrap text-xs sm:text-sm">Call</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="start" className="w-56 p-1">
@@ -365,7 +369,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 <Button asChild className="h-10 min-w-0 bg-[#ff6a00] px-2 text-white hover:bg-[#e65a00] sm:h-11">
                   <a href={`tel:${callNumbers[0]}`} onClick={() => trackClick("call_click")} className="flex items-center justify-center">
                     <Phone className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-xs sm:text-sm">Call</span>
+                    <span className="whitespace-nowrap text-xs sm:text-sm">Call</span>
                   </a>
                 </Button>
               ) : null}
@@ -379,7 +383,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     className="flex items-center justify-center"
                   >
                     <MessageSquare className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-xs sm:text-sm">WhatsApp</span>
+                    <span className="whitespace-nowrap text-xs sm:text-sm">WhatsApp</span>
                   </a>
                 </Button>
               )}
@@ -387,7 +391,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 <Button asChild variant="outline" className="h-10 min-w-0 px-2 sm:h-11">
                   <a href={mapsHref} target="_blank" rel="noreferrer" onClick={() => trackClick("direction_click")} className="flex items-center justify-center">
                     <Navigation className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-xs sm:text-sm">Directions</span>
+                    <span className="whitespace-nowrap text-xs sm:text-sm">Directions</span>
                   </a>
                 </Button>
               )}
@@ -395,17 +399,18 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 <Button asChild variant="outline" className="h-10 min-w-0 px-2 sm:h-11">
                   <a href={business.website} target="_blank" rel="noreferrer" onClick={() => trackClick("website_click")} className="flex items-center justify-center">
                     <Globe className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-xs sm:text-sm">Website</span>
+                    <span className="whitespace-nowrap text-xs sm:text-sm">Website</span>
                   </a>
                 </Button>
               ) : business.email ? (
                 <Button asChild variant="outline" className="h-10 min-w-0 px-2 sm:h-11">
                   <a href={`mailto:${business.email}`} className="flex items-center justify-center">
                     <Mail className="mr-1 h-4 w-4 shrink-0" />
-                    <span className="truncate text-xs sm:text-sm">Email</span>
+                    <span className="whitespace-nowrap text-xs sm:text-sm">Email</span>
                   </a>
                 </Button>
               ) : null}
+            </div>
             </div>
 
             {!isOwner && (

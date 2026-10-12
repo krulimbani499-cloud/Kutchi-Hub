@@ -108,7 +108,8 @@ export function BusinessCard({ business, delayMs }: BusinessCardProps) {
       </div>
       <div className="flex flex-1 flex-col p-3 sm:p-4">
         <div className="mb-1 flex items-start justify-between gap-2">
-          <h3 className="line-clamp-1 text-sm font-semibold text-foreground sm:text-base">{business.name}</h3>
+          {/* Up to 2 lines (never a 1-line "…"); the full name is in the tooltip / long-press title. */}
+          <h3 title={business.name} className="min-w-0 line-clamp-2 break-words text-sm font-semibold text-foreground sm:text-base">{business.name}</h3>
           <div className="flex shrink-0 items-center gap-1 rounded bg-rating/10 px-1.5 py-0.5 text-xs font-medium text-rating">
             <Star className="h-3 w-3 fill-rating text-rating" />
             {(business.avgRating ?? 0).toFixed(1)}

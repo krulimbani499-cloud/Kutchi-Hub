@@ -120,7 +120,7 @@ export function PlansRevenueOverview({
                 {data.noPlan.map((b) => (
                   <li key={b.id} className="flex items-center justify-between gap-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{b.name}</p>
+                      <p className="break-words text-sm font-medium text-foreground">{b.name}</p>
                       <p className="text-xs text-muted-foreground">{b.city ?? "—"}</p>
                     </div>
                     <Button size="sm" variant="outline"
@@ -145,7 +145,7 @@ export function PlansRevenueOverview({
               {data.renewals.map((r) => (
                 <li key={r.subscriptionId} className="flex items-center justify-between gap-3 py-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{r.businessName}</p>
+                    <p className="break-words text-sm font-medium text-foreground">{r.businessName}</p>
                     <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <Badge variant="outline">{r.planName}</Badge>
                       Expires {new Date(r.expiresAt).toLocaleDateString("en-IN")}

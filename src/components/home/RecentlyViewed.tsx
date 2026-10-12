@@ -38,7 +38,7 @@ export function RecentlyViewed() {
                 )}
               </div>
               <div className="p-2">
-                <p className="line-clamp-1 text-xs font-semibold text-foreground">{b.name}</p>
+                <p title={b.name} className="line-clamp-2 break-words text-xs font-semibold text-foreground">{b.name}</p>
                 <p className="line-clamp-1 text-[10px] text-muted-foreground">
                   {b.category ?? "Business"}
                   {b.city ? ` · ${b.city}` : ""}

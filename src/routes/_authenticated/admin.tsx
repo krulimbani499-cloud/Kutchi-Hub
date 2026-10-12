@@ -188,7 +188,7 @@ function AdminPage() {
               <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
                 <div className="min-w-0 flex-1">
                   <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
-                    <span className="truncate">{b.name}</span>
+                    <span className="min-w-0 break-words">{b.name}</span>
                     {b.categoryName ? <Badge variant="outline">{b.categoryName}</Badge> : null}
                   </CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -1092,7 +1092,7 @@ function VerifyBusinessesAdmin() {
                 <li key={b.id} className="flex flex-wrap items-center gap-3 p-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate font-medium text-foreground">{b.name}</span>
+                      <span className="min-w-0 break-words font-medium text-foreground">{b.name}</span>
                       {b.verified && (
                         <Badge className="bg-blue-600 text-white hover:bg-blue-600">
                           <BadgeCheck className="mr-1 h-3 w-3" /> Verified
