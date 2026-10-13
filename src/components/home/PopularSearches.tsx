@@ -1,17 +1,21 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { pickEmoji } from "@/components/business/CategoryGrid";
+import { SafeImage } from "@/components/business/SafeImage";
 
 type Category = {
   id: string;
   name: string;
   slug: string;
+  icon?: string | null;
+  icon_url?: string | null;
   popular_image_url?: string | null;
   popular_featured?: boolean | null;
 };
 
-// Manual image overrides for specific category slugs. Everything else falls
-// back to a keyword-based loremflickr photo.
+// Fixed photos for a few category slugs (always the same image). Every other category uses
+// its uploaded icon or emoji (see PopularCardMedia) — there is no random / stock-photo fallback.
 const IMAGE_OVERRIDES: Record<string, string> = {
   hotels:
     "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
@@ -37,13 +41,47 @@ const IMAGE_OVERRIDES: Record<string, string> = {
     "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=800&q=80",
 };
 
-function imageFor(cat: Category) {
-  if (cat.popular_image_url && cat.popular_image_url.trim().length > 0) {
-    return cat.popular_image_url;
+/**
+ * The picture of a card, first match wins:
+ *   1. popular_image_url set in admin
+ *   2. one of the fixed photos above (our own code, always the same image)
+ *   3. the category's uploaded icon, centred on a soft tinted background
+ *   4. the same emoji the category grid shows
+ * A photo or icon that fails to load drops to the next option (never a random or empty picture).
+ */
+function PopularCardMedia({ cat }: { cat: Category }) {
+  const photo = cat.popular_image_url?.trim() || IMAGE_OVERRIDES[cat.slug] || null;
+  const icon = cat.icon_url?.trim() || null;
+  // Remember WHICH url failed (not just "something failed"), so a changed url is tried again.
+  const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
+  const [failedIcon, setFailedIcon] = useState<string | null>(null);
+
+  if (photo && failedPhoto !== photo) {
+    return (
+      <SafeImage
+        src={photo}
+        alt={cat.name}
+        loading="lazy"
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        onFail={() => setFailedPhoto(photo)}
+      />
+    );
   }
   return (
-    IMAGE_OVERRIDES[cat.slug] ??
-    `https://loremflickr.com/480/320/${encodeURIComponent(cat.name)}?lock=${cat.id.slice(0, 8)}`
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100/70">
+      {icon && failedIcon !== icon ? (
+        <SafeImage
+          src={icon}
+          loading="lazy"
+          className="h-20 w-20 object-contain transition-transform duration-500 group-hover:scale-110"
+          onFail={() => setFailedIcon(icon)}
+        />
+      ) : (
+        <span aria-hidden className="text-6xl leading-none">
+          {pickEmoji(cat.icon ?? null, cat.slug, cat.name)}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -82,15 +120,7 @@ export function PopularSearches({ categories }: { categories: Category[] }) {
               style={{ width: "240px" }}
             >
               <div className="relative h-40 w-full overflow-hidden bg-muted">
-                <img
-                  src={imageFor(cat)}
-                  alt={cat.name}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                  }}
-                />
+                <PopularCardMedia cat={cat} />
               </div>
               <div className="bg-[#1a73e8] p-3 text-white">
                 <p className="line-clamp-1 text-sm font-semibold">{cat.name}</p>

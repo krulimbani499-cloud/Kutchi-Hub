@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Tables } from "@/integrations/supabase/types";
+import { SafeImage } from "./SafeImage";
 
 // Colorful emoji icons in JustDial style — mapped by icon key or category slug/name.
 const emojiMap: Record<string, string> = {
@@ -102,7 +104,8 @@ const keywordMap: Array<[RegExp, string]> = [
   [/govern|municip|office/, "🏛️"],
 ];
 
-function pickEmoji(icon: string | null, slug: string, name?: string) {
+// Shared with the home "Popular Searches" row, so both show the same emoji for a category without an image.
+export function pickEmoji(icon: string | null, slug: string, name?: string) {
   const direct =
     emojiMap[icon ?? ""] ??
     emojiMap[slug] ??
@@ -121,6 +124,17 @@ interface CategoryGridProps {
   size?: "sm" | "md";
 }
 
+/** The uploaded icon, or the emoji when there is no icon or the image fails to load. */
+function CategoryTileIcon({ category }: { category: Tables<"categories"> }) {
+  const iconUrl = (category as unknown as { icon_url?: string | null }).icon_url?.trim() || null;
+  // Remember WHICH url failed, so a changed url is tried again.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  if (iconUrl && failedUrl !== iconUrl) {
+    return <SafeImage src={iconUrl} className="h-10 w-10 object-contain" onFail={() => setFailedUrl(iconUrl)} />;
+  }
+  return <span aria-hidden>{pickEmoji(category.icon, category.slug, category.name)}</span>;
+}
+
 export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
   const sizeClasses =
     size === "sm"
@@ -130,8 +144,6 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
   return (
     <div className={`grid gap-3 ${sizeClasses}`}>
       {categories.map((category) => {
-        const iconUrl = (category as unknown as { icon_url?: string | null }).icon_url;
-        const emoji = pickEmoji(category.icon, category.slug, category.name);
         return (
           <Link
             key={category.id}
@@ -140,11 +152,7 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
             className="group flex min-w-0 flex-col items-center gap-2 rounded-2xl border border-border bg-card p-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:p-4"
           >
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/60 text-3xl leading-none">
-              {iconUrl ? (
-                <img src={iconUrl} alt="" className="h-10 w-10 object-contain" />
-              ) : (
-                <span aria-hidden>{emoji}</span>
-              )}
+              <CategoryTileIcon category={category} />
             </div>
             <span className="w-full truncate text-xs font-medium leading-tight text-foreground sm:text-sm">{category.name}</span>
           </Link>
