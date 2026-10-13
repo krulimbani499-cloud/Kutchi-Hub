@@ -7,6 +7,7 @@ import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
 import { EDIT_LOCKED_MESSAGE, friendlyEditError } from "./edit-lock";
+import { compareCategoryName } from "./category-sort";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -531,6 +532,64 @@ export const adminDeleteBannerAd = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const HOME_CATEGORY_TILES = 12;
+
+/**
+ * Number of PUBLISHED businesses per category, optionally only in one city (same exact, case-insensitive
+ * match as the banners). One query shape, paged because PostgREST returns at most 1000 rows per request.
+ */
+async function countPublishedByCategory(supabase: ReturnType<typeof createServerSupabaseClient>, city?: string) {
+  const PAGE = 1000;
+  const counts = new Map<string, number>();
+  for (let from = 0; ; from += PAGE) {
+    let query = supabase
+      .from("businesses")
+      .select("category_id")
+      .eq("status", "published")
+      .not("category_id", "is", null)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (city) query = query.ilike("city", exactIlike(city));
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    for (const row of data ?? []) {
+      if (row.category_id) counts.set(row.category_id, (counts.get(row.category_id) ?? 0) + 1);
+    }
+    if ((data ?? []).length < PAGE) break;
+  }
+  return counts;
+}
+
+/** Categories with at least one business, most businesses first, ties A–Z by name. */
+function rankByCount<T extends { id: string; name: string }>(categories: T[], counts: Map<string, number>) {
+  return categories
+    .filter((c) => (counts.get(c.id) ?? 0) > 0)
+    .map((c) => ({ ...c, businessCount: counts.get(c.id) as number }))
+    .sort((a, b) => b.businessCount - a.businessCount || compareCategoryName(a, b));
+}
+
+/**
+ * Popular Categories: the selected city's ranking first; if it has fewer categories than `limit`, the rest
+ * is filled with the overall (all cities) ranking, without repeats.
+ * `businessCount` (shown on the tile) is set for tiles counted in the selected city, and for every tile when no
+ * city is selected. Fill-in tiles have no `businessCount`, so they show no number.
+ */
+function rankPopularCategories<T extends { id: string; name: string }>(
+  categories: T[],
+  cityCounts: Map<string, number> | null,
+  overallCounts: Map<string, number>,
+  limit: number,
+): Array<T & { businessCount?: number }> {
+  if (!cityCounts) return rankByCount(categories, overallCounts).slice(0, limit);
+  const picked: Array<T & { businessCount?: number }> = rankByCount(categories, cityCounts).slice(0, limit);
+  if (picked.length >= limit) return picked;
+  const taken = new Set(picked.map((c) => c.id));
+  const fill = rankByCount(categories, overallCounts)
+    .filter((c) => !taken.has(c.id))
+    .map(({ businessCount: _overall, ...category }) => category as unknown as T);
+  return [...picked, ...fill].slice(0, limit);
+}
+
 export const getHomeData = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z.object({ city: z.string().optional() }).optional().parse(input) ?? {},
@@ -570,12 +629,24 @@ export const getHomeData = createServerFn({ method: "GET" })
       .limit(8);
     if (city) offersQuery = offersQuery.ilike("city", city);
 
-    const [{ data: categories }, { data: featured }, { data: offers }, { data: spotlight }] = await Promise.all([
-      supabase.from("categories").select("*").order("display_order", { ascending: true }).limit(12),
+    // Popular Categories are ranked by published businesses: in the selected city first, then (to fill the
+    // tiles) overall. Two count queries run in parallel with the rest — never one query per category.
+    const [
+      { data: allCategories },
+      { data: featured },
+      { data: offers },
+      { data: spotlight },
+      cityCounts,
+      overallCounts,
+    ] = await Promise.all([
+      supabase.from("categories").select("*").order("display_order", { ascending: true }),
       featuredQuery,
       offersQuery,
       spotlightQuery,
+      city ? countPublishedByCategory(supabase, city) : Promise.resolve(null),
+      countPublishedByCategory(supabase),
     ]);
+    const categories = rankPopularCategories(allCategories ?? [], cityCounts, overallCounts, HOME_CATEGORY_TILES);
 
   const businessIds = Array.from(
     new Set([
@@ -625,7 +696,7 @@ export const getHomeData = createServerFn({ method: "GET" })
       };
     });
 
-    return { categories: categories ?? [], featured: listings, topOffers, platinumSpotlight };
+    return { categories, featured: listings, topOffers, platinumSpotlight };
   });
 
 // Personalized recommendations based on the user's recently-viewed categories.

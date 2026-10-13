@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { sortCategoriesAZ } from "@/lib/category-sort";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { getCategories } from "@/lib/businesses.functions";
@@ -27,7 +29,8 @@ export const Route = createFileRoute("/categories")({
 });
 
 function CategoriesPage() {
-  const { data: categories } = useSuspenseQuery(categoriesQueryOptions);
+  const { data } = useSuspenseQuery(categoriesQueryOptions);
+  const categories = useMemo(() => sortCategoriesAZ(data), [data]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">

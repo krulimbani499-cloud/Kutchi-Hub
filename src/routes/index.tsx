@@ -254,16 +254,7 @@ function HomePage() {
         </div>
       </ScrollReveal>
 
-      {/* Nearby businesses (uses device location) */}
-      <Suspense fallback={null}><NearbyBusinesses /></Suspense>
-
-      {/* Recently viewed (localStorage) */}
-      <Suspense fallback={null}><RecentlyViewed /></Suspense>
-
-      {/* Personalized recommendations */}
-      <Suspense fallback={null}><ForYou /></Suspense>
-
-      {/* Categories — clean icon grid, JD style */}
+      {/* Categories — clean icon grid, JD style. Ranked by published businesses in the selected city (see getHomeData). */}
       <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
         <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -283,6 +274,15 @@ function HomePage() {
           )}
         </div>
       </ScrollReveal>
+
+      {/* Nearby businesses (uses device location) */}
+      <Suspense fallback={null}><NearbyBusinesses /></Suspense>
+
+      {/* Recently viewed (localStorage) */}
+      <Suspense fallback={null}><RecentlyViewed /></Suspense>
+
+      {/* Personalized recommendations */}
+      <Suspense fallback={null}><ForYou /></Suspense>
 
       {/* Platinum Spotlight — auto-showcase for Platinum/Enterprise plans */}
       {home && home.platinumSpotlight && home.platinumSpotlight.length > 0 && (

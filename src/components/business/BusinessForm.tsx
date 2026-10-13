@@ -23,6 +23,7 @@ import { ServicesManager } from "./ServicesManager";
 import { ProductsManager } from "./ProductsManager";
 import type { Tables } from "@/integrations/supabase/types";
 import { slugify, slugifyInput, ensureSlug } from "@/lib/slug";
+import { sortCategoriesAZ } from "@/lib/category-sort";
 import { isValidIndianMobile, PHONE_ERROR } from "@/lib/phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "@/lib/url";
 import { EDIT_LOCKED_MESSAGE, friendlyEditError, isEditLockedError } from "@/lib/edit-lock";
@@ -232,7 +233,7 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
-            {categoryList.map((cat) => (
+            {sortCategoriesAZ(categoryList).map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 {cat.name}
               </SelectItem>

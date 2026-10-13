@@ -18,6 +18,7 @@ import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X, Tag } from "luci
 import { useEffect, useMemo, useState } from "react";
 import { useCity } from "@/hooks/useCity";
 import { CategoryBanner } from "@/components/category/CategoryBanner";
+import { sortCategoriesAZ } from "@/lib/category-sort";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BusinessCardSkeletonGrid, ListingPageSkeleton } from "@/components/layout/PageSkeleton";
 
@@ -60,7 +61,7 @@ function SearchPage() {
     sort?: string;
   };
   const { data: categoriesData, isPending: categoriesPending } = useQuery(categoriesQueryOptions);
-  const categories = useMemo(() => categoriesData ?? [], [categoriesData]);
+  const categories = useMemo(() => sortCategoriesAZ(categoriesData ?? []), [categoriesData]);
   const { city: selectedCity } = useCity();
   const initialCity = city ?? selectedCity ?? "";
   const [filters, setFilters] = useState({

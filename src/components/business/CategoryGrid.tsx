@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Tables } from "@/integrations/supabase/types";
+import { useT } from "@/lib/i18n";
 import { SafeImage } from "./SafeImage";
 
 // Colorful emoji icons in JustDial style — mapped by icon key or category slug/name.
@@ -119,8 +120,11 @@ export function pickEmoji(icon: string | null, slug: string, name?: string) {
   return "📍";
 }
 
+/** `businessCount` is only set where the grid should show "N businesses" (home Popular Categories). */
+type GridCategory = Tables<"categories"> & { businessCount?: number };
+
 interface CategoryGridProps {
-  categories: Tables<"categories">[];
+  categories: GridCategory[];
   size?: "sm" | "md";
 }
 
@@ -136,6 +140,8 @@ function CategoryTileIcon({ category }: { category: Tables<"categories"> }) {
 }
 
 export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
+  const t = useT();
+  const hasCounts = categories.some((c) => c.businessCount !== undefined);
   const sizeClasses =
     size === "sm"
       ? "grid-cols-2 sm:grid-cols-3"
@@ -154,7 +160,21 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/60 text-3xl leading-none">
               <CategoryTileIcon category={category} />
             </div>
-            <span className="w-full truncate text-xs font-medium leading-tight text-foreground sm:text-sm">{category.name}</span>
+            {/* Up to 2 lines, never cut with "…". min-h reserves both lines so every tile has the same height. */}
+            <span
+              title={category.name}
+              className="line-clamp-2 min-h-[2.5em] w-full break-words text-xs font-medium leading-tight text-foreground sm:text-sm"
+            >
+              {category.name}
+            </span>
+            {category.businessCount !== undefined ? (
+              <span className="-mt-1 w-full truncate text-[11px] leading-tight text-muted-foreground">
+                {category.businessCount} {category.businessCount === 1 ? t("home.business1") : t("home.businessN")}
+              </span>
+            ) : (
+              // Tiles without a number (city fill-ins) keep the line's height so the grid stays even.
+              hasCounts && <span aria-hidden className="-mt-1 text-[11px] leading-tight">&nbsp;</span>
+            )}
           </Link>
         );
       })}
