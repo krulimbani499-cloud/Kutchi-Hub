@@ -2,6 +2,7 @@
 // The reverse geocoding itself runs on the server (reverseGeocodeCity in maps.functions.ts).
 // Client-only: never call from a loader or server function.
 import type { GeocodeCandidates } from "./geocode";
+import { INDIAN_CITIES } from "./cities";
 
 export interface GeolocationResult {
   latitude: number;
@@ -101,7 +102,16 @@ const DISTRICT_ALIASES: Record<string, { district: string; city: string }> = {
   vadgam: { district: "aravalli", city: "Vadagam (Aravalli)" },
 };
 
-function cleanPlaceName(value: string): string {
+/** Listed cities a typed spelling variant stands for ("dehg" -> Dahegam), so typing the Google spelling finds ours. */
+export function cityAliasTargets(typed: string): string[] {
+  const q = cleanPlaceName(typed);
+  if (q.length < 2) return [];
+  return Object.entries(CITY_ALIASES)
+    .filter(([alias]) => alias.startsWith(q))
+    .map(([, city]) => city);
+}
+
+export function cleanPlaceName(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -109,6 +119,52 @@ function cleanPlaceName(value: string): string {
     .replace(/\b(taluka|taluk|tehsil|tahsil|district|dist|municipal corporation|nagar palika|city)\b/g, " ")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+/**
+ * Maps one Google place name to the spelling our businesses use: the district rule ("Vadagam" in Aravalli),
+ * the spelling aliases (Dehgam -> Dahegam) or an exact listed name. Null when it is none of those.
+ */
+export function normalizeToListedCity(raw: string, district: string | null, cities: string[]): string | null {
+  const key = cleanPlaceName(raw);
+  const scoped = DISTRICT_ALIASES[key];
+  if (scoped && district && scoped.district === cleanPlaceName(district) && cities.includes(scoped.city)) return scoped.city;
+  const byName = new Map(cities.map((c) => [cleanPlaceName(c), c]));
+  return byName.get(key) ?? CITY_ALIASES[key] ?? null;
+}
+
+/**
+ * The spelling our businesses use for a typed city: the spelling aliases (Dehgam -> Dahegam) and listed names
+ * are applied, anything else is returned as typed. The district rule is NOT applied (no district is known),
+ * so "Vadagam" stays "Vadagam" and never turns into "Vadagam (Aravalli)".
+ */
+export function canonicalCityName(city: string): string {
+  return normalizeToListedCity(city, null, INDIAN_CITIES) ?? city.trim();
+}
+
+/** A picked autocomplete result ("Hanspura, Vasant Vihar 2, Nava Naroda") -> the city name to store. */
+export function cityFromPickedPlace(mainText: string, district: string | null, cities: string[]): string {
+  const name = mainText.split(",")[0].trim() || mainText.trim();
+  return normalizeToListedCity(name, district, cities) ?? name;
+}
+
+/**
+ * "Use my location": the MOST SPECIFIC place Google returns. A listed suburb / village wins (with the
+ * spelling aliases and the district rule applied, so existing businesses keep matching); otherwise the
+ * town or village itself ("Vadagam"), even when it is not in our list; only then the taluka.
+ * Suburbs that are not in our list (e.g. "Satellite") are skipped in favour of their town (Ahmedabad).
+ */
+export function resolveDetectedCity(
+  place: Pick<GeocodeCandidates, "district" | "localNames" | "locality" | "fallback" | "names">,
+  cities: string[],
+): string | null {
+  for (const raw of place.localNames) {
+    const hit = normalizeToListedCity(raw, place.district, cities);
+    if (hit) return hit;
+  }
+  const own = place.locality ?? place.localNames[0];
+  if (own) return own.trim();
+  return place.fallback ?? place.names[0] ?? null;
 }
 
 /**

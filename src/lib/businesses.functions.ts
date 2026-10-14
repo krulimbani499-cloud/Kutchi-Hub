@@ -8,6 +8,7 @@ import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
 import { EDIT_LOCKED_MESSAGE, friendlyEditError } from "./edit-lock";
 import { compareCategoryName } from "./category-sort";
+import { canonicalCityName } from "./geolocation";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -92,7 +93,9 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     }
 
     if (data.city && data.city !== "all") {
-      query = query.ilike("city", `%${data.city}%`);
+      // Same exact, case-insensitive match as the home page (so "Vadagam" never shows "Vadagam (Aravalli)").
+      // Spelling aliases still apply: typing "Dehgam" finds the businesses saved as "Dahegam".
+      query = query.ilike("city", exactIlike(canonicalCityName(data.city)));
     }
 
     if (data.hasDiscount) {

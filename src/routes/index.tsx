@@ -36,6 +36,7 @@ import tileDoctors from "@/assets/tile-doctors.jpg";
 import { useCity } from "@/hooks/useCity";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { HorizontalCardRow } from "@/components/home/HorizontalCardRow";
+import { CityCoverageCard } from "@/components/home/CityCoverageCard";
 import { BASE_URL, ldScript, breadcrumbLd } from "@/lib/seo";
 import { useT } from "@/lib/i18n";
 
@@ -71,7 +72,7 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const { city } = useCity();
+  const { city, coords: cityCoords } = useCity();
   const t = useT();
   const { data: home } = useQuery(homeQueryOptions(city ?? undefined));
   const [search, setSearch] = useState("");
@@ -243,13 +244,19 @@ function HomePage() {
             ))}
           </HorizontalCardRow>
         ) : (
-          <div className="rounded-xl border border-dashed border-border p-8 text-center">
-            <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 text-muted-foreground">{t("home.noFeatured")}</p>
-            <Button className="mt-4 bg-primary text-primary-foreground" asChild>
-              <Link to="/business/new">{t("home.addBusiness")}</Link>
-            </Button>
-          </div>
+          (() => {
+            const empty = (
+              <div className="rounded-xl border border-dashed border-border p-8 text-center">
+                <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
+                <p className="mt-3 text-muted-foreground">{t("home.noFeatured")}</p>
+                <Button className="mt-4 bg-primary text-primary-foreground" asChild>
+                  <Link to="/business/new">{t("home.addBusiness")}</Link>
+                </Button>
+              </div>
+            );
+            // A selected place with no business at all: suggest the nearest cities that have some.
+            return city ? <CityCoverageCard city={city} coords={cityCoords} fallback={empty} /> : empty;
+          })()
         )}
         </div>
       </ScrollReveal>

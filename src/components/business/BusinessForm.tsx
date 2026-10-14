@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createBusiness, updateBusiness, createCategory } from "@/lib/businesses.functions";
+import { CityAutocomplete } from "./CityAutocomplete";
 import { PhotoUploader } from "./PhotoUploader";
 import { CatalogUploader } from "./CatalogUploader";
 import { CatalogUpgradeCard } from "./CatalogUpgradeCard";
@@ -311,7 +312,7 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
         </div>
         <div className="space-y-2">
           <Label htmlFor="city">City *</Label>
-          <Input id="city" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} required />
+          <CityAutocomplete id="city" value={form.city} onChange={(city) => setForm((f) => ({ ...f, city }))} required />
           {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
         </div>
         <div className="space-y-2">

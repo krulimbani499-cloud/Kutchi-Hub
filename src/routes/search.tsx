@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useCity } from "@/hooks/useCity";
 import { CategoryBanner } from "@/components/category/CategoryBanner";
 import { sortCategoriesAZ } from "@/lib/category-sort";
+import { CityCoverageCard } from "@/components/home/CityCoverageCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BusinessCardSkeletonGrid, ListingPageSkeleton } from "@/components/layout/PageSkeleton";
 
@@ -62,7 +63,7 @@ function SearchPage() {
   };
   const { data: categoriesData, isPending: categoriesPending } = useQuery(categoriesQueryOptions);
   const categories = useMemo(() => sortCategoriesAZ(categoriesData ?? []), [categoriesData]);
-  const { city: selectedCity } = useCity();
+  const { city: selectedCity, coords: selectedCoords, setCity } = useCity();
   const initialCity = city ?? selectedCity ?? "";
   const [filters, setFilters] = useState({
     q: q ?? "",
@@ -289,11 +290,36 @@ function SearchPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-border bg-card p-8 text-center">
-              <p className="text-muted-foreground">
-                {anyChip ? "No businesses match these filters. Try clearing some." : "No businesses found matching your search."}
-              </p>
-            </div>
+            (() => {
+              const empty = (
+                <div className="rounded-2xl border border-border bg-card p-8 text-center">
+                  <p className="text-muted-foreground">
+                    {anyChip ? "No businesses match these filters. Try clearing some." : "No businesses found matching your search."}
+                  </p>
+                </div>
+              );
+              // No result for a place that has no business at all: suggest the nearest cities that have some.
+              return applied.city ? (
+                <CityCoverageCard
+                  city={applied.city}
+                  coords={applied.city === selectedCity ? selectedCoords : null}
+                  fallback={empty}
+                  onPick={(next) => {
+                    setCity(next);
+                    setFilters((f) => ({ ...f, city: next }));
+                    setApplied((a) => ({ ...a, city: next }));
+                    const params = new URLSearchParams();
+                    if (applied.q) params.set("q", applied.q);
+                    if (applied.category) params.set("category", applied.category);
+                    params.set("city", next);
+                    if (applied.sort) params.set("sort", applied.sort);
+                    window.history.replaceState({}, "", `/search?${params.toString()}`);
+                  }}
+                />
+              ) : (
+                empty
+              );
+            })()
           )}
         </div>
       </div>

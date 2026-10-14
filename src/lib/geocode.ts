@@ -8,6 +8,10 @@ export type GeocodeCandidates = {
   district: string | null;
   /** Name to use when nothing in our city list matches. */
   fallback: string | null;
+  /** Only the town / village / suburb level names (no taluka or district), most specific first. */
+  localNames: string[];
+  /** The locality (town or village) itself, when Google returns one. */
+  locality: string | null;
 };
 
 type GoogleComponent = { long_name: string; types: string[] };
@@ -30,7 +34,10 @@ const NAME_TYPES = [
   "administrative_area_level_2",
 ] as const;
 
-const EMPTY: GeocodeCandidates = { names: [], district: null, fallback: null };
+// The subset of NAME_TYPES that names a place a person lives in (suburb, village, town), not an administrative area.
+const LOCAL_TYPES = new Set(NAME_TYPES.slice(0, 6));
+
+const EMPTY: GeocodeCandidates = { names: [], district: null, fallback: null, localNames: [], locality: null };
 
 function component(result: { address_components?: GoogleComponent[] }, type: string): string | undefined {
   return result.address_components?.find((c) => c.types.includes(type))?.long_name;
@@ -43,12 +50,17 @@ export function extractGoogleCandidates(body: GoogleGeocodeResponse): GeocodeCan
   if (!best) return EMPTY;
 
   const names: string[] = [];
+  const localNames: string[] = [];
   for (const type of NAME_TYPES) {
     const name = component(best, type);
-    if (name && !names.includes(name)) names.push(name);
+    if (!name) continue;
+    if (!names.includes(name)) names.push(name);
+    if (LOCAL_TYPES.has(type) && !localNames.includes(name)) localNames.push(name);
   }
   return {
     names,
+    localNames,
+    locality: component(best, "locality") ?? null,
     district: component(best, "administrative_area_level_3") ?? component(best, "administrative_area_level_2") ?? null,
     fallback: component(best, "locality") ?? component(best, "administrative_area_level_4") ?? null,
   };

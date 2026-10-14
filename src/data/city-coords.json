@@ -1,0 +1,42 @@
+{
+  "ahmedabad": {
+    "name": "Ahmedabad",
+    "lat": 23.02252,
+    "lng": 72.57129
+  },
+  "dahegam": {
+    "name": "Dahegam",
+    "lat": 23.16372,
+    "lng": 72.81025
+  },
+  "dhansura": {
+    "name": "Dhansura",
+    "lat": 23.34975,
+    "lng": 73.20871
+  },
+  "himatnagar": {
+    "name": "Himatnagar",
+    "lat": 23.59689,
+    "lng": 72.96304
+  },
+  "kapadvanj": {
+    "name": "Kapadvanj",
+    "lat": 23.02002,
+    "lng": 73.07004
+  },
+  "prantij": {
+    "name": "Prantij",
+    "lat": 23.43675,
+    "lng": 72.85281
+  },
+  "sangli": {
+    "name": "Sangli",
+    "lat": 16.85432,
+    "lng": 74.58017
+  },
+  "vadagam (aravalli)": {
+    "name": "Vadagam (Aravalli)",
+    "lat": 23.32722,
+    "lng": 73.13724
+  }
+}
