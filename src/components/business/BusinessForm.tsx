@@ -142,10 +142,10 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
         hours,
       });
       if (initial) {
-        await updateFn({ data: { ...payload, id: initial.id, latitude: null, longitude: null } });
+        await updateFn({ data: { ...payload, id: initial.id } });
         setFormMessage("Business updated successfully.");
       } else {
-        const result = await createFn({ data: { ...payload, latitude: null, longitude: null } });
+        const result = await createFn({ data: { ...payload } });
         // Upload pending image (if any) into the newly created business folder
         if (pendingFile) {
           try {

@@ -1,0 +1,7 @@
+Businesses without coordinates after the backfill (1) — generated 2026-10-14
+These are NOT in 01_update.sql. Fix the Google Maps link or address (a normal save re-resolves it), or add the row by hand.
+
+- Marutinandan Pan and Icecream (Dahegam) [published] id=194a035e-2a14-46f5-8251-837d71310159
+    link: (none)
+    address: Opp. Sabarmati Cng station, ahmedabad road, dahegam
+    why: no Google Maps link and the address could not be geocoded

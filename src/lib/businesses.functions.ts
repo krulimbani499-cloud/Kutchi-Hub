@@ -9,6 +9,10 @@ import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } fro
 import { EDIT_LOCKED_MESSAGE, friendlyEditError } from "./edit-lock";
 import { compareCategoryName } from "./category-sort";
 import { canonicalCityName } from "./geolocation";
+import { resolveCoords } from "./coords.server";
+import { cityKey } from "./places";
+import { NEARBY_WIDE_RADIUS_KM, rankNearby } from "./nearby";
+import cityCentres from "@/data/city-coords.json";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -794,8 +798,8 @@ const businessFormSchema = z.object({
   facebook_url: optionalUrl(SOCIAL_ERROR),
   youtube_url: optionalUrl(SOCIAL_ERROR),
   google_maps_url: requiredUrl(MAPS_ERROR),
-  latitude: z.coerce.number().nullable().optional(),
-  longitude: z.coerce.number().nullable().optional(),
+  // latitude / longitude are NOT accepted from the browser: the server works them out from the map link / address
+  // (see resolveBusinessCoords). Any value sent is dropped by this schema.
   hours: z.record(z.string()).optional(),
   featured_image: z.string().max(1000).optional().or(z.literal("")),
   app_discount_percent: z.coerce.number().int().min(0).max(100).nullable().optional(),
@@ -803,12 +807,37 @@ const businessFormSchema = z.object({
   app_discount_valid_until: z.string().max(20).optional().or(z.literal("")),
 });
 
+/**
+ * Coordinates for the "Nearby Businesses" section, worked out on the server from the Google Maps link
+ * (or the address). Never throws and never takes long: when it can't be resolved the business is saved without them.
+ */
+async function resolveBusinessCoords(
+  fields: { google_maps_url?: string | null; address?: string | null; city?: string | null; state?: string | null },
+  userId: string,
+): Promise<{ latitude: number; longitude: number } | null> {
+  try {
+    const found = await Promise.race([
+      resolveCoords(fields, {
+        geocodeKey: process.env.GOOGLE_MAPS_API_KEY,
+        rateLimitKey: `save:${userId}`,
+        // City centres we already know (src/data/city-coords.json) catch geocoder answers that landed in the wrong town.
+        cityCentre: fields.city ? (cityCentres as Record<string, { lat: number; lng: number }>)[cityKey(fields.city)] : null,
+      }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 9000)),
+    ]);
+    return found ? { latitude: found.lat, longitude: found.lng } : null;
+  } catch {
+    return null;
+  }
+}
+
 export const createBusiness = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => businessFormSchema.parse(input))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase;
     const userId = context.userId;
+    const coords = await resolveBusinessCoords(data, userId);
 
     const { data: existing, error: existingError } = await supabase
       .from("businesses")
@@ -823,6 +852,7 @@ export const createBusiness = createServerFn({ method: "POST" })
       .from("businesses")
       .insert({
         ...data,
+        ...(coords ?? {}),
         owner_id: userId,
         status: "pending",
         phone_secondary: data.phone_secondary || null,
@@ -863,7 +893,7 @@ export const updateBusiness = createServerFn({ method: "POST" })
 
     const { data: existing, error: existingError } = await supabase
       .from("businesses")
-      .select("owner_id")
+      .select("owner_id, google_maps_url, address, city, state, latitude, longitude")
       .eq("id", data.id)
       .maybeSingle();
     if (existingError) throw new Error(existingError.message);
@@ -872,11 +902,28 @@ export const updateBusiness = createServerFn({ method: "POST" })
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     if (existing.owner_id !== userId && !isAdmin) throw new Error("Unauthorized");
 
+    // Work out the coordinates again only when the map link or address changed, or there are none yet.
+    // A changed place whose new location can't be found loses the old (now wrong) coordinates.
+    const same = (a?: string | null, b?: string | null) => (a ?? "").trim() === (b ?? "").trim();
+    const placeChanged =
+      !same(existing.google_maps_url, data.google_maps_url) ||
+      !same(existing.address, data.address) ||
+      !same(existing.city, data.city) ||
+      !same(existing.state, data.state);
+    const hasCoords = existing.latitude != null && existing.longitude != null;
+    let coordsPatch: { latitude: number | null; longitude: number | null } | Record<string, never> = {};
+    if (placeChanged || !hasCoords) {
+      const coords = await resolveBusinessCoords(data, userId);
+      if (coords) coordsPatch = coords;
+      else if (placeChanged) coordsPatch = { latitude: null, longitude: null };
+    }
+
     const { id, ...rest } = data;
     const { data: updatedRows, error } = await supabase
       .from("businesses")
       .update({
         ...rest,
+        ...coordsPatch,
         phone_secondary: rest.phone_secondary || null,
         website: rest.website || null,
         email: rest.email || null,
@@ -1558,20 +1605,21 @@ export const listBusinessDiscountClaims = createServerFn({ method: "GET" })
   });
 
 const nearbySchema = z.object({
-  lat: z.coerce.number(),
-  lng: z.coerce.number(),
-  radiusKm: z.coerce.number().min(1).max(200).optional().default(25),
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
   limit: z.coerce.number().min(1).max(50).optional().default(12),
 });
 
+// Businesses within 25 km; if that gives fewer than 4, the search widens to 50 km (see rankNearby).
 export const getNearbyBusinesses = createServerFn({ method: "GET" })
   .inputValidator((input) => nearbySchema.parse(input))
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
-    const { lat, lng, radiusKm, limit } = data;
-    // ~1 deg latitude ≈ 111km; longitude varies with cos(lat)
-    const latDelta = radiusKm / 111;
-    const lngDelta = radiusKm / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
+    const { lat, lng, limit } = data;
+    // One query for the wide box; the radius is applied below. ~1 deg latitude ≈ 111km; longitude varies with cos(lat)
+    const latDelta = NEARBY_WIDE_RADIUS_KM / 111;
+    const lngDelta = NEARBY_WIDE_RADIUS_KM / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
+    // (NEARBY_* constants and rankNearby live in ./nearby.ts)
 
     const { data: rows, error } = await supabase
       .from("businesses")
@@ -1585,25 +1633,8 @@ export const getNearbyBusinesses = createServerFn({ method: "GET" })
       .lte("latitude", lat + latDelta)
       .gte("longitude", lng - lngDelta)
       .lte("longitude", lng + lngDelta)
-      .limit(100);
+      .limit(500);
     if (error) throw new Error(error.message);
 
-    const toRad = (v: number) => (v * Math.PI) / 180;
-    const haversine = (la: number, ln: number) => {
-      const R = 6371;
-      const dLat = toRad(la - lat);
-      const dLon = toRad(ln - lng);
-      const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(lat)) * Math.cos(toRad(la)) * Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    };
-
-    const withDist = (rows ?? [])
-      .map((b) => ({ ...b, distanceKm: haversine(b.latitude!, b.longitude!) }))
-      .filter((b) => b.distanceKm <= radiusKm)
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, limit);
-
-    return withDist;
+    return rankNearby(rows ?? [], lat, lng, limit);
   });

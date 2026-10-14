@@ -12,6 +12,9 @@ export interface GeolocationResult {
   warning?: string;
 }
 
+/** `denied` is true when the person (or the browser) refused location permission. */
+export type LocationError = Error & { denied?: boolean };
+
 function formatBrowserLocationError(error: GeolocationPositionError): string {
   switch (error.code) {
     case error.PERMISSION_DENIED:
@@ -56,7 +59,9 @@ export async function getCurrentLocation(): Promise<GeolocationResult> {
           source: "gps",
         });
       } else if (err) {
-        reject(new Error(formatBrowserLocationError(err)));
+        const failure: LocationError = new Error(formatBrowserLocationError(err));
+        failure.denied = err.code === err.PERMISSION_DENIED;
+        reject(failure);
       } else {
         reject(new Error("Could not determine your location."));
       }
