@@ -166,7 +166,7 @@ export const adminListSubscriptions = createServerFn({ method: "GET" })
     await assertAdmin(context as never);
     let q = context.supabase
       .from("business_subscriptions" as never)
-      .select("*, plan:plans(name, slug, color), business:businesses(name, slug)")
+      .select("*, plan:plans(name, slug, color), business:businesses(name, slug, city, phone, phone_secondary)")
       .order("created_at", { ascending: false });
     if (data.businessId) q = q.eq("business_id", data.businessId);
     const { data: rows, error } = await q;
@@ -189,7 +189,7 @@ export const adminPlanOverview = createServerFn({ method: "GET" })
         .from("business_subscriptions" as never)
         .select("id, business_id, plan_id, status, billing_cycle, started_at, expires_at, amount_paid, business:businesses(name, city)")
         .limit(1000),
-      context.supabase.from("businesses").select("id, name, city").eq("status", "published").order("name", { ascending: true }).limit(1000),
+      context.supabase.from("businesses").select("id, name, city, phone, phone_secondary").eq("status", "published").order("name", { ascending: true }).limit(1000),
       context.supabase.from("businesses").select("id", { count: "exact", head: true }).eq("status", "pending"),
     ]);
     for (const r of [plansRes, subsRes, publishedRes, pendingRes]) {
@@ -364,5 +364,5 @@ export type SubscriptionRow = {
   notes: string | null;
   created_at: string;
   plan?: { name: string; slug: string; color: string | null } | null;
-  business?: { name: string; slug: string } | null;
+  business?: { name: string; slug: string; city?: string | null; phone?: string | null; phone_secondary?: string | null } | null;
 };

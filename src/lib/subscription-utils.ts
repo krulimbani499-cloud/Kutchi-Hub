@@ -75,12 +75,18 @@ export type OverviewPlanInput = {
   price_monthly: number | null;
 };
 export type OverviewSubInput = SubLike & { business?: { name: string; city: string | null } | null };
-export type OverviewBusinessInput = { id: string; name: string; city: string | null };
+export type OverviewBusinessInput = {
+  id: string;
+  name: string;
+  city: string | null;
+  phone?: string | null;
+  phone_secondary?: string | null;
+};
 
 export type PlanOverview = {
   plans: { id: string; name: string; slug: string; color: string | null; count: number; yearlyPrice: number; isActive: boolean }[];
   planOptions: { id: string; name: string; yearlyPrice: number }[];
-  noPlan: { id: string; name: string; city: string | null }[];
+  noPlan: { id: string; name: string; city: string | null; phone: string | null; phoneSecondary: string | null }[];
   pendingCount: number;
   revenue: { total: number; recorded: number; byPlanPrice: number; withoutAmount: number; activeBusinesses: number };
   renewals: {
@@ -155,7 +161,7 @@ export function buildPlanOverview(args: {
       .map((p) => ({ id: p.id, name: p.name, yearlyPrice: planYearlyPrice(p) })),
     noPlan: args.publishedBusinesses
       .filter((b) => !activeBusinessIds.has(b.id))
-      .map((b) => ({ id: b.id, name: b.name, city: b.city }))
+      .map((b) => ({ id: b.id, name: b.name, city: b.city, phone: b.phone ?? null, phoneSecondary: b.phone_secondary ?? null }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     pendingCount: args.pendingCount,
     revenue: { total: recorded + byPlanPrice, recorded, byPlanPrice, withoutAmount, activeBusinesses: current.length },

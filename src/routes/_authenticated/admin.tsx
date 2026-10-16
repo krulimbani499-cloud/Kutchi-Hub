@@ -46,6 +46,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { slugify, slugifyInput } from "@/lib/slug";
+import { ListSearchInput } from "@/components/ListSearchInput";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { matchesSearch } from "@/lib/list-search";
 
 const pendingQueryOptions = queryOptions({
   queryKey: ["admin", "pending-businesses"],
@@ -112,6 +115,15 @@ function AdminPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState("overview");
   const [subsPlanFilter, setSubsPlanFilter] = useState<{ planId: string; planName: string } | null>(null);
+  // Search for the pending list (name, city, category, slug, phone, business email).
+  const [pendingText, setPendingText] = useState("");
+  const pendingSearch = useDebouncedValue(pendingText, 150);
+  const pendingShown = pending.filter((b) =>
+    matchesSearch(pendingSearch, {
+      text: [b.name, b.city, b.categoryName, b.slug, b.address, b.email],
+      phones: [b.phone, b.phone_secondary],
+    }),
+  );
 
   const handleAction = async (id: string, action: "approve" | "reject") => {
     setBusyId(id);
@@ -183,7 +195,21 @@ function AdminPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {pending.map((b) => (
+          <ListSearchInput value={pendingText} onChange={setPendingText} className="sm:max-w-sm" />
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {pendingShown.length} of {pending.length} pending
+          </p>
+          {pendingShown.length === 0 && (
+            <Card>
+              <CardContent className="py-10 text-center">
+                <p className="font-medium text-foreground">Koi business nahi mila</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => setPendingText("")}>
+                  Clear
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          {pendingShown.map((b) => (
             <Card key={b.id}>
               <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
                 <div className="min-w-0 flex-1">
@@ -1049,16 +1075,15 @@ function VerifyBusinessesAdmin() {
     }
   };
 
-  const filtered = businesses.filter((b) => {
-    if (!showAll && b.verified) return false;
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return (
-      b.name.toLowerCase().includes(q) ||
-      (b.city ?? "").toLowerCase().includes(q) ||
-      (b.categoryName ?? "").toLowerCase().includes(q)
-    );
-  });
+  const search = useDebouncedValue(query, 150);
+  const filtered = businesses.filter(
+    (b) =>
+      (showAll || !b.verified) &&
+      matchesSearch(search, {
+        text: [b.name, b.city, b.categoryName, b.slug, b.email],
+        phones: [b.phone, b.phoneSecondary],
+      }),
+  );
 
   return (
     <div className="mt-10">
@@ -1071,21 +1096,25 @@ function VerifyBusinessesAdmin() {
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name, city, category"
-          className="max-w-sm"
-        />
+        <ListSearchInput value={query} onChange={setQuery} className="sm:max-w-sm" />
         <Button size="sm" variant={showAll ? "default" : "outline"} onClick={() => setShowAll((v) => !v)}>
           {showAll ? "Showing all" : "Hiding verified"}
         </Button>
       </div>
+      <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
+        {filtered.length} of {showAll ? businesses.length : businesses.filter((b) => !b.verified).length}{" "}
+        {showAll ? "businesses" : "unverified businesses"}
+      </p>
 
       <Card>
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">No businesses match.</p>
+            <div className="p-6 text-center">
+              <p className="font-medium text-foreground">Koi business nahi mila</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => setQuery("")} disabled={!query}>
+                Clear
+              </Button>
+            </div>
           ) : (
             <ul className="divide-y divide-border">
               {filtered.slice(0, 100).map((b) => (

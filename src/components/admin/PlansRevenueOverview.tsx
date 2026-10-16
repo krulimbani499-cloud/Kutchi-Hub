@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminPlanOverview } from "@/lib/plans.functions";
 import { renewalExpiryDefault } from "@/lib/subscription-utils";
+import { ListSearchInput } from "@/components/ListSearchInput";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { matchesSearch } from "@/lib/list-search";
 import { SubscriptionForm, type SubscriptionFormInitial } from "@/components/admin/SubscriptionsManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +30,8 @@ export function PlansRevenueOverview({
   });
   const [showNoPlan, setShowNoPlan] = useState(false);
   const [dialog, setDialog] = useState<FormDialog>(null);
+  const [noPlanText, setNoPlanText] = useState("");
+  const noPlanSearch = useDebouncedValue(noPlanText, 150);
 
   if (isPending) {
     return (
@@ -50,6 +55,9 @@ export function PlansRevenueOverview({
   }
 
   const { revenue } = data;
+  const noPlanShown = data.noPlan.filter((b) =>
+    matchesSearch(noPlanSearch, { text: [b.name, b.city], phones: [b.phone, b.phoneSecondary] }),
+  );
   const closeAndRefresh = async () => {
     setDialog(null);
     // refreshes the cards, the no-plan list, the renewals and the Subscriptions tab
@@ -116,8 +124,21 @@ export function PlansRevenueOverview({
             {data.noPlan.length === 0 ? (
               <p className="text-sm text-muted-foreground">Every published business has an active plan.</p>
             ) : (
+              <>
+              <ListSearchInput value={noPlanText} onChange={setNoPlanText} className="mb-2 sm:max-w-sm" />
+              <p className="mb-2 text-sm text-muted-foreground" aria-live="polite">
+                {noPlanShown.length} of {data.noPlan.length} businesses
+              </p>
+              {noPlanShown.length === 0 && (
+                <div className="py-6 text-center">
+                  <p className="font-medium text-foreground">Koi business nahi mila</p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => setNoPlanText("")}>
+                    Clear
+                  </Button>
+                </div>
+              )}
               <ul className="divide-y divide-border">
-                {data.noPlan.map((b) => (
+                {noPlanShown.map((b) => (
                   <li key={b.id} className="flex items-center justify-between gap-3 py-2">
                     <div className="min-w-0">
                       <p className="break-words text-sm font-medium text-foreground">{b.name}</p>
@@ -130,6 +151,7 @@ export function PlansRevenueOverview({
                   </li>
                 ))}
               </ul>
+              </>
             )}
           </CardContent>
         </Card>

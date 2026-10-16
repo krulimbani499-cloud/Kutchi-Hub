@@ -13,6 +13,9 @@ import { addYears, currentSubscriptions, planYearlyPrice, toLocalInputValue } fr
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ListSearchInput } from "@/components/ListSearchInput";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { matchesSearch } from "@/lib/list-search";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -188,6 +191,8 @@ export function SubscriptionsManager({
   const cancelFn = useServerFn(cancelBusinessSubscription);
 
   const [formState, setFormState] = useState<{ initial: SubscriptionFormInitial; businessName?: string } | null>(null);
+  const [listText, setListText] = useState("");
+  const listSearch = useDebouncedValue(listText, 150);
 
   const planOptions: SubscriptionPlanOption[] = plans.map((p) => ({ id: p.id, name: p.name, yearlyPrice: planYearlyPrice(p) }));
 
@@ -219,9 +224,15 @@ export function SubscriptionsManager({
     catch (e: any) { toast.error(e?.message || "Failed"); }
   };
 
-  const visibleSubs = planFilter
+  const byPlan = planFilter
     ? currentSubscriptions(subs).filter((s) => s.plan_id === planFilter.planId)
     : subs;
+  const visibleSubs = byPlan.filter((s) =>
+    matchesSearch(listSearch, {
+      text: [s.business?.name, s.business?.city, s.business?.slug, s.plan?.name, s.status],
+      phones: [s.business?.phone, s.business?.phone_secondary],
+    }),
+  );
 
   return (
     <div className="space-y-4">
@@ -254,8 +265,25 @@ export function SubscriptionsManager({
         />
       )}
 
+      {byPlan.length > 0 && (
+        <div className="space-y-2">
+          <ListSearchInput value={listText} onChange={setListText} className="sm:max-w-sm" />
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {visibleSubs.length} of {byPlan.length} subscriptions
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-3">
-        {visibleSubs.length === 0 && <Card><CardContent className="p-6 text-center text-muted-foreground">{planFilter ? "No active subscriptions on this plan." : "No subscriptions yet."}</CardContent></Card>}
+        {byPlan.length > 0 && visibleSubs.length === 0 && (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <p className="font-medium text-foreground">Koi business nahi mila</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => setListText("")}>Clear</Button>
+            </CardContent>
+          </Card>
+        )}
+        {byPlan.length === 0 && <Card><CardContent className="p-6 text-center text-muted-foreground">{planFilter ? "No active subscriptions on this plan." : "No subscriptions yet."}</CardContent></Card>}
         {visibleSubs.map((s) => (
           <Card key={s.id}>
             <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">

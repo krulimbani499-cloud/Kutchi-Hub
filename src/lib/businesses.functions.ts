@@ -959,7 +959,7 @@ export const listPendingBusinesses = createServerFn({ method: "GET" })
 
     const { data, error } = await supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, state, phone, email, website, featured_image, status, created_at, owner_id, categories:category_id(name, slug)")
+      .select("id, name, slug, description, address, city, state, phone, phone_secondary, email, website, featured_image, status, created_at, owner_id, categories:category_id(name, slug)")
       .eq("status", "pending")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -996,7 +996,7 @@ export const adminListPublishedBusinesses = createServerFn({ method: "GET" })
 
     const { data, error } = await supabase
       .from("businesses")
-      .select("id, name, slug, city, verified, created_at, categories:category_id(name)")
+      .select("id, name, slug, city, phone, phone_secondary, email, verified, created_at, categories:category_id(name)")
       .eq("status", "published")
       .order("verified", { ascending: true })
       .order("created_at", { ascending: false })
@@ -1007,6 +1007,9 @@ export const adminListPublishedBusinesses = createServerFn({ method: "GET" })
       name: b.name,
       slug: b.slug,
       city: b.city,
+      phone: b.phone,
+      phoneSecondary: b.phone_secondary,
+      email: b.email,
       verified: b.verified,
       created_at: b.created_at,
       categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
@@ -1147,7 +1150,7 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     let businessesQuery = supabase
       .from("businesses")
-      .select("id, name, slug, status, city, category_id, current_plan_id, plan_tier_order, plans:current_plan_id(name, slug, analytics_access), categories:category_id(name, slug)")
+      .select("id, name, slug, status, city, phone, phone_secondary, category_id, current_plan_id, plan_tier_order, plans:current_plan_id(name, slug, analytics_access), categories:category_id(name, slug)")
       .order("created_at", { ascending: false });
     if (!isAdmin) {
       businessesQuery = businessesQuery.eq("owner_id", userId);
@@ -1187,6 +1190,8 @@ export const getDashboard = createServerFn({ method: "GET" })
       slug: (b as unknown as { slug: string }).slug,
       status: (b as unknown as { status: string }).status,
       city: (b as unknown as { city: string | null }).city,
+      phone: (b as unknown as { phone: string | null }).phone,
+      phoneSecondary: (b as unknown as { phone_secondary: string | null }).phone_secondary,
       categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
       planName: (b as unknown as { plans: { name: string } | null }).plans?.name ?? null,
       planTierOrder: (b as unknown as { plan_tier_order: number }).plan_tier_order ?? 0,

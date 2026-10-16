@@ -16,6 +16,7 @@ import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCa
 import { ServicesManager } from "@/components/business/ServicesManager";
 import { ProductsManager } from "@/components/business/ProductsManager";
 import { useState } from "react";
+import { BusinessFilterBar, NoBusinessMatch, useBusinessFilters } from "@/components/business/BusinessFilterBar";
 import { RewardsCard } from "@/components/gamification/RewardsCard";
 import { ReferralCard } from "@/components/gamification/ReferralCard";
 
@@ -47,6 +48,9 @@ function DashboardPage() {
   const updateClaimFn = useServerFn(updateClaimStatus);
   const updateEnquiryFn = useServerFn(updateEnquiryStatus);
   const [expanded, setExpanded] = useState<Record<string, "services" | "products" | null>>({});
+
+  // My Businesses search + filters (kept here, not in the tab, so they survive switching tabs; nothing is stored).
+  const filters = useBusinessFilters(data.businesses);
 
   const toggle = (id: string, panel: "services" | "products") => {
     setExpanded((prev) => ({ ...prev, [id]: prev[id] === panel ? null : panel }));
@@ -146,8 +150,13 @@ function DashboardPage() {
                   </div>
                 </div>
               ) : (
+                <>
+                <BusinessFilterBar f={filters} />
+                {filters.filtered.length === 0 ? (
+                  <NoBusinessMatch f={filters} />
+                ) : (
                 <div className="space-y-4">
-                  {data.businesses.map((b) => (
+                  {filters.filtered.map((b) => (
                     <div key={b.id} className="rounded-lg border border-border p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1">
@@ -225,6 +234,8 @@ function DashboardPage() {
                     </div>
                   ))}
                 </div>
+                )}
+                </>
               )}
             </CardContent>
           </Card>
