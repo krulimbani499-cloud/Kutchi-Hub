@@ -39,6 +39,7 @@ import { listBusinessProducts } from "@/lib/products.functions";
 import { replyToReview, updateReview } from "@/lib/reviews.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
+import { BlurFillImage } from "./BlurFillImage";
 import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
@@ -242,13 +243,17 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 aria-label="Open photo gallery"
                 disabled={photos.length === 0 && !featuredImageSrc}
               >
-                {featuredImageSrc ? (
-                  <BusinessPhotoImage src={featuredImageSrc} alt={business.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 text-2xl font-bold text-primary">
-                    {business.name.charAt(0)}
-                  </div>
-                )}
+                {/* Whole picture over a blurred copy of itself: nothing cropped, no empty sides. */}
+                <BlurFillImage
+                  src={featuredImageSrc}
+                  alt={business.name}
+                  loading="eager"
+                  fallback={
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 text-2xl font-bold text-primary">
+                      {business.name.charAt(0)}
+                    </div>
+                  }
+                />
               </button>
               {[0, 1, 2, 3].map((i) => {
                 const p = galleryPhotos[i];
@@ -263,7 +268,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   >
                     {p ? (
                       <>
-                        <BusinessPhotoImage src={p.url} alt={p.caption ?? ""} className="h-full w-full object-cover transition-transform hover:scale-105" loading="lazy" />
+                        <BlurFillImage src={p.url} alt={p.caption ?? ""} loading="lazy" imgClassName="transition-transform hover:scale-105" />
                         {i === 3 && photos.length > 4 && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white">
                             +{photos.length - 4} more
@@ -319,10 +324,19 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <FavoriteButton businessId={business.id} />
-                  <span className="inline-flex items-center gap-1 rounded-md bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white sm:px-2 sm:py-1 sm:text-sm">
-                    {avgRating.toFixed(1)} <Star className="h-3.5 w-3.5 fill-white" />
-                  </span>
-                  <span className="whitespace-nowrap text-[11px] text-muted-foreground sm:text-xs">{reviewCount} Ratings</span>
+                  {reviewCount === 0 ? (
+                    // No reviews yet: a "New" pill instead of "★ 0.0 / 0 Ratings".
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary sm:py-1 sm:text-sm">
+                      New
+                    </span>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white sm:px-2 sm:py-1 sm:text-sm">
+                        {avgRating.toFixed(1)} <Star className="h-3.5 w-3.5 fill-white" />
+                      </span>
+                      <span className="whitespace-nowrap text-[11px] text-muted-foreground sm:text-xs">{reviewCount} Ratings</span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -533,12 +547,14 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     key={photo.id}
                     className="overflow-hidden rounded-lg border border-border"
                   >
-                    <BusinessPhotoImage
-                      src={photo.url}
-                      alt={photo.caption ?? "Business photo"}
-                      loading="lazy"
-                      className="aspect-square w-full object-cover transition-transform hover:scale-105"
-                    />
+                    <div className="aspect-square w-full">
+                      <BlurFillImage
+                        src={photo.url}
+                        alt={photo.caption ?? "Business photo"}
+                        loading="lazy"
+                        imgClassName="transition-transform hover:scale-105"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

@@ -2,15 +2,8 @@ import { ReactNode, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BUSINESS_PHOTOS_BUCKET, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, getBusinessPhotoStorageKey } from "@/lib/business-photos";
 
-interface BusinessPhotoImageProps {
-  src: string | null | undefined;
-  alt: string;
-  className?: string;
-  loading?: "eager" | "lazy";
-  fallback?: ReactNode;
-}
-
-export function BusinessPhotoImage({ src, alt, className, loading, fallback }: BusinessPhotoImageProps) {
+/** A stored photo (storage key or full URL) as a URL an <img> can load; "" while a signed URL is being fetched. */
+export function useResolvedBusinessPhotoSrc(src: string | null | undefined): string {
   const [resolvedSrc, setResolvedSrc] = useState(() => {
     const key = getBusinessPhotoStorageKey(src);
     return key ? "" : src ?? "";
@@ -42,6 +35,20 @@ export function BusinessPhotoImage({ src, alt, className, loading, fallback }: B
       cancelled = true;
     };
   }, [src]);
+
+  return resolvedSrc;
+}
+
+interface BusinessPhotoImageProps {
+  src: string | null | undefined;
+  alt: string;
+  className?: string;
+  loading?: "eager" | "lazy";
+  fallback?: ReactNode;
+}
+
+export function BusinessPhotoImage({ src, alt, className, loading, fallback }: BusinessPhotoImageProps) {
+  const resolvedSrc = useResolvedBusinessPhotoSrc(src);
 
   if (!resolvedSrc) return <>{fallback ?? null}</>;
 

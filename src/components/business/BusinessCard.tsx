@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { MapPin, Phone, Star, BadgeCheck, MessageCircle, Clock, Tag, Crown } from "lucide-react";
 import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
-import { BusinessPhotoImage } from "./BusinessPhotoImage";
+import { BlurFillImage } from "./BlurFillImage";
 import { FavoriteButton } from "./FavoriteButton";
 import { isOpenNow, hasAnyHours } from "@/lib/business-hours";
 import { useEffect, useState, type CSSProperties } from "react";
@@ -59,19 +59,19 @@ export function BusinessCard({ business, delayMs }: BusinessCardProps) {
       style={animateOnScroll ? ({ "--delay": `${delayMs}ms` } as CSSProperties) : undefined}
     >
       <Link to="/business/$slug" params={{ slug: business.slug }} className="absolute inset-0 z-10" />
+      {/* Same box on every card. The photo is shown whole over a blurred copy of itself (no cropping, no empty sides). */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-        {imageSrc ? (
-          <BusinessPhotoImage
-            src={imageSrc}
-            alt={business.name}
-            className="h-full w-full object-contain transition-transform group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted/50 text-muted-foreground">
-            {business.categories?.name ?? "Business"}
-          </div>
-        )}
+        <BlurFillImage
+          src={imageSrc}
+          alt={business.name}
+          loading="lazy"
+          imgClassName="transition-transform group-hover:scale-105"
+          fallback={
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted/50 text-muted-foreground">
+              {business.categories?.name ?? "Business"}
+            </div>
+          }
+        />
         {business.verified && (
           <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-success px-2 py-0.5 text-xs font-medium text-success-foreground">
             <BadgeCheck className="h-3 w-3" />
@@ -110,10 +110,17 @@ export function BusinessCard({ business, delayMs }: BusinessCardProps) {
         <div className="mb-1 flex items-start justify-between gap-2">
           {/* Up to 2 lines (never a 1-line "…"); the full name is in the tooltip / long-press title. */}
           <h3 title={business.name} className="min-w-0 line-clamp-2 break-words text-sm font-semibold text-foreground sm:text-base">{business.name}</h3>
-          <div className="flex shrink-0 items-center gap-1 rounded bg-rating/10 px-1.5 py-0.5 text-xs font-medium text-rating">
-            <Star className="h-3 w-3 fill-rating text-rating" />
-            {(business.avgRating ?? 0).toFixed(1)}
-          </div>
+          {/* No reviews yet: a "New" pill instead of "★ 0.0". Lists that don't load ratings (reviewCount missing) show nothing. */}
+          {business.reviewCount === 0 ? (
+            <div className="flex shrink-0 items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+              New
+            </div>
+          ) : business.reviewCount === undefined && business.avgRating === undefined ? null : (
+            <div className="flex shrink-0 items-center gap-1 rounded bg-rating/10 px-1.5 py-0.5 text-xs font-medium text-rating">
+              <Star className="h-3 w-3 fill-rating text-rating" />
+              {(business.avgRating ?? 0).toFixed(1)}
+            </div>
+          )}
         </div>
         <p className="mb-2 line-clamp-1 text-xs text-muted-foreground">
           {business.categories?.name ?? "Business"}
