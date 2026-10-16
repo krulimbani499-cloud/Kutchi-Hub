@@ -169,7 +169,7 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
         <p className="text-xs text-muted-foreground">
           JPG, PNG, WebP up to 10MB each · {photos.length}/{MAX_PHOTOS} photos
           <br />
-          Best size: 1200 × 750 (landscape)
+          Best size: 1200 × 900 (4:3 landscape)
         </p>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}

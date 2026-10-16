@@ -475,7 +475,7 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
             <p className="text-xs text-muted-foreground">
               JPG, PNG or WebP. Up to 10MB.
               <br />
-              Best size: 1200 × 750 (landscape)
+              Best size: 1200 × 900 (4:3 landscape)
             </p>
           </div>
         </div>
