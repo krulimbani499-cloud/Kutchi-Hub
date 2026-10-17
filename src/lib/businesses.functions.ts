@@ -37,6 +37,8 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       // reviews come back embedded so ratings need no second query over the whole reviews table.
       .select(
         "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, featured_image, hours, status, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id!inner(id, name, slug, color), business_reviews(rating)",
+        // The true number of matching businesses comes back with the same query (no extra round trip).
+        { count: "exact" },
       )
       .eq("status", "published");
 
@@ -109,16 +111,26 @@ export const searchBusinesses = createServerFn({ method: "GET" })
         .or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`);
     }
 
-    const { data: businesses, error } = await query
+    // The order is decided in the database so every page continues exactly where the last one stopped:
+    //   relevance: plan priority, featured, verified, name;  newest: newest first;  discount: biggest discount first.
+    // `id` is the last tie-breaker, so two businesses can never swap places between pages (no duplicates, none skipped).
+    // "rating" and a minimum rating need the reviews of every match, so that mode loads all matches (the database caps
+    // a response at 1000 rows) and sorts / pages them here.
+    const inMemory = data.sort === "rating" || (data.minRating ?? 0) > 0;
+    let ordered = query;
+    if (data.sort === "newest") ordered = ordered.order("created_at", { ascending: false });
+    else if (data.sort === "discount") ordered = ordered.order("app_discount_percent", { ascending: false, nullsFirst: false });
+    ordered = ordered
       .order("plan_tier_order", { ascending: false })
       .order("plan_featured", { ascending: false })
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
-      .range(offset, offset + data.limit - 1);
+      .order("id", { ascending: true });
 
+    const { data: businesses, error, count } = await (inMemory ? ordered.range(0, 999) : ordered.range(offset, offset + data.limit - 1));
     if (error) throw new Error(error.message);
 
-    const results = (businesses ?? []).map(({ business_reviews, ...b }) => {
+    let results = (businesses ?? []).map(({ business_reviews, ...b }) => {
       const reviews = business_reviews ?? [];
       const sum = reviews.reduce((total, r) => total + r.rating, 0);
       return {
@@ -128,28 +140,22 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       };
     });
 
-    let filteredResults = results;
-    if (data.minRating && data.minRating > 0) {
-      filteredResults = filteredResults.filter((b) => b.avgRating >= data.minRating!);
+    let total = count ?? results.length;
+    if (inMemory) {
+      if ((data.minRating ?? 0) > 0) results = results.filter((b) => b.avgRating >= data.minRating!);
+      // Array.sort is stable: equal ratings keep the plan-priority order above.
+      if (data.sort === "rating") results = [...results].sort((a, b) => b.avgRating - a.avgRating);
+      total = results.length;
+      results = results.slice(offset, offset + data.limit);
     }
 
-    if (data.sort === "rating") {
-      filteredResults.sort((a, b) => b.avgRating - a.avgRating);
-    } else if (data.sort === "newest") {
-      filteredResults.sort(
-        (a, b) =>
-          new Date((b as unknown as { created_at: string }).created_at).getTime() -
-          new Date((a as unknown as { created_at: string }).created_at).getTime(),
-      );
-    } else if (data.sort === "discount") {
-      filteredResults.sort(
-        (a, b) =>
-          ((b as unknown as { app_discount_percent: number | null }).app_discount_percent ?? 0) -
-          ((a as unknown as { app_discount_percent: number | null }).app_discount_percent ?? 0),
-      );
-    }
-
-    return filteredResults;
+    return {
+      items: results,
+      /** How many businesses match in total (not just on this page). */
+      total,
+      page: data.page,
+      hasMore: offset + results.length < total,
+    };
   });
 
 export const getBusinessBySlug = createServerFn({ method: "GET" })

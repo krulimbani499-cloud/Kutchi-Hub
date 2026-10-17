@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, queryOptions, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, queryOptions, keepPreviousData } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { getCategories, searchBusinesses } from "@/lib/businesses.functions";
 import { isOpenNow } from "@/lib/business-hours";
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X, Tag } from "lucide-react";
+import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X, Tag, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useCity } from "@/hooks/useCity";
@@ -24,11 +24,17 @@ import { CityCoverageCard } from "@/components/home/CityCoverageCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BusinessCardSkeletonGrid, ListingPageSkeleton } from "@/components/layout/PageSkeleton";
 
-const searchQueryOptions = (q: string, category: string, city: string, sort: string, hasDiscount: boolean) =>
-  queryOptions({
-    queryKey: ["search", q, category, city, sort, hasDiscount],
-    queryFn: () => searchBusinesses({ data: { q, category, city, sort, hasDiscount } }),
-  });
+// Businesses are loaded one page at a time; the server also returns the true total of matches.
+const PAGE_SIZE = 20;
+
+const searchInfiniteOptions = (q: string, category: string, city: string, sort: string, hasDiscount: boolean) => ({
+  // Every filter is in the key: changing any of them starts again from the first page.
+  queryKey: ["search", q, category, city, sort, hasDiscount] as const,
+  initialPageParam: 1,
+  queryFn: ({ pageParam }: { pageParam: number }) =>
+    searchBusinesses({ data: { q, category, city, sort, hasDiscount, page: pageParam, limit: PAGE_SIZE } }),
+  getNextPageParam: (last: Awaited<ReturnType<typeof searchBusinesses>>) => (last.hasMore ? last.page + 1 : undefined),
+});
 
 const categoriesQueryOptions = queryOptions({
   queryKey: ["categories"],
@@ -125,20 +131,41 @@ function SearchPage() {
   const [chipDiscount, setChipDiscount] = useState(false);
   // keepPreviousData: changing a filter keeps showing the old results (dimmed) until the new ones arrive.
   const {
-    data: results,
+    data: searchData,
     isPending: resultsPending,
     isPlaceholderData: resultsStale,
-  } = useQuery({
-    ...searchQueryOptions(applied.q, applied.category, applied.city, applied.sort, chipDiscount),
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    ...searchInfiniteOptions(applied.q, applied.category, applied.city, applied.sort, chipDiscount),
     placeholderData: keepPreviousData,
+    // A search that is no longer on screen is not kept: coming back to it (e.g. clearing the city again) starts from
+    // page 1 instead of restoring every page that was loaded last time.
+    gcTime: 0,
   });
+  // All loaded pages as one list (a business can never appear twice) and the true number of matches.
+  const results = useMemo(() => {
+    const seen = new Set<string>();
+    const list: NonNullable<typeof searchData>["pages"][number]["items"] = [];
+    for (const page of searchData?.pages ?? []) {
+      for (const b of page.items) {
+        if (!seen.has(b.id)) {
+          seen.add(b.id);
+          list.push(b);
+        }
+      }
+    }
+    return list;
+  }, [searchData]);
+  const total = searchData?.pages[searchData.pages.length - 1]?.total ?? 0;
 
   const [chipVerified, setChipVerified] = useState(false);
   const [chipOpenNow, setChipOpenNow] = useState(false);
   const [chipTopRated, setChipTopRated] = useState(false);
 
   const filteredResults = useMemo(() => {
-    let list = results ?? [];
+    let list = results;
     if (chipVerified) list = list.filter((b) => b.verified);
     if (chipTopRated) list = list.filter((b) => (b.avgRating ?? 0) >= 4);
     if (chipOpenNow) {
@@ -146,7 +173,28 @@ function SearchPage() {
     }
     return list;
   }, [results, chipVerified, chipOpenNow, chipTopRated]);
-  const anyChip = chipVerified || chipOpenNow || chipTopRated || chipDiscount;
+  // Verified / Top rated / Open now are checked in the browser (opening hours need the local time), so while one of
+  // them is on, the remaining pages are loaded automatically so the filter covers every business, not just page 1.
+  const clientChip = chipVerified || chipOpenNow || chipTopRated;
+  const anyChip = clientChip || chipDiscount;
+  useEffect(() => {
+    if (clientChip && hasNextPage && !isFetchingNextPage && !resultsStale) void fetchNextPage();
+  }, [clientChip, hasNextPage, isFetchingNextPage, resultsStale, fetchNextPage]);
+
+  // Auto-load the next page when the end of the list comes near the screen. The "Load more" button is the fallback.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasNextPage || isFetchingNextPage || resultsStale || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void fetchNextPage();
+      },
+      { rootMargin: "400px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, resultsStale, fetchNextPage, results.length, clientChip]);
 
   const activeCategory = useMemo(
     () => categories.find((c) => c.slug === applied.category) ?? null,
@@ -297,9 +345,9 @@ function SearchPage() {
             <p className="text-sm text-muted-foreground">
               {resultsPending || resultsStale
                 ? "Loading..."
-                : `${filteredResults.length} ${filteredResults.length === 1 ? "result" : "results"}${
-                    anyChip && results ? ` of ${results.length}` : ""
-                  }`}
+                : clientChip
+                  ? `${filteredResults.length} ${filteredResults.length === 1 ? "result" : "results"} of ${total}`
+                  : `${total} ${total === 1 ? "result" : "results"}`}
             </p>
           </div>
           {resultsPending ? (
@@ -307,7 +355,7 @@ function SearchPage() {
           ) : filteredResults.length > 0 ? (
             <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 transition-opacity ${resultsStale ? "opacity-60" : ""}`}>
               {filteredResults.map((business, i) => (
-                <BusinessCard key={business.id} business={business} delayMs={i * 100} />
+                <BusinessCard key={business.id} business={business} delayMs={(i % PAGE_SIZE) * 100} />
               ))}
             </div>
           ) : (
@@ -341,6 +389,22 @@ function SearchPage() {
                 empty
               );
             })()
+          )}
+
+          {/* End of the list: the next page loads by itself when this comes near the screen; the button is the fallback. */}
+          {results.length > 0 && (
+            <div ref={sentinelRef} className="mt-6 flex min-h-10 flex-col items-center justify-center gap-2" data-testid="load-more">
+              {isFetchingNextPage && (
+                <span role="status" aria-label="Loading more" className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading more…
+                </span>
+              )}
+              {hasNextPage && !isFetchingNextPage && !resultsStale && (
+                <Button variant="outline" onClick={() => void fetchNextPage()}>
+                  Load more
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>
