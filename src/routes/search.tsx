@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X, Tag } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { useCity } from "@/hooks/useCity";
 import { CategoryBanner } from "@/components/category/CategoryBanner";
 import { sortCategoriesAZ } from "@/lib/category-sort";
@@ -63,7 +64,8 @@ function SearchPage() {
   };
   const { data: categoriesData, isPending: categoriesPending } = useQuery(categoriesQueryOptions);
   const categories = useMemo(() => sortCategoriesAZ(categoriesData ?? []), [categoriesData]);
-  const { city: selectedCity, coords: selectedCoords, setCity } = useCity();
+  const { city: selectedCity, coords: selectedCoords, allLocations, loaded: cityLoaded, setCity } = useCity();
+  const t = useT();
   const initialCity = city ?? selectedCity ?? "";
   const [filters, setFilters] = useState({
     q: q ?? "",
@@ -73,13 +75,32 @@ function SearchPage() {
   });
   const [applied, setApplied] = useState({ q: q ?? "", category: category ?? "", city: initialCity, sort: sort ?? "relevance" });
 
-  // When the header city changes and user hasn't typed a city filter yet, sync it.
+  // The header choice: a city, "All locations" (no city filter) or nothing yet.
+  const headerChoice = selectedCity ?? (allLocations ? "__all__" : "");
+  const lastHeaderChoice = useRef<string | null>(null);
   useEffect(() => {
-    if (city) return; // URL param wins
-    if (!selectedCity) return;
-    setFilters((f) => (f.city ? f : { ...f, city: selectedCity }));
-    setApplied((a) => (a.city ? a : { ...a, city: selectedCity }));
-  }, [selectedCity, city]);
+    if (!cityLoaded) return; // the stored choice has not been read yet
+    if (lastHeaderChoice.current === null) {
+      // First read: a city in the URL wins; otherwise start from the header city if the filter is still empty.
+      lastHeaderChoice.current = headerChoice;
+      if (city || !selectedCity) return;
+      setFilters((f) => (f.city ? f : { ...f, city: selectedCity }));
+      setApplied((a) => (a.city ? a : { ...a, city: selectedCity }));
+      return;
+    }
+    if (lastHeaderChoice.current === headerChoice) return;
+    // The person changed the header choice (a city, or All locations): the search follows it. All locations = no
+    // city filter at all (an empty city is omitted by the query, it never matches "nothing").
+    lastHeaderChoice.current = headerChoice;
+    const next = selectedCity ?? "";
+    setFilters((f) => ({ ...f, city: next }));
+    setApplied((a) => ({ ...a, city: next }));
+    const params = new URLSearchParams(window.location.search);
+    if (next) params.set("city", next);
+    else params.delete("city");
+    const qs = params.toString();
+    window.history.replaceState({}, "", `/search${qs ? `?${qs}` : ""}`);
+  }, [cityLoaded, headerChoice, selectedCity, city]);
 
   // Sync URL search params → filter state so clicking a category link
   // (or any other in-page navigation that only changes search params)
@@ -166,7 +187,7 @@ function SearchPage() {
           </div>
           <div className="relative">
             <Input
-              placeholder="City"
+              placeholder={allLocations && !filters.city ? t("loc.all") : "City"}
               value={filters.city}
               onChange={(e) => setFilters((f) => ({ ...f, city: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}

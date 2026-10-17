@@ -10,10 +10,11 @@ interface Props {
 }
 
 export function MarketingBanner({ intervalMs = 4500 }: Props) {
-  const { city } = useCity();
+  const { city, allLocations } = useCity();
   const { data: banners = [] } = useQuery({
-    queryKey: ["banner-ads", city ?? "all"],
-    queryFn: () => getBannerAdsForCity({ data: { city: city ?? undefined } }),
+    // "All locations" is its own key: every active banner. No choice at all (null) still shows nothing, as before.
+    queryKey: ["banner-ads", city ?? (allLocations ? "__all__" : "none")],
+    queryFn: () => getBannerAdsForCity({ data: { city: city ?? undefined, all: allLocations || undefined } }),
     staleTime: 60_000,
   });
   const [index, setIndex] = useState(0);

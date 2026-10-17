@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, LocateFixed, Check, ChevronDown, Loader2 } from "lucide-react";
+import { MapPin, LocateFixed, Check, ChevronDown, Loader2, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -17,6 +17,7 @@ import { getCurrentLocation, resolveDetectedCity, LOCATION_UNAVAILABLE } from "@
 import { reverseGeocodeCity } from "@/lib/maps.functions";
 import type { PlaceSuggestion } from "@/lib/places";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface CitySelectorProps {
@@ -25,7 +26,8 @@ interface CitySelectorProps {
 }
 
 export function CitySelector({ className, compact }: CitySelectorProps) {
-  const { city, setCity } = useCity();
+  const { city, allLocations, setCity, setAllLocations } = useCity();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [query, setQuery] = useState("");
@@ -48,6 +50,11 @@ export function CitySelector({ className, compact }: CitySelectorProps) {
 
   function choose(name: string, coords?: { lat: number; lng: number } | null) {
     setCity(name, coords);
+    handleOpenChange(false);
+  }
+
+  function chooseAll() {
+    setAllLocations();
     handleOpenChange(false);
   }
 
@@ -98,15 +105,28 @@ export function CitySelector({ className, compact }: CitySelectorProps) {
             className,
           )}
         >
-          <MapPin className="h-4 w-4 text-primary" />
-          <span className={compact ? "max-w-[9ch] truncate" : "max-w-[14ch] truncate"}>
-            {city ?? "Select city"}
+          {allLocations ? <Globe className="h-4 w-4 text-primary" /> : <MapPin className="h-4 w-4 text-primary" />}
+          <span className={compact ? (allLocations ? "max-w-[13ch] truncate" : "max-w-[9ch] truncate") : "max-w-[14ch] truncate"}>
+            {allLocations ? t("loc.all") : (city ?? "Select city")}
           </span>
           <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-0" align="start">
-        <div className="border-b border-border p-2">
+        <div className="space-y-2 border-b border-border p-2">
+          {/* First item: no city filter anywhere. Saved as an explicit choice, so a reload (and the auto-detect) keeps it. */}
+          <Button
+            type="button"
+            variant={allLocations ? "secondary" : "outline"}
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={chooseAll}
+            aria-pressed={allLocations}
+          >
+            <Globe className="h-4 w-4" />
+            {t("loc.all")}
+            {allLocations && <Check className="ml-auto h-4 w-4 text-primary" />}
+          </Button>
           <Button
             type="button"
             variant="outline"

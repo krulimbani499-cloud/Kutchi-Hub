@@ -384,12 +384,15 @@ const normalizeBannerImageUrl = (url: string) => {
 const exactIlike = (value: string) => value.replace(/\*/g, "").replace(/[\\%_]/g, "\\$&");
 
 export const getBannerAdsForCity = createServerFn({ method: "GET" })
-  .inputValidator((input) => z.object({ city: z.string().trim().min(1).max(80).optional() }).parse(input ?? {}))
+  // `all` = the person explicitly chose "All locations": every active banner, whatever its city.
+  .inputValidator((input) =>
+    z.object({ city: z.string().trim().min(1).max(80).optional(), all: z.boolean().optional() }).parse(input ?? {}),
+  )
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
-    // Only show banners for the selected city. If no city is selected,
+    // Only show banners for the selected city. If no city is selected AND "All locations" was not chosen,
     // return nothing so city-specific banners don't leak across locations.
-    if (!data.city) return [];
+    if (!data.city && !data.all) return [];
     const now = new Date().toISOString();
     let query = supabase
       .from("banner_ads")
@@ -401,7 +404,8 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
       .order("priority", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(10);
-    query = query.ilike("city", exactIlike(data.city));
+    // With a city: exactly that city. With "All locations": no city condition at all (never an empty-string match).
+    if (data.city) query = query.ilike("city", exactIlike(data.city));
     const { data: banners, error } = await query;
     if (error) throw new Error(error.message);
     return (banners ?? []).map((banner) => ({

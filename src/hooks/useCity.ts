@@ -8,6 +8,13 @@ const COORDS_KEY = "kutchi-hub:city-coords";
 const EVT = "kutchi-hub:city-changed";
 const AUTO_TRIED_KEY = "kutchi-hub:city-auto-tried";
 
+/**
+ * The stored value for the explicit choice "All locations". It is saved like a city, so a reload keeps it and the
+ * first-visit auto-detect (which only runs when nothing is stored) never overrides it. Nothing outside this file sees
+ * it: `city` is null for it, exactly like "no city filter", so no query can send it (or an empty string) as a city.
+ */
+export const ALL_LOCATIONS = "__all__";
+
 /** Where the chosen place is (from the autocomplete details or the device), used to find nearby cities. */
 export type CityCoords = { lat: number; lng: number };
 
@@ -40,23 +47,26 @@ function store(next: string | null, coords?: CityCoords | null) {
 }
 
 export function useCity() {
-  const [city, setCityState] = useState<string | null>(null);
+  // The raw stored value: a city, ALL_LOCATIONS, or null (nothing chosen yet / not read yet).
+  const [stored, setStored] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [coords, setCoords] = useState<CityCoords | null>(null);
 
   useEffect(() => {
-    const stored = read();
-    setCityState(stored);
-    setCoords(readCoords(stored));
+    const first = read();
+    setStored(first);
+    setCoords(readCoords(first === ALL_LOCATIONS ? null : first));
+    setLoaded(true);
     const onChange = () => {
       const now = read();
-      setCityState(now);
-      setCoords(readCoords(now));
+      setStored(now);
+      setCoords(readCoords(now === ALL_LOCATIONS ? null : now));
     };
     window.addEventListener(EVT, onChange);
     window.addEventListener("storage", onChange);
 
-    // Auto-detect once per browser if no city stored yet.
-    if (!stored && !window.localStorage.getItem(AUTO_TRIED_KEY)) {
+    // Auto-detect once per browser if no choice is stored yet ("All locations" counts as a choice).
+    if (!first && !window.localStorage.getItem(AUTO_TRIED_KEY)) {
       window.localStorage.setItem(AUTO_TRIED_KEY, "1");
       (async () => {
         try {
@@ -64,6 +74,8 @@ export function useCity() {
           const place = await reverseGeocodeCity({ data: { lat: loc.latitude, lng: loc.longitude } });
           const next = resolveDetectedCity(place, INDIAN_CITIES);
           if (!next) return;
+          // The person may have picked something (e.g. All locations) while the location was being found.
+          if (read()) return;
           store(next, { lat: loc.latitude, lng: loc.longitude });
           window.dispatchEvent(new Event(EVT));
         } catch {
@@ -78,13 +90,26 @@ export function useCity() {
     };
   }, []);
 
+  const allLocations = stored === ALL_LOCATIONS;
+  // A real city, or null for "All locations" and "nothing chosen": every consumer treats both as "no city filter".
+  const city = allLocations ? null : stored;
+
   const setCity = useCallback((next: string | null, at?: CityCoords | null) => {
     if (typeof window === "undefined") return;
     store(next, at);
     window.dispatchEvent(new Event(EVT));
-    setCityState(next);
+    setStored(next);
     setCoords(next && at ? at : null);
   }, []);
 
-  return { city, coords, setCity };
+  /** The explicit choice "All locations": no city filter anywhere, remembered across reloads. */
+  const setAllLocations = useCallback(() => {
+    if (typeof window === "undefined") return;
+    store(ALL_LOCATIONS, null);
+    window.dispatchEvent(new Event(EVT));
+    setStored(ALL_LOCATIONS);
+    setCoords(null);
+  }, []);
+
+  return { city, coords, allLocations, loaded, setCity, setAllLocations };
 }
