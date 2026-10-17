@@ -2,6 +2,7 @@ import { Check, Crown, Award, Shield, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { PlanRow } from "@/lib/plans.functions";
+import { perMonthPrice, periodLabel, planPeriodMonths } from "@/lib/subscription-utils";
 
 const iconMap = {
   crown: Crown,
@@ -21,6 +22,10 @@ export function PlanCard({ plan, cycle, onSelect }: Props) {
   const price = cycle === "monthly" ? plan.price_monthly : plan.price_yearly;
   const isFree = Number(price) === 0;
   const color = plan.color || "#ff6a00";
+  // How long the price covers: 3 years for Silver / Gold / Platinum, a year for Enterprise (and for every plan until
+  // billing_period_months exists in the database, so the card looks exactly as before).
+  const months = cycle === "monthly" ? 1 : planPeriodMonths(plan);
+  const periodText = cycle === "monthly" ? "mo" : months === 12 ? "yr" : periodLabel(months);
 
   return (
     <div
@@ -48,10 +53,17 @@ export function PlanCard({ plan, cycle, onSelect }: Props) {
         {isFree ? (
           <div className="text-3xl font-bold text-foreground">Free</div>
         ) : (
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-foreground">₹{Number(price).toLocaleString("en-IN")}</span>
-            <span className="text-sm text-muted-foreground">/ {cycle === "monthly" ? "mo" : "yr"}</span>
-          </div>
+          <>
+            <div className="flex flex-wrap items-baseline gap-1">
+              <span className="text-3xl font-bold text-foreground">₹{Number(price).toLocaleString("en-IN")}</span>
+              <span className="text-sm text-muted-foreground">/ {periodText}</span>
+            </div>
+            {cycle === "yearly" && months > 12 && (
+              <p className="mt-1 text-xs font-medium text-emerald-700">
+                Just ₹{perMonthPrice(Number(price), months).toLocaleString("en-IN")}/month
+              </p>
+            )}
+          </>
         )}
       </div>
 

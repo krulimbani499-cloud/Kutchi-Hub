@@ -13,7 +13,12 @@ export type SubLike = {
   amount_paid: number | null;
 };
 
-export type PlanPriceLike = { price_yearly: number | null; price_monthly: number | null };
+export type PlanPriceLike = {
+  price_yearly: number | null;
+  price_monthly: number | null;
+  /** How long the plan price covers. Missing (SQL not applied yet) or invalid = 12. */
+  billing_period_months?: number | null;
+};
 
 export const RENEWAL_WINDOW_DAYS = 30;
 
@@ -40,10 +45,42 @@ export function currentSubscriptions<T extends SubLike>(subs: T[], now: Date = n
   return [...best.values()];
 }
 
-/** All plans are sold yearly: the plan price is the yearly price. */
+/**
+ * The plan price for ONE billing period. The column is still called price_yearly: for a 3-year plan it holds the
+ * price of the 3 years (e.g. 500), and billing_period_months says how long that covers.
+ */
 export function planYearlyPrice(p: PlanPriceLike): number {
   const yearly = Number(p.price_yearly ?? 0);
   return yearly > 0 ? yearly : Number(p.price_monthly ?? 0);
+}
+
+/** Months the plan price covers (12 until the billing_period_months column exists). */
+export function planPeriodMonths(p: Pick<PlanPriceLike, "billing_period_months">): number {
+  const m = Number(p.billing_period_months);
+  return Number.isInteger(m) && m > 0 ? m : 12;
+}
+
+/** "year", "3 years", "18 months" — for "₹500 / 3 years". */
+export function periodLabel(months: number): string {
+  if (months === 12) return "year";
+  if (months % 12 === 0) return `${months / 12} years`;
+  return `${months} months`;
+}
+
+/** Price per month for a multi-year plan, rounded ("Just ₹14/month"). */
+export function perMonthPrice(price: number, months: number): number {
+  return Math.round(price / Math.max(1, months));
+}
+
+/** Date plus whole months; Jan 31 + 1 month is Feb 28/29 (like the database), not March 3. */
+export function addMonths(date: Date, months: number): Date {
+  const d = new Date(date.getTime());
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, lastDay));
+  return d;
 }
 
 export function addYears(date: Date, years = 1): Date {
@@ -58,10 +95,10 @@ export function toLocalInputValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** Default expiry for a renewal: one year after the later of "now" and the current expiry. */
-export function renewalExpiryDefault(currentExpiry: string | null, now: Date = new Date()): string {
+/** Default expiry for a renewal: one plan period (12 months unless told otherwise) after the later of "now" and the current expiry. */
+export function renewalExpiryDefault(currentExpiry: string | null, months = 12, now: Date = new Date()): string {
   const base = currentExpiry && new Date(currentExpiry).getTime() > now.getTime() ? new Date(currentExpiry) : now;
-  return toLocalInputValue(addYears(base, 1));
+  return toLocalInputValue(addMonths(base, months));
 }
 
 export type OverviewPlanInput = {
@@ -73,6 +110,7 @@ export type OverviewPlanInput = {
   is_active: boolean;
   price_yearly: number | null;
   price_monthly: number | null;
+  billing_period_months?: number | null;
 };
 export type OverviewSubInput = SubLike & { business?: { name: string; city: string | null } | null };
 export type OverviewBusinessInput = {
@@ -84,8 +122,8 @@ export type OverviewBusinessInput = {
 };
 
 export type PlanOverview = {
-  plans: { id: string; name: string; slug: string; color: string | null; count: number; yearlyPrice: number; isActive: boolean }[];
-  planOptions: { id: string; name: string; yearlyPrice: number }[];
+  plans: { id: string; name: string; slug: string; color: string | null; count: number; yearlyPrice: number; months: number; isActive: boolean }[];
+  planOptions: { id: string; name: string; yearlyPrice: number; months: number }[];
   noPlan: { id: string; name: string; city: string | null; phone: string | null; phoneSecondary: string | null }[];
   pendingCount: number;
   revenue: { total: number; recorded: number; byPlanPrice: number; withoutAmount: number; activeBusinesses: number };
@@ -154,11 +192,12 @@ export function buildPlanOverview(args: {
         color: p.color,
         count: counts.get(p.id) ?? 0,
         yearlyPrice: planYearlyPrice(p),
+        months: planPeriodMonths(p),
         isActive: p.is_active,
       })),
     planOptions: [...args.plans]
       .sort((a, b) => a.tier_order - b.tier_order)
-      .map((p) => ({ id: p.id, name: p.name, yearlyPrice: planYearlyPrice(p) })),
+      .map((p) => ({ id: p.id, name: p.name, yearlyPrice: planYearlyPrice(p), months: planPeriodMonths(p) })),
     noPlan: args.publishedBusinesses
       .filter((b) => !activeBusinessIds.has(b.id))
       .map((b) => ({ id: b.id, name: b.name, city: b.city, phone: b.phone ?? null, phoneSecondary: b.phone_secondary ?? null }))

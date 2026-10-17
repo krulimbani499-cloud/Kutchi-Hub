@@ -7,6 +7,7 @@ import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { EDIT_LOCKED_MESSAGE, friendlyEditError, isEditLockedError } from "@/lib/edit-lock";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 interface PhotoUploaderProps {
   businessId: string;
@@ -47,13 +48,16 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
     setFeatured(featuredImage);
   }, [featuredImage, initialPhotos]);
 
-  const MAX_PHOTOS = 10;
+  // The plan's photo limit (-1 = unlimited). While it is unknown, or if it could not be read, the old cap of 10 applies.
+  const planLimits = usePlanLimits(businessId);
+  const MAX_PHOTOS = planLimits.photos == null ? 10 : planLimits.photos < 0 ? Infinity : planLimits.photos;
+  const maxLabel = MAX_PHOTOS === Infinity ? "unlimited" : String(MAX_PHOTOS);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setError("");
     if (photos.length >= MAX_PHOTOS) {
-      setError(`Photo limit reached (max ${MAX_PHOTOS}). Delete some photos first.`);
+      setError(`Photo limit reached (max ${maxLabel}). Delete some photos first.`);
       return;
     }
     const remaining = MAX_PHOTOS - photos.length;
@@ -167,7 +171,7 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
           />
         </label>
         <p className="text-xs text-muted-foreground">
-          JPG, PNG, WebP up to 10MB each · {photos.length}/{MAX_PHOTOS} photos
+          JPG, PNG, WebP up to 10MB each · {photos.length}/{maxLabel} photos
           <br />
           Best size: 1200 × 900 (4:3 landscape)
         </p>

@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Trash2, Plus, IndianRupee, Upload, X, Package, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyEditError, isEditLockedError } from "@/lib/edit-lock";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { PlanUpgradeCard } from "./PlanUpgradeCard";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
@@ -42,6 +44,7 @@ export function ProductsManager({ businessId }: Props) {
   });
   const upsert = useServerFn(upsertBusinessProduct);
   const del = useServerFn(deleteBusinessProduct);
+  const limits = usePlanLimits(businessId);
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -178,6 +181,10 @@ export function ProductsManager({ businessId }: Props) {
         )}
       </div>
 
+      {/* A plan with 0 products (Silver): no add form, an upgrade card instead. Existing products stay listed and editable. */}
+      {limits.products === 0 && !editingId ? (
+        <PlanUpgradeCard what="Products" />
+      ) : (
       <div className="space-y-3 rounded-lg border border-dashed border-border p-3">
         {editingId ? (
           <div className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-900">
@@ -299,6 +306,7 @@ export function ProductsManager({ businessId }: Props) {
           )}
         </Button>
       </div>
+      )}
     </div>
   );
 }

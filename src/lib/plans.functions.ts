@@ -73,6 +73,8 @@ const planSchema = z.object({
   priority_support: z.boolean().default(false),
   analytics_access: z.boolean().default(false),
   banner_ad_slots: z.number().int().min(0).default(0),
+  // Only sent when the column exists (after pricing-3yr/01_migration.sql); how many months the plan price covers.
+  billing_period_months: z.number().int().min(1).max(120).optional(),
 });
 
 async function assertAdmin(context: { supabase: ReturnType<typeof createServerSupabaseClient>; userId: string }) {
@@ -183,7 +185,8 @@ export const adminPlanOverview = createServerFn({ method: "GET" })
     const [plansRes, subsRes, publishedRes, pendingRes] = await Promise.all([
       context.supabase
         .from("plans" as never)
-        .select("id, name, slug, color, tier_order, is_active, price_yearly, price_monthly")
+        // "*" so billing_period_months comes along once that column exists (naming it would fail before the SQL is applied)
+        .select("*")
         .order("tier_order", { ascending: true }),
       context.supabase
         .from("business_subscriptions" as never)
@@ -302,6 +305,47 @@ export const cancelBusinessSubscription = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+/**
+ * What the business's plan allows: photos, products and services it may have. Used by the uploader and the managers.
+ * Mirrors the database trigger enforce_business_plan_limit: no plan = 5 photos / 3 products / 3 services, a plan value of
+ * NULL = those same defaults, a negative value = unlimited (-1 here). Admins are never limited (-1).
+ * A value of null means "could not be read": callers keep today's behaviour (nothing extra is blocked).
+ */
+export const getPlanLimits = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const unknown = { photos: null, products: null, services: null, planName: null } as {
+      photos: number | null; products: number | null; services: number | null; planName: string | null;
+    };
+    try {
+      const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+      if (isAdmin) return { photos: -1, products: -1, services: -1, planName: null as string | null };
+      const { data: biz, error } = await context.supabase
+        .from("businesses")
+        .select("current_plan_id, plans:current_plan_id(name, max_photos, max_products, max_services)")
+        .eq("id", data.businessId)
+        .maybeSingle();
+      if (error || !biz) return unknown;
+      const row = biz as unknown as {
+        current_plan_id: string | null;
+        plans: { name: string; max_photos: number | null; max_products: number | null; max_services: number | null } | null;
+      };
+      const free = { photos: 5, products: 3, services: 3 };
+      if (!row.current_plan_id) return { ...free, planName: null };
+      if (!row.plans) return unknown; // plan row not readable (e.g. a deactivated plan): do not guess
+      const pick = (v: number | null, def: number) => (v == null ? def : v < 0 ? -1 : v);
+      return {
+        photos: pick(row.plans.max_photos, free.photos),
+        products: pick(row.plans.max_products, free.products),
+        services: pick(row.plans.max_services, free.services),
+        planName: row.plans.name,
+      };
+    } catch {
+      return unknown;
+    }
+  });
+
 // Types
 export type PlanRow = {
   id: string;
@@ -329,6 +373,8 @@ export type PlanRow = {
   banner_ad_slots: number;
   /** Product catalog (PDF) included. Missing until the catalog-gold-only SQL is applied. */
   allow_catalog?: boolean;
+  /** Months the plan price covers (36 for Silver / Gold / Platinum). Missing until pricing-3yr/01_migration.sql is applied = 12. */
+  billing_period_months?: number;
 };
 
 export type AdSlotRow = {

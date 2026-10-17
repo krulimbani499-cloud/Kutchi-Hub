@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminPlanOverview } from "@/lib/plans.functions";
-import { renewalExpiryDefault } from "@/lib/subscription-utils";
+import { periodLabel, renewalExpiryDefault } from "@/lib/subscription-utils";
 import { ListSearchInput } from "@/components/ListSearchInput";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { matchesSearch } from "@/lib/list-search";
@@ -78,7 +78,7 @@ export function PlansRevenueOverview({
                   {p.name}{!p.isActive && " (inactive)"}
                 </p>
                 <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{p.count}</p>
-                <p className="text-xs text-muted-foreground">active · {inr(p.yearlyPrice)}/yr</p>
+                <p className="text-xs text-muted-foreground">active · {inr(p.yearlyPrice)}/{p.months === 12 ? "yr" : periodLabel(p.months)}</p>
               </CardContent>
             </Card>
           </button>
@@ -182,7 +182,7 @@ export function PlansRevenueOverview({
                         businessId: r.businessId,
                         planId: r.planId,
                         billingCycle: "yearly",
-                        expiresAt: renewalExpiryDefault(r.expiresAt),
+                        expiresAt: renewalExpiryDefault(r.expiresAt, data.planOptions.find((o) => o.id === r.planId)?.months ?? 12),
                       },
                     })}>
                     Renew

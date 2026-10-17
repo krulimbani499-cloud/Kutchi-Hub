@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { listActivePlans, listAdSlots } from "@/lib/plans.functions";
 import { PlanCard } from "@/components/pricing/PlanCard";
+import { planPeriodMonths } from "@/lib/subscription-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BASE_URL } from "@/lib/seo";
@@ -68,7 +69,11 @@ function PricingPage() {
           Choose a plan that fits your business. Cancel anytime.
         </p>
 
-        <p className="mt-4 text-sm font-medium text-[#ff6a00]">All plans are billed yearly</p>
+        <p className="mt-4 text-sm font-medium text-[#ff6a00]">
+          {plans.every((p) => planPeriodMonths(p) === 12)
+            ? "All plans are billed yearly"
+            : "One payment covers the whole period shown on each plan"}
+        </p>
       </div>
 
       <div className="mx-auto mt-10 grid max-w-6xl gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">

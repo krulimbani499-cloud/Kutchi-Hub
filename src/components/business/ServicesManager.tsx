@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, IndianRupee, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyEditError } from "@/lib/edit-lock";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { PlanUpgradeCard } from "./PlanUpgradeCard";
 
 type PriceUnit = "fixed" | "starts_at" | "per_hour" | "per_day" | "per_visit" | "per_item";
 
@@ -29,6 +31,7 @@ export function ServicesManager({ businessId }: Props) {
   });
   const upsert = useServerFn(upsertBusinessService);
   const del = useServerFn(deleteBusinessService);
+  const limits = usePlanLimits(businessId);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -125,6 +128,10 @@ export function ServicesManager({ businessId }: Props) {
         )}
       </div>
 
+      {/* A plan with 0 services (Silver): no add form, an upgrade card instead. Existing services stay listed and editable. */}
+      {limits.services === 0 && !editingId ? (
+        <PlanUpgradeCard what="Services" />
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-dashed border-border p-3">
         <div className="flex items-center justify-between">
           <div className="text-sm font-medium text-foreground">{editingId ? "Edit service" : "Add a service"}</div>
@@ -159,6 +166,7 @@ export function ServicesManager({ businessId }: Props) {
           )}
         </Button>
       </form>
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Save, X } from "lucide-react";
 import { slugify, slugifyInput } from "@/lib/slug";
 import { toast } from "sonner";
+import { periodLabel, planPeriodMonths } from "@/lib/subscription-utils";
 
 type Form = {
   id?: string;
@@ -37,6 +38,8 @@ type Form = {
   priority_support: boolean;
   analytics_access: boolean;
   banner_ad_slots: number;
+  /** Months the plan price covers (text for the input). Only used once the database has the column. */
+  billing_period_months: string;
 };
 
 const emptyForm: Form = {
@@ -47,6 +50,7 @@ const emptyForm: Form = {
   featured_listing: false, verified_badge: false, top_ranking: false,
   unlimited_leads: false, priority_support: false, analytics_access: false,
   banner_ad_slots: 0,
+  billing_period_months: "12",
 };
 
 export function PlansManager() {
@@ -56,6 +60,8 @@ export function PlansManager() {
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [form, setForm] = useState<Form>(emptyForm);
   const [saving, setSaving] = useState(false);
+  // The billing period is only read / written once pricing-3yr/01_migration.sql has added the column.
+  const hasPeriodColumn = plans.some((p) => p.billing_period_months !== undefined);
 
   const startNew = () => { setForm(emptyForm); setEditing("new"); };
   const startEdit = (p: PlanRow) => {
@@ -73,6 +79,7 @@ export function PlansManager() {
       top_ranking: p.top_ranking, unlimited_leads: p.unlimited_leads,
       priority_support: p.priority_support, analytics_access: p.analytics_access,
       banner_ad_slots: p.banner_ad_slots,
+      billing_period_months: String(p.billing_period_months ?? 12),
     });
     setEditing(p.id);
   };
@@ -98,6 +105,7 @@ export function PlansManager() {
           top_ranking: form.top_ranking, unlimited_leads: form.unlimited_leads,
           priority_support: form.priority_support, analytics_access: form.analytics_access,
           banner_ad_slots: Number(form.banner_ad_slots) || 0,
+          ...(hasPeriodColumn ? { billing_period_months: Math.max(1, Math.round(Number(form.billing_period_months) || 12)) } : {}),
         },
       });
       toast.success(form.id ? "Plan updated" : "Plan created");
@@ -139,7 +147,14 @@ export function PlansManager() {
                 </select>
               </div>
               <div><Label>Monthly price (₹)</Label><Input type="number" value={form.price_monthly} onChange={(e) => setForm((f) => ({ ...f, price_monthly: Number(e.target.value) }))} /></div>
-              <div><Label>Yearly price (₹)</Label><Input type="number" value={form.price_yearly} onChange={(e) => setForm((f) => ({ ...f, price_yearly: Number(e.target.value) }))} /></div>
+              <div><Label>{hasPeriodColumn ? "Plan price (₹, whole period)" : "Yearly price (₹)"}</Label><Input type="number" value={form.price_yearly} onChange={(e) => setForm((f) => ({ ...f, price_yearly: Number(e.target.value) }))} /></div>
+              {hasPeriodColumn && (
+                <div>
+                  <Label>Billing period (months)</Label>
+                  <Input type="number" min={1} max={120} value={form.billing_period_months} onChange={(e) => setForm((f) => ({ ...f, billing_period_months: e.target.value }))} />
+                  <p className="mt-1 text-xs text-muted-foreground">12 = yearly, 36 = 3 years. The plan price above covers this whole period.</p>
+                </div>
+              )}
               <div className="sm:col-span-2"><Label>Description</Label><Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></div>
               <div className="sm:col-span-2"><Label>Features (one per line)</Label><Textarea rows={6} value={form.featuresText} onChange={(e) => setForm((f) => ({ ...f, featuresText: e.target.value }))} /></div>
               <div><Label>Color</Label><Input type="color" value={form.color} onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))} /></div>
@@ -185,7 +200,9 @@ export function PlansManager() {
                   {!p.is_active && <Badge variant="secondary">Inactive</Badge>}
                 </div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  ₹{Number(p.price_monthly).toLocaleString("en-IN")}/mo · ₹{Number(p.price_yearly).toLocaleString("en-IN")}/yr · {p.features?.length ?? 0} features
+                  {hasPeriodColumn && planPeriodMonths(p) !== 12
+                    ? `₹${Number(p.price_yearly).toLocaleString("en-IN")} / ${periodLabel(planPeriodMonths(p))}`
+                    : `₹${Number(p.price_monthly).toLocaleString("en-IN")}/mo · ₹${Number(p.price_yearly).toLocaleString("en-IN")}/yr`} · {p.features?.length ?? 0} features
                 </div>
               </div>
               <div className="flex gap-2">

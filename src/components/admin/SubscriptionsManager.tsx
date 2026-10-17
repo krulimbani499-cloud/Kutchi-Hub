@@ -9,7 +9,7 @@ import {
   updateBusinessSubscription,
   cancelBusinessSubscription,
 } from "@/lib/plans.functions";
-import { addYears, currentSubscriptions, planYearlyPrice, toLocalInputValue } from "@/lib/subscription-utils";
+import { addMonths, currentSubscriptions, periodLabel, planPeriodMonths, planYearlyPrice, toLocalInputValue } from "@/lib/subscription-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,13 +33,15 @@ export type SubscriptionFormInitial = {
   notes?: string;
 };
 
-export type SubscriptionPlanOption = { id: string; name: string; yearlyPrice: number };
+/** `yearlyPrice` is the plan price for one billing period; `months` is how long that period is (36 for a 3-year plan). */
+export type SubscriptionPlanOption = { id: string; name: string; yearlyPrice: number; months?: number };
 
 /**
  * The assign / edit / renew form. Used by the Subscriptions tab and by the Overview
  * ("Assign plan" and "Renew"), so there is exactly one copy of the save logic.
- * New assignments and renewals default to a yearly plan expiring one year from now and
- * require the amount paid; editing an existing row keeps everything optional.
+ * New assignments default to the plan's own period (a 3-year plan expires 3 years from now; every plan
+ * is 12 months until billing_period_months exists) and to the plan price as the amount paid. Both can be
+ * changed. The amount paid is required for new assignments and renewals; editing keeps everything optional.
  */
 export function SubscriptionForm({
   plans,
@@ -61,16 +63,31 @@ export function SubscriptionForm({
   const isEdit = !!initial.id;
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const initialPlan = plans.find((p) => p.id === initial.planId);
   const [form, setForm] = useState(() => ({
     id: initial.id ?? null,
     businessId: initial.businessId ?? "",
     planId: initial.planId ?? "",
     billingCycle: initial.billingCycle ?? ("yearly" as "monthly" | "yearly"),
-    expiresAt: initial.expiresAt ?? (initial.id ? "" : toLocalInputValue(addYears(new Date(), 1))),
-    amountPaid: initial.amountPaid ?? "",
+    expiresAt: initial.expiresAt ?? (initial.id ? "" : toLocalInputValue(addMonths(new Date(), initialPlan?.months ?? 12))),
+    amountPaid: initial.amountPaid ?? (!initial.id && initialPlan ? String(initialPlan.yearlyPrice) : ""),
     paymentRef: initial.paymentRef ?? "",
     notes: initial.notes ?? "",
   }));
+  // Once the admin types a date / amount themselves, picking another plan no longer overwrites it.
+  const [expiresTouched, setExpiresTouched] = useState(!!initial.expiresAt || isEdit);
+  const [amountTouched, setAmountTouched] = useState(!!initial.amountPaid || isEdit);
+
+  const changePlan = (planId: string) => {
+    const plan = plans.find((p) => p.id === planId);
+    setForm((f) => ({
+      ...f,
+      planId,
+      // New assignments only: the plan's own duration and price become the defaults.
+      expiresAt: !isEdit && plan && !expiresTouched ? toLocalInputValue(addMonths(new Date(), plan.months ?? 12)) : f.expiresAt,
+      amountPaid: !isEdit && plan && !amountTouched ? String(plan.yearlyPrice) : f.amountPaid,
+    }));
+  };
 
   const filteredBiz = businesses.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
   const selectedPlan = plans.find((p) => p.id === form.planId);
@@ -136,7 +153,7 @@ export function SubscriptionForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label>Plan *</Label>
-            <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.planId} onChange={(e) => setForm((f) => ({ ...f, planId: e.target.value }))}>
+            <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.planId} onChange={(e) => changePlan(e.target.value)}>
               <option value="">Select plan</option>
               {plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
@@ -148,15 +165,15 @@ export function SubscriptionForm({
               <option value="monthly">Monthly</option>
             </select>
           </div>
-          <div><Label>Expires at</Label><Input type="datetime-local" value={form.expiresAt} onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))} /></div>
+          <div><Label>Expires at</Label><Input type="datetime-local" value={form.expiresAt} onChange={(e) => { setExpiresTouched(true); setForm((f) => ({ ...f, expiresAt: e.target.value })); }} /></div>
           <div>
             <Label>Amount paid (₹){isEdit ? "" : " *"}</Label>
-            <Input type="number" min={0} required={!isEdit} value={form.amountPaid} onChange={(e) => setForm((f) => ({ ...f, amountPaid: e.target.value }))} />
+            <Input type="number" min={0} required={!isEdit} value={form.amountPaid} onChange={(e) => { setAmountTouched(true); setForm((f) => ({ ...f, amountPaid: e.target.value })); }} />
             {selectedPlan && (
               <p className="mt-1 text-xs text-muted-foreground">
-                Plan price: ₹{selectedPlan.yearlyPrice.toLocaleString("en-IN")} / year{" "}
+                Plan price: ₹{selectedPlan.yearlyPrice.toLocaleString("en-IN")} / {periodLabel(selectedPlan.months ?? 12)}{" "}
                 <button type="button" className="font-medium text-primary hover:underline"
-                  onClick={() => setForm((f) => ({ ...f, amountPaid: String(selectedPlan.yearlyPrice) }))}>
+                  onClick={() => { setAmountTouched(true); setForm((f) => ({ ...f, amountPaid: String(selectedPlan.yearlyPrice) })); }}>
                   Use plan price
                 </button>
               </p>
@@ -194,7 +211,7 @@ export function SubscriptionsManager({
   const [listText, setListText] = useState("");
   const listSearch = useDebouncedValue(listText, 150);
 
-  const planOptions: SubscriptionPlanOption[] = plans.map((p) => ({ id: p.id, name: p.name, yearlyPrice: planYearlyPrice(p) }));
+  const planOptions: SubscriptionPlanOption[] = plans.map((p) => ({ id: p.id, name: p.name, yearlyPrice: planYearlyPrice(p), months: planPeriodMonths(p) }));
 
   const refreshAll = async () => {
     setFormState(null);
