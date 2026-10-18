@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
-import { EDIT_LOCKED_MESSAGE, friendlyEditError } from "./edit-lock";
+import { EDIT_LOCKED_MESSAGE, friendlyEditError, isEditLockedError } from "./edit-lock";
 
 export const listBusinessServices = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
@@ -31,10 +31,37 @@ const serviceSchema = z.object({
   active: z.boolean().optional(),
 });
 
+type DbError = { message?: string; code?: string; details?: string; hint?: string };
+
+/**
+ * The text an owner sees when a service could not be saved. Only known, owner-friendly reasons are spelled out;
+ * anything else shows just the error code (never the raw database text, keys or a stack trace).
+ */
+function describeServiceError(err: DbError): string {
+  const message = err.message ?? "";
+  // enforce_business_plan_limit(): "Plan limit reached — your plan allows only N services. Upgrade to add more."
+  const limit = /plan limit reached.*allows only (\d+) services/i.exec(message);
+  if (limit) {
+    const n = Number(limit[1]);
+    return n === 0
+      ? "Your plan does not include services. Upgrade your plan to add services."
+      : `Your plan allows ${n} service${n === 1 ? "" : "s"} and you already have ${n}. Upgrade your plan to add more.`;
+  }
+  if (isEditLockedError(err)) return EDIT_LOCKED_MESSAGE;
+  if (err.code === "42501") return "Could not save the service: the server is missing a database permission (code 42501). Please contact support.";
+  return err.code ? `Could not save the service (code ${err.code}). Please try again or contact support.` : "Could not save the service. Please try again.";
+}
+
+export type UpsertServiceResult = { ok: true; row: Awaited<ReturnType<typeof listBusinessServices>>[number] } | { ok: false; message: string };
+
+/**
+ * Failures are RETURNED (ok: false + a readable message) instead of thrown, so the reason always reaches the owner's
+ * toast. The underlying error is logged on the server (Vercel logs) with ids only - no keys, no stack.
+ */
 export const upsertBusinessService = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => serviceSchema.parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<UpsertServiceResult> => {
     const payload = {
       business_id: data.businessId,
       name: data.name,
@@ -45,24 +72,28 @@ export const upsertBusinessService = createServerFn({ method: "POST" })
       display_order: data.displayOrder ?? 0,
       active: data.active ?? true,
     };
-    if (data.id) {
-      const { data: row, error } = await context.supabase
-        .from("business_services")
-        .update(payload)
-        .eq("id", data.id)
-        .select("*")
-        .single();
+    const fail = (err: DbError, step: string): UpsertServiceResult => {
+      console.error(`[upsertBusinessService] ${step} failed`, {
+        userId: context.userId,
+        businessId: data.businessId,
+        serviceId: data.id ?? null,
+        code: err.code ?? null,
+        message: err.message ?? null,
+        details: err.details ?? null,
+        hint: err.hint ?? null,
+      });
+      return { ok: false, message: describeServiceError(err) };
+    };
+    try {
       // An update the database refuses (owner without an active plan) comes back as "no row": friendly message.
-      if (error) throw new Error(friendlyEditError(error, error.message));
-      return row;
+      const { data: row, error } = data.id
+        ? await context.supabase.from("business_services").update(payload).eq("id", data.id).select("*").single()
+        : await context.supabase.from("business_services").insert(payload).select("*").single();
+      if (error) return fail(error, data.id ? "update" : "insert");
+      return { ok: true, row };
+    } catch (e) {
+      return fail({ message: e instanceof Error ? e.message : String(e) }, "unexpected");
     }
-    const { data: row, error } = await context.supabase
-      .from("business_services")
-      .insert(payload)
-      .select("*")
-      .single();
-    if (error) throw new Error(friendlyEditError(error, error.message));
-    return row;
   });
 
 export const deleteBusinessService = createServerFn({ method: "POST" })

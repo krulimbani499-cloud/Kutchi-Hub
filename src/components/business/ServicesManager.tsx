@@ -62,7 +62,7 @@ export function ServicesManager({ businessId }: Props) {
     if (name.trim().length < 2) return;
     setBusy(true);
     try {
-      await upsert({
+      const result = await upsert({
         data: {
           id: editingId ?? undefined,
           businessId,
@@ -72,11 +72,17 @@ export function ServicesManager({ businessId }: Props) {
           priceUnit: price ? priceUnit : null,
         },
       });
+      if (!result.ok) {
+        // The server already turned the database reason into a readable sentence (plan limit, no active plan, ...).
+        toast.error(result.message);
+        return;
+      }
       resetForm();
       await refetch();
     } catch (e) {
-      // e.g. the database refused the save because the business has no active plan
-      toast.error(friendlyEditError(e, "Could not save service. Please try again."));
+      // The request itself failed (network, session expired): the server never got to give a reason.
+      console.error("[ServicesManager] save failed:", e);
+      toast.error(friendlyEditError(e, "Could not save service. Check your connection and try again."));
     } finally { setBusy(false); }
   };
 
