@@ -22,6 +22,7 @@ type FavoriteRow = {
     id: string;
     name: string;
     slug: string;
+    status: string;
     description: string | null;
     address: string | null;
     city: string | null;
@@ -43,7 +44,7 @@ function FavoritesPage() {
       const { data, error } = await supabase
         .from("business_favorites")
         .select(
-          "business_id, businesses:business_id(id, name, slug, description, address, city, phone, verified, featured_image, categories:category_id(id, name, slug, color))",
+          "business_id, businesses:business_id(id, name, slug, status, description, address, city, phone, verified, featured_image, categories:category_id(id, name, slug, color))",
         )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
@@ -52,7 +53,10 @@ function FavoritesPage() {
     },
   });
 
-  const businesses = (data ?? []).map((r) => r.businesses).filter((b): b is NonNullable<FavoriteRow["businesses"]> => !!b);
+  // An archived (or otherwise unpublished) business is never shown, even to its owner or an admin who favourited it.
+  const businesses = (data ?? [])
+    .map((r) => r.businesses)
+    .filter((b): b is NonNullable<FavoriteRow["businesses"]> => !!b && b.status === "published");
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">

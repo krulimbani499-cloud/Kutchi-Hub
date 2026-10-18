@@ -25,6 +25,7 @@ import { PlansManager } from "@/components/admin/PlansManager";
 import { AdSlotsManager } from "@/components/admin/AdSlotsManager";
 import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
 import { PlansRevenueOverview } from "@/components/admin/PlansRevenueOverview";
+import { BusinessesAdmin } from "@/components/admin/BusinessesAdmin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -165,6 +166,7 @@ function AdminPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="verify">Verify Businesses</TabsTrigger>
+          <TabsTrigger value="businesses">Businesses</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="banners">Banner Ads</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
@@ -292,6 +294,9 @@ function AdminPage() {
 
         <TabsContent value="verify" className="mt-0">
           <VerifyBusinessesAdmin />
+        </TabsContent>
+        <TabsContent value="businesses" className="mt-0">
+          <BusinessesAdmin />
         </TabsContent>
         <TabsContent value="categories" className="mt-0">
           <CategoriesAdmin />

@@ -31,7 +31,8 @@ export function useBusinessFilters<T extends FilterableBusiness>(businesses: T[]
   const statusChips: Chip<string>[] = useMemo(
     () => [
       { value: "all", label: "All", count: businesses.length },
-      ...(["published", "pending", "rejected"] as const).map((s) => ({
+      // "Archived" only appears when the list has one (admins see them here; owners normally have none).
+      ...((["published", "pending", "rejected", "archived"] as const).filter((s) => s !== "archived" || businesses.some((b) => b.status === "archived"))).map((s) => ({
         value: s,
         label: s[0].toUpperCase() + s.slice(1),
         count: businesses.filter((b) => b.status === s).length,

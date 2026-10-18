@@ -1,14 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { getDashboard, deleteBusiness, updateClaimStatus } from "@/lib/businesses.functions";
+import { getDashboard, adminSetBusinessStatus, updateClaimStatus } from "@/lib/businesses.functions";
+import { CONTACT_WHATSAPP } from "@/lib/contact";
+import { toast } from "sonner";
 import { signOut } from "@/lib/auth";
 import { getOwnerEnquiries, updateEnquiryStatus } from "@/lib/leads.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin, Star, Trash2, Edit, Lock, MessageSquare, Phone, Mail, Inbox, LogOut, Package, Wrench, ChevronDown, ChevronUp, Gift, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { Building2, MapPin, Star, Archive, Flag, Edit, Lock, MessageSquare, Phone, Mail, Inbox, LogOut, Package, Wrench, ChevronDown, ChevronUp, Gift, LayoutDashboard, ShieldCheck } from "lucide-react";
 import { EditLockedCard } from "@/components/business/EditLockedCard";
 import { BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,7 +46,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage() {
   const { data, refetch } = useSuspenseQuery(dashboardQueryOptions);
   const { data: enquiries = [], refetch: refetchEnquiries } = useQuery(enquiriesQueryOptions);
-  const deleteFn = useServerFn(deleteBusiness);
+  const archiveFn = useServerFn(adminSetBusinessStatus);
   const updateClaimFn = useServerFn(updateClaimStatus);
   const updateEnquiryFn = useServerFn(updateEnquiryStatus);
   const [expanded, setExpanded] = useState<Record<string, "services" | "products" | null>>({});
@@ -56,11 +58,23 @@ function DashboardPage() {
     setExpanded((prev) => ({ ...prev, [id]: prev[id] === panel ? null : panel }));
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this business?")) return;
-    await deleteFn({ data: { id } });
-    await refetch();
+  // Nobody deletes a business from here any more (deleting also deleted its subscription and payment history).
+  // An admin archives it (hidden from the website, nothing lost; restore is in Admin -> Businesses).
+  const handleArchive = async (id: string, name: string) => {
+    if (!confirm(`Archive "${name}"?
+
+It will disappear from the website. Its subscription and payment history are kept.`)) return;
+    try {
+      await archiveFn({ data: { id, status: "archived" } });
+      toast.success("Business archived");
+      await refetch();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not archive");
+    }
   };
+  // An owner asks Kutchi Hub to remove the listing (WhatsApp message); the admin decides.
+  const removalHref = (name: string) =>
+    `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Hi, I want to remove my business "${name}" from Kutchi Hub. Please help.`)}`;
 
   const handleClaim = async (claimId: string, status: "approved" | "rejected") => {
     await updateClaimFn({ data: { claimId, status } });
@@ -187,9 +201,19 @@ function DashboardPage() {
                           </Link>
                         </Button>
                         )}
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(b.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {data.isAdmin ? (
+                          b.status !== "archived" && (
+                            <Button variant="ghost" size="icon" onClick={() => handleArchive(b.id, b.name)} aria-label="Archive business" title="Archive (hide from the website)">
+                              <Archive className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )
+                        ) : (
+                          <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+                            <a href={removalHref(b.name)} target="_blank" rel="noreferrer" title="Ask Kutchi Hub to remove this listing">
+                              <Flag className="mr-1 h-4 w-4" /> Request removal
+                            </a>
+                          </Button>
+                        )}
                         </div>
                       </div>
                       {b.editLocked ? (

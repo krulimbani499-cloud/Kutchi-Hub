@@ -1253,22 +1253,94 @@ export const updateClaimStatus = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-export const deleteBusiness = createServerFn({ method: "POST" })
+// -------- Archive / restore / permanent delete (admin only) --------
+// Businesses are never hard-deleted from the app any more: deleting a business also deletes its subscriptions and
+// payment history (ON DELETE CASCADE). "Archived" hides it everywhere public and keeps every row.
+
+async function requireAdmin(context: { supabase: ReturnType<typeof createServerSupabaseClient>; userId: string }) {
+  const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+  if (!isAdmin) throw new Error("Unauthorized");
+}
+
+/** Every business with its status, for the admin "Businesses" tab (published, pending, rejected, archived). */
+export const adminListAllBusinesses = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireAdmin(context as never);
+    const { data, error } = await context.supabase
+      .from("businesses")
+      .select("id, name, slug, city, phone, phone_secondary, email, status, verified, created_at, categories:category_id(name), plans:current_plan_id(name)")
+      .order("created_at", { ascending: false })
+      .limit(2000);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((b) => ({
+      id: b.id,
+      name: b.name,
+      slug: b.slug,
+      city: b.city,
+      phone: b.phone,
+      phoneSecondary: b.phone_secondary,
+      email: b.email,
+      status: b.status,
+      verified: b.verified,
+      created_at: b.created_at,
+      categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
+      planName: (b as unknown as { plans: { name: string } | null }).plans?.name ?? null,
+    }));
+  });
+
+/** Archive (hide everywhere public) or restore (back to 'published'). Nothing is deleted either way. */
+export const adminSetBusinessStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid(), status: z.enum(["archived", "published"]) }).parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context as never);
+    // Archive only a business that is not archived yet; restore only an archived one.
+    const query = context.supabase.from("businesses").update({ status: data.status }).eq("id", data.id);
+    const { data: rows, error } = await (data.status === "archived" ? query.neq("status", "archived") : query.eq("status", "archived")).select("id");
+    if (error) throw new Error(error.message);
+    if (!rows || rows.length === 0) throw new Error(data.status === "archived" ? "Business is already archived" : "Only an archived business can be restored");
+    return { success: true, status: data.status };
+  });
+
+/** What a permanent delete would take with it, for the confirm dialog. */
+export const adminBusinessDeleteImpact = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const supabase = context.supabase;
-    const { data: existing } = await supabase
-      .from("businesses")
-      .select("owner_id")
-      .eq("id", data.id)
-      .single();
-    if (!existing) throw new Error("Business not found");
-    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
-    if (existing.owner_id !== context.userId && !isAdmin) throw new Error("Unauthorized");
-
-    const { error } = await supabase.from("businesses").delete().eq("id", data.id);
+    await requireAdmin(context as never);
+    const { data: subs, error } = await context.supabase
+      .from("business_subscriptions" as never)
+      .select("id, amount_paid")
+      .eq("business_id", data.id);
     if (error) throw new Error(error.message);
+    const rows = (subs ?? []) as unknown as Array<{ id: string; amount_paid: number | null }>;
+    return { subscriptions: rows.length, totalPaid: rows.reduce((sum, r) => sum + Number(r.amount_paid ?? 0), 0) };
+  });
+
+/**
+ * Permanent delete. Admin only, only for an ARCHIVED business, and only when the exact business name is sent back
+ * (the admin typed it in the confirm dialog). Also deletes its subscriptions, payments, reviews, photos, products, ...
+ */
+export const adminDeleteBusinessPermanently = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid(), confirmName: z.string() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context as never);
+    const { data: biz, error: findError } = await context.supabase
+      .from("businesses")
+      .select("id, name, status")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (findError) throw new Error(findError.message);
+    if (!biz) throw new Error("Business not found");
+    if (biz.status !== "archived") throw new Error("Archive the business first. Only an archived business can be deleted permanently.");
+    if (data.confirmName !== biz.name) throw new Error("The name you typed does not match the business name exactly.");
+    const { data: deleted, error } = await context.supabase.from("businesses").delete().eq("id", data.id).select("id");
+    if (error) throw new Error(error.message);
+    // Row-level security silently skips a delete it does not allow (e.g. before no-hard-delete/01_migration.sql is applied
+    // it is allowed; after it, only admins): report instead of pretending it worked.
+    if (!deleted || deleted.length === 0) throw new Error("The database did not delete the business.");
     return { success: true };
   });
 
