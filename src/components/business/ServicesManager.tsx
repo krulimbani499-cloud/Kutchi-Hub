@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, IndianRupee, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
-import { friendlyEditError } from "@/lib/edit-lock";
+import { friendlyEditError, readValidationError } from "@/lib/edit-lock";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { PlanUpgradeCard } from "./PlanUpgradeCard";
 
@@ -39,6 +39,7 @@ export function ServicesManager({ businessId }: Props) {
   const [price, setPrice] = useState("");
   const [priceUnit, setPriceUnit] = useState<PriceUnit>("fixed");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const resetForm = () => {
     setEditingId(null);
@@ -46,6 +47,7 @@ export function ServicesManager({ businessId }: Props) {
     setDescription("");
     setPrice("");
     setPriceUnit("fixed");
+    setError("");
   };
 
   const startEdit = (s: Awaited<ReturnType<typeof listBusinessServices>>[number]) => {
@@ -57,9 +59,23 @@ export function ServicesManager({ businessId }: Props) {
     if (typeof window !== "undefined") window.scrollTo({ top: window.scrollY + 100, behavior: "smooth" });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (name.trim().length < 2) return;
+  // NOT a <form>: this component renders inside the BusinessForm <form>, and forms cannot nest (the browser drops the
+  // inner one, so its submit button would submit the business form instead and this handler would never run).
+  const handleSubmit = async () => {
+    setError("");
+    if (name.trim().length < 2) {
+      const msg = "Service name must be at least 2 characters.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    const priceNumber = price.trim() === "" ? null : Number(price);
+    if (priceNumber !== null && (!Number.isFinite(priceNumber) || priceNumber < 0 || priceNumber > 9999999)) {
+      const msg = "Enter a valid price (0 to 9,999,999) or leave it empty.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
     setBusy(true);
     try {
       const result = await upsert({
@@ -68,21 +84,25 @@ export function ServicesManager({ businessId }: Props) {
           businessId,
           name: name.trim(),
           description: description.trim() || undefined,
-          price: price ? Number(price) : null,
-          priceUnit: price ? priceUnit : null,
+          price: priceNumber,
+          priceUnit: priceNumber !== null ? priceUnit : null,
         },
       });
       if (!result.ok) {
         // The server already turned the database reason into a readable sentence (plan limit, no active plan, ...).
+        setError(result.message);
         toast.error(result.message);
         return;
       }
+      toast.success(editingId ? "Service updated" : "Service added");
       resetForm();
       await refetch();
     } catch (e) {
-      // The request itself failed (network, session expired): the server never got to give a reason.
+      // Thrown before/outside the handler: an input-check (zod) failure, a network error or an expired session.
       console.error("[ServicesManager] save failed:", e);
-      toast.error(friendlyEditError(e, "Could not save service. Check your connection and try again."));
+      const msg = readValidationError(e) ?? friendlyEditError(e, "Could not save service. Check your connection and try again.");
+      setError(msg);
+      toast.error(msg);
     } finally { setBusy(false); }
   };
 
@@ -122,10 +142,10 @@ export function ServicesManager({ businessId }: Props) {
                 {s.description && <p className="mt-1 text-sm text-muted-foreground">{s.description}</p>}
               </div>
               <div className="flex flex-shrink-0 gap-1">
-                <Button variant="ghost" size="icon" onClick={() => startEdit(s)} title="Edit">
+                <Button type="button" variant="ghost" size="icon" onClick={() => startEdit(s)} title="Edit">
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} title="Delete">
+                <Button type="button" variant="ghost" size="icon" onClick={() => handleDelete(s.id)} title="Delete">
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
@@ -138,7 +158,7 @@ export function ServicesManager({ businessId }: Props) {
       {limits.services === 0 && !editingId ? (
         <PlanUpgradeCard what="Services" />
       ) : (
-      <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-dashed border-border p-3">
+      <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
         <div className="flex items-center justify-between">
           <div className="text-sm font-medium text-foreground">{editingId ? "Edit service" : "Add a service"}</div>
           {editingId && (
@@ -147,10 +167,21 @@ export function ServicesManager({ businessId }: Props) {
             </button>
           )}
         </div>
-        <Input placeholder="Service name (e.g. AC Repair)" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
+        <Input
+          placeholder="Service name (e.g. AC Repair)"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={120}
+          aria-invalid={!!error}
+          // Enter saves the service, not the whole business form around it.
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleSubmit(); } }}
+        />
         <Textarea placeholder="Short description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} rows={2} />
         <div className="flex gap-2">
-          <Input type="number" step="1" min="0" placeholder="Price (₹)" value={price} onChange={(e) => setPrice(e.target.value)} className="flex-1" />
+          <Input
+            type="number" step="1" min="0" placeholder="Price (₹)" value={price} onChange={(e) => setPrice(e.target.value)} className="flex-1"
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleSubmit(); } }}
+          />
           <select
             value={priceUnit}
             onChange={(e) => setPriceUnit(e.target.value as PriceUnit)}
@@ -164,14 +195,15 @@ export function ServicesManager({ businessId }: Props) {
             <option value="per_item">Per item</option>
           </select>
         </div>
-        <Button type="submit" disabled={busy || name.trim().length < 2} className="bg-[#ff6a00] text-white hover:bg-[#e65a00]">
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <Button type="button" onClick={() => void handleSubmit()} disabled={busy} className="bg-[#ff6a00] text-white hover:bg-[#e65a00]">
           {editingId ? (
             <><Pencil className="mr-1 h-4 w-4" /> {busy ? "Saving..." : "Save changes"}</>
           ) : (
             <><Plus className="mr-1 h-4 w-4" /> {busy ? "Adding..." : "Add service"}</>
           )}
         </Button>
-      </form>
+      </div>
       )}
     </div>
   );

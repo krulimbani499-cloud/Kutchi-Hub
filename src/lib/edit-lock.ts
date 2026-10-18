@@ -37,3 +37,30 @@ export function friendlyEditError(err: unknown, fallback?: string): string {
   if (fallback) return fallback;
   return err instanceof Error ? err.message : "Something went wrong.";
 }
+
+const FIELD_LABEL: Record<string, string> = {
+  name: "Name", description: "Description", price: "Price", discountPrice: "Discount price", stock: "Stock",
+  category: "Category", imageUrls: "Images", businessId: "Business",
+};
+
+/**
+ * A server function whose input check fails throws a ZodError BEFORE its handler runs; over the wire that arrives as an
+ * Error whose message is the JSON list of issues. Turn it into one readable line ("Name: must be at least 2 characters").
+ * Returns null when `err` is not such an error.
+ */
+export function readValidationError(err: unknown): string | null {
+  const text = err instanceof Error ? err.message : typeof err === "string" ? err : "";
+  if (!text.trimStart().startsWith("[")) return null;
+  try {
+    const issues = JSON.parse(text) as Array<{ path?: Array<string | number>; message?: string }>;
+    if (!Array.isArray(issues) || issues.length === 0 || !issues.every((i) => typeof i?.message === "string")) return null;
+    return issues
+      .map((i) => {
+        const field = String(i.path?.[0] ?? "");
+        return field ? `${FIELD_LABEL[field] ?? field}: ${i.message}` : (i.message as string);
+      })
+      .join(" · ");
+  } catch {
+    return null;
+  }
+}

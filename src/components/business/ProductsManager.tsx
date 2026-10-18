@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus, IndianRupee, Upload, X, Package, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { friendlyEditError, isEditLockedError } from "@/lib/edit-lock";
+import { friendlyEditError, isEditLockedError, readValidationError } from "@/lib/edit-lock";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { PlanUpgradeCard } from "./PlanUpgradeCard";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -148,15 +148,14 @@ export function ProductsManager({ businessId }: Props) {
       resetForm();
       await invalidateEverywhere();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Could not save product.";
+      // An input-check failure (zod) is thrown before the server handler runs: show it as a readable line.
+      const invalid = readValidationError(e);
+      const msg = invalid ?? (e instanceof Error ? e.message : "Could not save product.");
       console.error("[ProductsManager] upsert failed:", e);
-      setError(msg);
       // Plan-limit text is written for owners; anything else (database errors) stays out of the toast.
-      toast.error(
-        msg.startsWith("Plan limit reached") || isEditLockedError(e)
-          ? friendlyEditError(e, msg)
-          : "Could not save product. Please try again.",
-      );
+      const shown = invalid ?? (msg.startsWith("Plan limit reached") || isEditLockedError(e) ? friendlyEditError(e, msg) : "Could not save product. Please try again.");
+      setError(shown);
+      toast.error(shown);
     } finally {
       setBusy(false);
     }
@@ -164,9 +163,14 @@ export function ProductsManager({ businessId }: Props) {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product?")) return;
-    await del({ data: { id } });
-    if (editingId === id) resetForm();
-    await invalidateEverywhere();
+    try {
+      await del({ data: { id } });
+      if (editingId === id) resetForm();
+      await invalidateEverywhere();
+    } catch (e) {
+      console.error("[ProductsManager] delete failed:", e);
+      toast.error(readValidationError(e) ?? friendlyEditError(e, "Could not delete product. Please try again."));
+    }
   };
 
   return (
@@ -365,12 +369,12 @@ function ProductRow({ product: p, onEdit, onDelete }: { product: Product; onEdit
       {(onEdit || onDelete) && (
         <div className="flex flex-shrink-0 gap-1">
           {onEdit && (
-            <Button variant="ghost" size="icon" onClick={onEdit} title="Edit">
+            <Button type="button" variant="ghost" size="icon" onClick={onEdit} title="Edit">
               <Pencil className="h-4 w-4" />
             </Button>
           )}
           {onDelete && (
-            <Button variant="ghost" size="icon" onClick={onDelete} title="Delete">
+            <Button type="button" variant="ghost" size="icon" onClick={onDelete} title="Delete">
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           )}
