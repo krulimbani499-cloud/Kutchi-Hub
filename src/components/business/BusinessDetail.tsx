@@ -447,6 +447,37 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               <p className="text-sm leading-relaxed text-muted-foreground">{business.description || "No description available."}</p>
             </section>
 
+            {/* Catalog (PDF): only when there is one and the plan includes it. */}
+            {business.catalog_url && business.catalog_allowed !== false && (
+              <section>
+                <h2 className="mb-2 text-lg font-semibold text-foreground">Catalog</h2>
+                <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-orange-50 text-[#ff6a00]">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-sm font-medium text-foreground">{business.catalog_name || "Product catalog"}</p>
+                    <p className="text-xs text-muted-foreground">PDF</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="shrink-0 bg-[#ff6a00] text-white hover:bg-[#e65a00]"
+                    onClick={async () => {
+                      const key = getBusinessPhotoStorageKey(business.catalog_url);
+                      if (!key) return;
+                      const { data } = await supabase.storage
+                        .from(BUSINESS_PHOTOS_BUCKET)
+                        .createSignedUrl(key, SIGNED_BUSINESS_PHOTO_TTL_SECONDS);
+                      if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
+                    }}
+                  >
+                    View catalog
+                  </Button>
+                </div>
+              </section>
+            )}
+
             <section>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Services</h2>
               {isOwner ? (
@@ -670,25 +701,6 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Globe className="h-4 w-4 shrink-0" />
                   <a href={business.website} target="_blank" rel="noreferrer" className="text-foreground hover:underline">{business.website}</a>
-                </div>
-              )}
-              {business.catalog_url && business.catalog_allowed !== false && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <FileText className="h-4 w-4 shrink-0" />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const key = getBusinessPhotoStorageKey(business.catalog_url);
-                      if (!key) return;
-                      const { data } = await supabase.storage
-                        .from(BUSINESS_PHOTOS_BUCKET)
-                        .createSignedUrl(key, SIGNED_BUSINESS_PHOTO_TTL_SECONDS);
-                      if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
-                    }}
-                    className="truncate text-left text-foreground hover:underline"
-                  >
-                    View catalog ({business.catalog_name ?? "PDF"})
-                  </button>
                 </div>
               )}
               {(business.instagram_url || business.facebook_url || business.youtube_url) && (
