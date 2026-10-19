@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { notFound } from "@tanstack/react-router";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createServerSupabaseClient } from "./businesses.server";
+import { createServerSupabaseClient, uniqueBusinessSlug } from "./businesses.server";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
@@ -181,8 +181,10 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
       query = query.eq("city", data.city);
     }
 
-    const { data: business, error } = await query.maybeSingle();
+    // Two businesses can share a slug in old data: show the oldest instead of failing with "multiple rows".
+    const { data: found, error } = await query.order("created_at", { ascending: true }).limit(1);
     if (error) throw new Error(error.message);
+    const business = found?.[0] ?? null;
     if (!business) {
       // Not published. If it's merely awaiting review, say so (and nothing more);
       // rejected or missing businesses stay a plain not-found.
@@ -841,6 +843,11 @@ async function resolveBusinessCoords(
   }
 }
 
+/** True when an insert / update failed because another business already has that slug (unique index, SQLSTATE 23505). */
+function isSlugConflict(error: { code?: string; message?: string }): boolean {
+  return error.code === "23505" && /slug/i.test(error.message ?? "");
+}
+
 export const createBusiness = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => businessFormSchema.parse(input))
@@ -849,40 +856,42 @@ export const createBusiness = createServerFn({ method: "POST" })
     const userId = context.userId;
     const coords = await resolveBusinessCoords(data, userId);
 
-    const { data: existing, error: existingError } = await supabase
-      .from("businesses")
-      .select("id")
-      .eq("slug", data.slug)
-      .eq("city", data.city)
-      .maybeSingle();
-    if (existingError) throw new Error(existingError.message);
-    if (existing) throw new Error("A business with this slug already exists in this city");
-
-    const { data: business, error } = await supabase
-      .from("businesses")
-      .insert({
-        ...data,
-        ...(coords ?? {}),
-        owner_id: userId,
-        status: "pending",
-        phone_secondary: data.phone_secondary || null,
-        website: data.website || null,
-        email: data.email || null,
-        instagram_url: data.instagram_url || null,
-        facebook_url: data.facebook_url || null,
-        youtube_url: data.youtube_url || null,
-        google_maps_url: data.google_maps_url || null,
-        featured_image: data.featured_image || null,
-        app_discount_percent:
-          data.app_discount_percent == null || Number.isNaN(data.app_discount_percent)
-            ? null
-            : data.app_discount_percent,
-        app_discount_label: data.app_discount_label ? data.app_discount_label : null,
-        app_discount_valid_until: data.app_discount_valid_until ? data.app_discount_valid_until : null,
-      })
-      .select("id, slug")
-      .single();
-    if (error) throw new Error(error.message);
+    // The slug is the page address (/business/<slug>), so it must be unique across ALL businesses. Checked here on the
+    // server (the form cannot know about other owners' pending listings); a taken slug becomes slug-2, slug-3, ...
+    const row = (slug: string) => ({
+      ...data,
+      slug,
+      ...(coords ?? {}),
+      owner_id: userId,
+      status: "pending",
+      phone_secondary: data.phone_secondary || null,
+      website: data.website || null,
+      email: data.email || null,
+      instagram_url: data.instagram_url || null,
+      facebook_url: data.facebook_url || null,
+      youtube_url: data.youtube_url || null,
+      google_maps_url: data.google_maps_url || null,
+      featured_image: data.featured_image || null,
+      app_discount_percent:
+        data.app_discount_percent == null || Number.isNaN(data.app_discount_percent)
+          ? null
+          : data.app_discount_percent,
+      app_discount_label: data.app_discount_label ? data.app_discount_label : null,
+      app_discount_valid_until: data.app_discount_valid_until ? data.app_discount_valid_until : null,
+    });
+    let business: { id: string; slug: string } | null = null;
+    // Two sign-ups choosing the same slug at the same moment: the second insert fails on the unique index (once
+    // unique-slug/02_migration.sql is applied); ask again and take the next free one.
+    for (let attempt = 0; attempt < 3 && !business; attempt++) {
+      const slug = await uniqueBusinessSlug(data.slug, { fallbackClient: supabase });
+      const { data: inserted, error } = await supabase.from("businesses").insert(row(slug)).select("id, slug").single();
+      if (!error) {
+        business = inserted;
+      } else if (!isSlugConflict(error) || attempt === 2) {
+        throw new Error(error.message);
+      }
+    }
+    if (!business) throw new Error("Could not create the business. Please try again.");
 
     const { data: isOwner } = await supabase.rpc("has_role", { _user_id: userId, _role: "business_owner" });
     if (!isOwner) {
@@ -903,7 +912,7 @@ export const updateBusiness = createServerFn({ method: "POST" })
 
     const { data: existing, error: existingError } = await supabase
       .from("businesses")
-      .select("owner_id, google_maps_url, address, city, state, latitude, longitude")
+      .select("owner_id, slug, google_maps_url, address, city, state, latitude, longitude")
       .eq("id", data.id)
       .maybeSingle();
     if (existingError) throw new Error(existingError.message);
@@ -929,33 +938,42 @@ export const updateBusiness = createServerFn({ method: "POST" })
     }
 
     const { id, ...rest } = data;
-    const { data: updatedRows, error } = await supabase
-      .from("businesses")
-      .update({
-        ...rest,
-        ...coordsPatch,
-        phone_secondary: rest.phone_secondary || null,
-        website: rest.website || null,
-        email: rest.email || null,
-        instagram_url: rest.instagram_url || null,
-        facebook_url: rest.facebook_url || null,
-        youtube_url: rest.youtube_url || null,
-        google_maps_url: rest.google_maps_url || null,
-        featured_image: rest.featured_image || null,
-        app_discount_percent:
-          rest.app_discount_percent == null || Number.isNaN(rest.app_discount_percent)
-            ? null
-            : rest.app_discount_percent,
-        app_discount_label: rest.app_discount_label ? rest.app_discount_label : null,
-        app_discount_valid_until: rest.app_discount_valid_until ? rest.app_discount_valid_until : null,
-      })
-      .eq("id", id)
-      .select("id");
-    if (error) throw new Error(friendlyEditError(error, error.message));
-    // The database silently skips an update the row-level-security policy refuses (owner of a published
-    // business with no active plan): no error, zero rows. Report it instead of pretending it saved.
-    if (!updatedRows || updatedRows.length === 0) throw new Error(EDIT_LOCKED_MESSAGE);
-    return { success: true };
+    const patch = (slug: string) => ({
+      ...rest,
+      slug,
+      ...coordsPatch,
+      phone_secondary: rest.phone_secondary || null,
+      website: rest.website || null,
+      email: rest.email || null,
+      instagram_url: rest.instagram_url || null,
+      facebook_url: rest.facebook_url || null,
+      youtube_url: rest.youtube_url || null,
+      google_maps_url: rest.google_maps_url || null,
+      featured_image: rest.featured_image || null,
+      app_discount_percent:
+        rest.app_discount_percent == null || Number.isNaN(rest.app_discount_percent)
+          ? null
+          : rest.app_discount_percent,
+      app_discount_label: rest.app_discount_label ? rest.app_discount_label : null,
+      app_discount_valid_until: rest.app_discount_valid_until ? rest.app_discount_valid_until : null,
+    });
+    // A slug that did not change is kept as it is. A new one must not collide with ANY other business (taken -> slug-2, ...).
+    const slugChanged = rest.slug !== existing.slug;
+    let finalSlug = existing.slug;
+    let updatedRows: { id: string }[] | null = null;
+    for (let attempt = 0; attempt < 3 && !updatedRows; attempt++) {
+      finalSlug = slugChanged ? await uniqueBusinessSlug(rest.slug, { excludeId: id, fallbackClient: supabase }) : existing.slug;
+      const { data: rows, error } = await supabase.from("businesses").update(patch(finalSlug)).eq("id", id).select("id");
+      if (error) {
+        if (slugChanged && isSlugConflict(error) && attempt < 2) continue;
+        throw new Error(friendlyEditError(error, error.message));
+      }
+      // The database silently skips an update the row-level-security policy refuses (owner of a published
+      // business with no active plan): no error, zero rows. Report it instead of pretending it saved.
+      if (!rows || rows.length === 0) throw new Error(EDIT_LOCKED_MESSAGE);
+      updatedRows = rows;
+    }
+    return { success: true, slug: finalSlug };
   });
 
 // -------- Admin: business approval --------
@@ -1349,15 +1367,18 @@ export const getBusinessForEdit = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase;
-    const { data: business, error } = await supabase
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    // Old data can hold two businesses with one slug: take the caller's own (an admin: the oldest) instead of failing
+    // with "multiple rows". No match at all is a normal not-found page.
+    const { data: found, error } = await supabase
       .from("businesses")
       .select("*, categories:category_id(id, name, slug, color, icon)")
       .eq("slug", data.slug)
-      .maybeSingle();
+      .order("created_at", { ascending: true })
+      .limit(10);
     if (error) throw new Error(error.message);
-    if (!business) throw new Error("Business not found");
-
-    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!found || found.length === 0) throw notFound();
+    const business = found.find((b) => b.owner_id === context.userId) ?? found[0];
     if (business.owner_id !== context.userId && !isAdmin) throw new Error("Unauthorized");
 
     const { data: photos } = await supabase

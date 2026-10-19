@@ -218,6 +218,25 @@ const subSchema = z.object({
   status: z.enum(["active", "expired", "pending", "cancelled"]).default("active"),
 });
 
+/** The subscriptions a business has RIGHT NOW (status active and not past its expiry), newest first. Admin only. */
+export const getActiveSubscriptionsForBusiness = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { data: rows, error } = await context.supabase
+      .from("business_subscriptions" as never)
+      .select("id, expires_at, plans:plan_id(name)")
+      .eq("business_id", data.businessId)
+      .eq("status", "active")
+      .order("started_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const now = Date.now();
+    return ((rows ?? []) as unknown as Array<{ id: string; expires_at: string | null; plans: { name: string } | null }>)
+      .filter((r) => !r.expires_at || new Date(r.expires_at).getTime() > now)
+      .map((r) => ({ id: r.id, planName: r.plans?.name ?? "plan", expiresAt: r.expires_at }));
+  });
+
 export const assignPlanToBusiness = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => subSchema.parse(input))
@@ -226,6 +245,23 @@ export const assignPlanToBusiness = createServerFn({ method: "POST" })
     // New assignments and renewals must record what was paid (editing an old row stays optional).
     if (data.status === "active" && data.amountPaid == null) {
       throw new Error("Amount paid is required");
+    }
+    // A double-click (or a retry) sends the same assignment twice within moments: return the row just created
+    // instead of adding a second identical one.
+    {
+      const since = new Date(Date.now() - 15_000).toISOString();
+      const { data: recent } = await context.supabase
+        .from("business_subscriptions" as never)
+        .select("*")
+        .eq("business_id", data.businessId)
+        .eq("plan_id", data.planId)
+        .eq("status", data.status)
+        .eq("created_by", context.userId)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const dup = (recent as unknown as Array<{ amount_paid: number | null; billing_cycle: string }> | null)?.[0];
+      if (dup && Number(dup.amount_paid ?? -1) === Number(data.amountPaid ?? -1) && dup.billing_cycle === data.billingCycle) return dup;
     }
     // insert subscription
     const payload = {

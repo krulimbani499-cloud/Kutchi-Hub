@@ -142,8 +142,14 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
         hours,
       });
       if (initial) {
-        await updateFn({ data: { ...payload, id: initial.id } });
-        setFormMessage("Business updated successfully.");
+        const saved = await updateFn({ data: { ...payload, id: initial.id } });
+        if (saved.slug !== payload.slug) {
+          // Another business already had that slug: the server saved the next free one. Show it in the form.
+          setForm((f) => ({ ...f, slug: saved.slug }));
+          setFormMessage(`Business updated successfully. The slug "${payload.slug}" was already taken, so the link is now "${saved.slug}".`);
+        } else {
+          setFormMessage("Business updated successfully.");
+        }
       } else {
         const result = await createFn({ data: { ...payload } });
         // Upload pending image (if any) into the newly created business folder

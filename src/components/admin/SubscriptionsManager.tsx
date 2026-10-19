@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -6,6 +6,7 @@ import {
   adminListBusinessesForSubs,
   adminListSubscriptions,
   assignPlanToBusiness,
+  getActiveSubscriptionsForBusiness,
   updateBusinessSubscription,
   cancelBusinessSubscription,
 } from "@/lib/plans.functions";
@@ -19,6 +20,7 @@ import { matchesSearch } from "@/lib/list-search";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, X, Ban, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -59,6 +61,9 @@ export function SubscriptionForm({
   onCancel: () => void;
 }) {
   const assignFn = useServerFn(assignPlanToBusiness);
+  const activeFn = useServerFn(getActiveSubscriptionsForBusiness);
+  const inFlight = useRef(false);
+  const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
   const updateFn = useServerFn(updateBusinessSubscription);
   const isEdit = !!initial.id;
   const [search, setSearch] = useState("");
@@ -112,19 +117,49 @@ export function SubscriptionForm({
     if (!form.businessId || !form.planId) { toast.error("Pick a business and plan"); return; }
     const amount = form.amountPaid.trim() === "" ? NaN : Number(form.amountPaid);
     if (Number.isNaN(amount) || amount < 0) { toast.error("Enter the amount paid"); return; }
+    // A ref, not state: a second click in the same moment sees it at once (state would still say "not saving").
+    if (inFlight.current) return;
+    inFlight.current = true;
     setSaving(true);
     try {
-      await assignFn({ data: {
-        businessId: form.businessId, planId: form.planId, billingCycle: form.billingCycle,
-        expiresAt: form.expiresAt || null,
-        amountPaid: amount,
-        paymentRef: form.paymentRef || null, notes: form.notes || null,
-        status: "active",
-      }});
-      toast.success("Plan assigned");
-      await onDone();
+      // Already on an active plan? Ask before adding a second one (the usual cause of double entries).
+      let active: Awaited<ReturnType<typeof getActiveSubscriptionsForBusiness>> = [];
+      try {
+        active = await activeFn({ data: { businessId: form.businessId } });
+      } catch {
+        // could not check: do not block the assignment
+      }
+      if (active.length > 0) {
+        setConfirmMessage(
+          `This business already has an active ${active[0].planName} plan${active[0].expiresAt ? ` until ${new Date(active[0].expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : " (no end date)"}. Add another?`,
+        );
+        return;
+      }
+      await assign(amount);
     } catch (e: any) { toast.error(e?.message || "Failed"); }
-    finally { setSaving(false); }
+    finally { inFlight.current = false; setSaving(false); }
+  };
+
+  const assign = async (amount: number) => {
+    await assignFn({ data: {
+      businessId: form.businessId, planId: form.planId, billingCycle: form.billingCycle,
+      expiresAt: form.expiresAt || null,
+      amountPaid: amount,
+      paymentRef: form.paymentRef || null, notes: form.notes || null,
+      status: "active",
+    }});
+    toast.success("Plan assigned");
+    await onDone();
+  };
+
+  const confirmAddAnother = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setSaving(true);
+    setConfirmMessage(null);
+    try { await assign(Number(form.amountPaid)); }
+    catch (e: any) { toast.error(e?.message || "Failed"); }
+    finally { inFlight.current = false; setSaving(false); }
   };
 
   return (
@@ -188,6 +223,18 @@ export function SubscriptionForm({
           </Button>
           <Button variant="outline" onClick={onCancel}><X className="mr-1 h-4 w-4" /> Cancel</Button>
         </div>
+        <Dialog open={confirmMessage !== null} onOpenChange={(open) => { if (!open) setConfirmMessage(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Plan already active</DialogTitle>
+              <DialogDescription>{confirmMessage}</DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirmMessage(null)}>Cancel</Button>
+              <Button onClick={() => void confirmAddAnother()} disabled={saving}>Add another</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
