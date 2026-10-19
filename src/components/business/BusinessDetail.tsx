@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -15,9 +15,6 @@ import {
   Navigation,
   Heart,
   Camera,
-  ChevronLeft,
-  ChevronRight,
-  X,
   Tag,
 } from "lucide-react";
 import { FileText } from "lucide-react";
@@ -38,8 +35,8 @@ import { listBusinessServices } from "@/lib/services.functions";
 import { listBusinessProducts } from "@/lib/products.functions";
 import { replyToReview, updateReview } from "@/lib/reviews.functions";
 import { PhotoUploader } from "./PhotoUploader";
-import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { BlurFillImage } from "./BlurFillImage";
+import { PhotoLightbox, type LightboxPhoto } from "./PhotoLightbox";
 import { FavoriteButton } from "./FavoriteButton";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
@@ -142,8 +139,18 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const callNumbers = [business.phone, business.phone_secondary].filter((n): n is string => !!n);
   const addressLine = [business.address, business.city, business.state, business.pincode].filter(Boolean).join(", ");
   const mapsHref = business.google_maps_url;
-  const galleryPhotos = photos.slice(0, 4);
-  const featuredImageSrc = business.featured_image_url ?? business.featured_image;
+  // Cover first (the featured image, else the first photo), then the rest. The cover is added when it is not one of the
+  // stored photos; it is never listed twice.
+  const galleryPhotos = useMemo<LightboxPhoto[]>(() => {
+    const keyOf = (u: string) => getBusinessPhotoStorageKey(u) ?? u;
+    const all: LightboxPhoto[] = photos.map((p) => ({ id: p.id, url: p.url, caption: p.caption }));
+    const cover = business.featured_image;
+    if (!cover) return all;
+    const at = all.findIndex((p) => keyOf(p.url) === keyOf(cover));
+    if (at === -1) return [{ id: "cover", url: cover, caption: null }, ...all];
+    return [all[at], ...all.slice(0, at), ...all.slice(at + 1)];
+  }, [photos, business.featured_image]);
+  const coverSrc = business.featured_image_url ?? galleryPhotos[0]?.url ?? null;
   const discountActive =
     typeof business.app_discount_percent === "number" &&
     business.app_discount_percent > 0 &&
@@ -224,8 +231,8 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
       {/* JustDial-style hero card */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="grid gap-0 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-          {/* Gallery */}
-          <div className="relative bg-muted">
+          {/* Gallery: the cover picture only; every photo opens in the full-screen viewer. */}
+          <div className="relative aspect-[4/3] bg-muted md:aspect-auto md:min-h-[22rem]">
             {discountActive && (
               <div className="pointer-events-none absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full bg-[#ff6a00] px-3 py-1.5 text-xs font-extrabold text-white shadow-lg ring-2 ring-white">
                 <Tag className="h-3.5 w-3.5" />
@@ -235,69 +242,39 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 </span>
               </div>
             )}
-            <div className="grid h-56 grid-cols-2 grid-rows-1 gap-1 sm:h-80 sm:grid-cols-4 sm:grid-rows-2">
-              <button
-                type="button"
-                onClick={() => photos.length > 0 && setLightboxIndex(0)}
-                className="relative col-span-2 row-span-1 overflow-hidden bg-muted sm:row-span-2"
-                aria-label="Open photo gallery"
-                disabled={photos.length === 0 && !featuredImageSrc}
-              >
-                {/* Whole picture over a blurred copy of itself: nothing cropped, no empty sides. */}
-                <BlurFillImage
-                  src={featuredImageSrc}
-                  alt={business.name}
-                  loading="eager"
-                  fallback={
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 text-2xl font-bold text-primary">
-                      {business.name.charAt(0)}
-                    </div>
-                  }
-                />
-              </button>
-              {[0, 1, 2, 3].map((i) => {
-                const p = galleryPhotos[i];
-                return (
-                  <button
-                    type="button"
-                    key={i}
-                    onClick={() => p && setLightboxIndex(i)}
-                    disabled={!p}
-                    className="relative hidden overflow-hidden bg-muted sm:block disabled:cursor-default"
-                    aria-label={p ? `View photo ${i + 1}` : "No photo"}
-                  >
-                    {p ? (
-                      <>
-                        <BlurFillImage src={p.url} alt={p.caption ?? ""} loading="lazy" imgClassName="transition-transform hover:scale-105" />
-                        {i === 3 && photos.length > 4 && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white">
-                            +{photos.length - 4} more
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                        <Camera className="h-5 w-5" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            {photos.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setLightboxIndex(0)}
+              className="absolute inset-0 block overflow-hidden bg-muted disabled:cursor-default"
+              aria-label={galleryPhotos.length > 1 ? `Open all ${galleryPhotos.length} photos` : "Open photo"}
+              disabled={galleryPhotos.length === 0}
+            >
+              {/* Whole picture over a blurred copy of itself: nothing cropped, no empty sides. */}
+              <BlurFillImage
+                src={coverSrc}
+                alt={business.name}
+                loading="eager"
+                fallback={
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 text-5xl font-bold text-primary">
+                    {business.name.charAt(0)}
+                  </div>
+                }
+              />
+            </button>
+            {galleryPhotos.length > 1 && (
               <button
                 type="button"
                 onClick={() => setLightboxIndex(0)}
-                className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-black/85"
+                className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black/85"
               >
-                <Camera className="mr-1 inline h-3.5 w-3.5" /> {photos.length} Photos
+                <Camera className="h-3.5 w-3.5" /> View all {galleryPhotos.length} photos
               </button>
             )}
           </div>
 
-          {lightboxIndex !== null && photos.length > 0 && (
+          {lightboxIndex !== null && galleryPhotos.length > 0 && (
             <PhotoLightbox
-              photos={photos}
+              photos={galleryPhotos}
               index={lightboxIndex}
               onClose={() => setLightboxIndex(null)}
               onIndexChange={setLightboxIndex}
@@ -767,97 +744,6 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
         categoryId={business.categories?.id ?? null}
         city={business.city ?? null}
       />
-    </div>
-  );
-}
-
-function PhotoLightbox({
-  photos,
-  index,
-  onClose,
-  onIndexChange,
-}: {
-  photos: Tables<"business_photos">[];
-  index: number;
-  onClose: () => void;
-  onIndexChange: (i: number) => void;
-}) {
-  const total = photos.length;
-  const current = photos[index];
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowRight") onIndexChange((index + 1) % total);
-      if (e.key === "ArrowLeft") onIndexChange((index - 1 + total) % total);
-    };
-    window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [index, total, onClose, onIndexChange]);
-
-  if (!current) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
-        aria-label="Close"
-      >
-        <X className="h-5 w-5" />
-      </button>
-      {total > 1 && (
-        <>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onIndexChange((index - 1 + total) % total);
-            }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
-            aria-label="Previous"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onIndexChange((index + 1) % total);
-            }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
-            aria-label="Next"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
-        </>
-      )}
-      <div
-        className="relative flex max-h-[90vh] max-w-[92vw] items-center justify-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <BusinessPhotoImage
-          src={current.url}
-          alt={current.caption ?? `Photo ${index + 1}`}
-          className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
-        />
-      </div>
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
-        {index + 1} / {total}
-      </div>
     </div>
   );
 }
