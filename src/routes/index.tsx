@@ -282,6 +282,9 @@ function HomePage() {
         </div>
       </ScrollReveal>
 
+      {/* Second sponsored slot: banners placed "Middle" (and the all-city Enterprise ones). Hidden when it has none. */}
+      <Suspense fallback={null}><MarketingBanner placement="home_middle" /></Suspense>
+
       {/* Nearby businesses (uses device location) */}
       <Suspense fallback={null}><NearbyBusinesses /></Suspense>
 

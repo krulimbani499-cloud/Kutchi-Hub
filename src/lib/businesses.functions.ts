@@ -2,7 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { notFound } from "@tanstack/react-router";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createServerSupabaseClient, uniqueBusinessSlug } from "./businesses.server";
+import { activeEnterpriseBusinessIds, createServerSupabaseClient, uniqueBusinessSlug } from "./businesses.server";
+import { BANNER_PLACEMENTS, composeHomeBanners, type BannerPlacement } from "./banner-rules";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
@@ -304,7 +305,7 @@ export const createCategory = createServerFn({ method: "POST" })
       .insert({ name, slug })
       .select("*")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(friendlyBannerError(error));
     return inserted;
   });
 
@@ -357,7 +358,7 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .select("*")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(friendlyBannerError(error));
     return updated;
   });
 
@@ -391,32 +392,120 @@ const normalizeBannerImageUrl = (url: string) => {
 // because PostgREST treats it as "%". No real city name contains any of these.
 const exactIlike = (value: string) => value.replace(/\*/g, "").replace(/[\\%_]/g, "\\$&");
 
+const BANNER_SELECT = "id, business_id, title, subtitle, image_url, mobile_image_url, cta_label, cta_url, city, priority, created_at";
+const BANNER_SELECT_NEW = `${BANNER_SELECT}, placement, show_all_cities`;
+
+/** True when the database does not have the placement / show_all_cities columns yet (banner-placement/01_migration.sql). */
+const isMissingBannerColumns = (error: { code?: string; message?: string } | null) =>
+  !!error && (error.code === "42703" || error.code === "PGRST204" || /placement|show_all_cities/.test(error.message ?? ""));
+
+/**
+ * The business page each banner opens: banners that name a business get its slug (published businesses only, since a
+ * visitor cannot open anything else). An explicit CTA URL on the banner still wins on the client.
+ */
+async function attachBusinessSlugs<T extends { business_id: string | null }>(
+  supabase: ReturnType<typeof createServerSupabaseClient>,
+  banners: T[],
+): Promise<Array<T & { business_slug: string | null }>> {
+  const ids = [...new Set(banners.map((b) => b.business_id).filter((id): id is string => !!id))];
+  const slugs = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data } = await supabase.from("businesses").select("id, slug").in("id", ids).eq("status", "published");
+    for (const row of data ?? []) slugs.set(row.id, row.slug);
+  }
+  return banners.map((b) => ({ ...b, business_slug: b.business_id ? slugs.get(b.business_id) ?? null : null }));
+}
+
 export const getBannerAdsForCity = createServerFn({ method: "GET" })
   // `all` = the person explicitly chose "All locations": every active banner, whatever its city.
+  // `placement` = which homepage slot: the top one (default, as before) or the middle one.
   .inputValidator((input) =>
-    z.object({ city: z.string().trim().min(1).max(80).optional(), all: z.boolean().optional() }).parse(input ?? {}),
+    z
+      .object({
+        city: z.string().trim().min(1).max(80).optional(),
+        all: z.boolean().optional(),
+        placement: z.enum(BANNER_PLACEMENTS as unknown as [BannerPlacement, ...BannerPlacement[]]).optional(),
+      })
+      .parse(input ?? {}),
   )
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
     // Only show banners for the selected city. If no city is selected AND "All locations" was not chosen,
     // return nothing so city-specific banners don't leak across locations.
     if (!data.city && !data.all) return [];
+    const placement: BannerPlacement = data.placement ?? "home_top";
     const now = new Date().toISOString();
-    let query = supabase
-      .from("banner_ads")
-      .select("id, business_id, title, subtitle, image_url, mobile_image_url, cta_label, cta_url, city, priority")
-      .is("category_id", null)
-      .eq("active", true)
-      .lte("start_at", now)
-      .or(`end_at.is.null,end_at.gte.${now}`)
+
+    const live = (select: string) =>
+      supabase
+        .from("banner_ads")
+        .select(select)
+        .is("category_id", null)
+        .eq("active", true)
+        .lte("start_at", now)
+        .or(`end_at.is.null,end_at.gte.${now}`);
+    type Row = {
+      id: string;
+      business_id: string | null;
+      title: string;
+      subtitle: string | null;
+      image_url: string;
+      mobile_image_url: string | null;
+      cta_label: string | null;
+      cta_url: string | null;
+      city: string;
+      priority: number;
+      created_at: string;
+    };
+
+    let rows: Row[] = [];
+    // 1) The visitor's own city (or, with "All locations", every city) in this slot.
+    let own = live(BANNER_SELECT_NEW)
+      .eq("placement", placement)
       .order("priority", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(10);
-    // With a city: exactly that city. With "All locations": no city condition at all (never an empty-string match).
-    if (data.city) query = query.ilike("city", exactIlike(data.city));
-    const { data: banners, error } = await query;
-    if (error) throw new Error(error.message);
-    return (banners ?? []).map((banner) => ({
+      .limit(data.all ? 200 : 10);
+    if (data.city) own = own.ilike("city", exactIlike(data.city));
+    const ownRes = await own;
+    if (isMissingBannerColumns(ownRes.error)) {
+      // Database not updated yet: every banner is a top banner, exactly as before. The middle slot stays empty.
+      if (placement === "home_middle") return [];
+      let legacy = live(BANNER_SELECT).limit(10).order("priority", { ascending: false }).order("created_at", { ascending: false });
+      if (data.city) legacy = legacy.ilike("city", exactIlike(data.city));
+      const legacyRes = await legacy;
+      if (legacyRes.error) throw new Error(legacyRes.error.message);
+      rows = (legacyRes.data ?? []) as unknown as Row[];
+    } else {
+      if (ownRes.error) throw new Error(ownRes.error.message);
+      rows = (ownRes.data ?? []) as unknown as Row[];
+      // 2) Middle slot of a city: then the "show in all cities" banners of OTHER cities whose business still has an
+      //    active Enterprise plan. (In "All locations" mode every banner already appears in its own slot above.)
+      if (data.city && placement === "home_middle") {
+        const { data: others, error: othersError } = await live(BANNER_SELECT_NEW)
+          .eq("show_all_cities", true)
+          .not("business_id", "is", null)
+          .not("city", "ilike", exactIlike(data.city))
+          .order("priority", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(100);
+        if (othersError) throw new Error(othersError.message);
+        const candidates = (others ?? []) as unknown as Row[];
+        let allowed = new Set<string>();
+        try {
+          allowed = await activeEnterpriseBusinessIds(candidates.map((c) => c.business_id!));
+        } catch {
+          // Cannot verify the plan: show nothing outside the banner's own city (fail closed).
+        }
+        const extra = candidates.filter((c) => c.business_id && allowed.has(c.business_id));
+        rows = composeHomeBanners(rows, extra, 10);
+      } else if (data.all) {
+        rows = composeHomeBanners(rows, []);
+      } else {
+        rows = composeHomeBanners(rows, [], 10);
+      }
+    }
+    const withSlugs = await attachBusinessSlugs(supabase, rows);
+    return withSlugs.map((banner) => ({
       ...banner,
       image_url: normalizeBannerImageUrl(banner.image_url),
       mobile_image_url: banner.mobile_image_url ? normalizeBannerImageUrl(banner.mobile_image_url) : null,
@@ -467,7 +556,41 @@ const bannerInputSchema = z.object({
   active: z.boolean().default(true),
   start_at: z.string().datetime().optional(),
   end_at: z.string().datetime().nullable().optional(),
+  placement: z.enum(BANNER_PLACEMENTS as unknown as [BannerPlacement, ...BannerPlacement[]]).default("home_top"),
+  show_all_cities: z.boolean().default(false),
 });
+
+const BANNER_NEEDS_MIGRATION =
+  "The banner placement database update has not been applied yet (supabase/pending/banner-placement/01_migration.sql). Only top, single-city banners can be saved until then.";
+const ALL_CITIES_NEEDS_ENTERPRISE = "\"Show in all cities\" needs a business with an active Enterprise plan. Pick that business, or untick the box.";
+
+/**
+ * Rules the form cannot be trusted with. A banner shown in all cities must name a business that has an ACTIVE Enterprise plan
+ * right now, and (like every homepage banner) is not a category banner. Placement and the all-cities flag only apply to
+ * homepage banners.
+ */
+async function assertBannerRules(data: z.infer<typeof bannerInputSchema>) {
+  if (data.category_id && (data.show_all_cities || data.placement !== "home_top")) {
+    throw new Error("Placement and \"Show in all cities\" are for homepage banners only. Remove the category, or use Top and leave the box unticked.");
+  }
+  if (!data.show_all_cities) return;
+  if (!data.business_id) throw new Error(ALL_CITIES_NEEDS_ENTERPRISE);
+  let ok = false;
+  try {
+    ok = (await activeEnterpriseBusinessIds([data.business_id])).has(data.business_id);
+  } catch {
+    throw new Error("Could not check the business's plan right now. Please try again.");
+  }
+  if (!ok) throw new Error(ALL_CITIES_NEEDS_ENTERPRISE);
+}
+
+/** The new columns are only written when they differ from the defaults, so saving an ordinary banner works before the SQL runs. */
+function bannerPlacementColumns(data: { placement: BannerPlacement; show_all_cities: boolean }) {
+  return data.placement === "home_top" && !data.show_all_cities ? {} : { placement: data.placement, show_all_cities: data.show_all_cities };
+}
+
+const friendlyBannerError = (error: { code?: string; message: string }) =>
+  isMissingBannerColumns(error) ? BANNER_NEEDS_MIGRATION : error.message;
 
 export const adminListBannerAds = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -475,11 +598,39 @@ export const adminListBannerAds = createServerFn({ method: "GET" })
     await assertAdmin(context.supabase, context.userId);
     const { data, error } = await context.supabase
       .from("banner_ads")
-      .select("*")
+      .select("*, business:business_id(name, city, slug)")
       .order("city", { ascending: true })
       .order("priority", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return (data ?? []).map((b) => ({
+      ...b,
+      business: (b as unknown as { business: { name: string; city: string | null; slug: string } | null }).business,
+    }));
+  });
+
+/**
+ * Published businesses for the banner form's "Business" picker, each with whether it has an active Enterprise plan right now
+ * (which is what allows "Show in all cities"). Admin only.
+ */
+export const adminBannerBusinessOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("businesses")
+      .select("id, name, city")
+      .eq("status", "published")
+      .order("name", { ascending: true })
+      .limit(2000);
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    let enterprise = new Set<string>();
+    try {
+      enterprise = await activeEnterpriseBusinessIds(rows.map((r) => r.id));
+    } catch {
+      // the picker still works; the all-cities box just stays disabled
+    }
+    return rows.map((r) => ({ id: r.id, name: r.name, city: r.city ?? "", enterprise: enterprise.has(r.id) }));
   });
 
 export const adminCreateBannerAd = createServerFn({ method: "POST" })
@@ -487,9 +638,11 @@ export const adminCreateBannerAd = createServerFn({ method: "POST" })
   .inputValidator((input) => bannerInputSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    await assertBannerRules(data);
     const { data: inserted, error } = await context.supabase
       .from("banner_ads")
       .insert({
+        ...bannerPlacementColumns(data),
         business_id: data.business_id ?? null,
         category_id: data.category_id ?? null,
         owner_id: context.userId,
@@ -516,10 +669,12 @@ export const adminUpdateBannerAd = createServerFn({ method: "POST" })
   .inputValidator((input) => bannerInputSchema.extend({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    await assertBannerRules(data);
     const { id, ...rest } = data;
     const { data: updated, error } = await context.supabase
       .from("banner_ads")
       .update({
+        ...bannerPlacementColumns(rest),
         business_id: rest.business_id ?? null,
         category_id: rest.category_id ?? null,
         title: rest.title,

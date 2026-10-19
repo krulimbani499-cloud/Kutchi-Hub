@@ -39,3 +39,37 @@ export async function uniqueBusinessSlug(
   if (error) throw new Error(error.message);
   return pickUniqueSlug(slug, new Set((data ?? []).map((r) => r.slug)));
 }
+
+/**
+ * Which of these businesses have an ACTIVE Enterprise plan right now (a subscription that is "active", has started and has
+ * not expired) AND are published. Read with the service client because visitors cannot read subscriptions. Evaluated at
+ * read time, so a plan that expires drops out by itself. Throws if the service client is not available (callers decide
+ * whether to fail closed).
+ */
+export async function activeEnterpriseBusinessIds(businessIds: readonly string[]): Promise<Set<string>> {
+  const ids = [...new Set(businessIds)];
+  if (ids.length === 0) return new Set();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const now = new Date().toISOString();
+  const { data: subs, error } = await supabaseAdmin
+    .from("business_subscriptions")
+    .select("business_id, plans:plan_id(slug)")
+    .in("business_id", ids)
+    .eq("status", "active")
+    .lte("started_at", now)
+    .or(`expires_at.is.null,expires_at.gt.${now}`);
+  if (error) throw new Error(error.message);
+  const enterprise = new Set(
+    (subs ?? [])
+      .filter((s) => (s as unknown as { plans: { slug: string } | null }).plans?.slug === "enterprise")
+      .map((s) => s.business_id),
+  );
+  if (enterprise.size === 0) return enterprise;
+  const { data: published, error: pubError } = await supabaseAdmin
+    .from("businesses")
+    .select("id")
+    .in("id", [...enterprise])
+    .eq("status", "published");
+  if (pubError) throw new Error(pubError.message);
+  return new Set((published ?? []).map((b) => b.id));
+}

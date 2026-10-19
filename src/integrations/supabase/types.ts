@@ -97,7 +97,9 @@ export type Database = {
           image_url: string
           mobile_image_url: string | null
           owner_id: string | null
+          placement: string
           priority: number
+          show_all_cities: boolean
           start_at: string
           subtitle: string | null
           title: string
@@ -116,7 +118,9 @@ export type Database = {
           image_url: string
           mobile_image_url?: string | null
           owner_id?: string | null
+          placement?: string
           priority?: number
+          show_all_cities?: boolean
           start_at?: string
           subtitle?: string | null
           title: string
@@ -135,7 +139,9 @@ export type Database = {
           image_url?: string
           mobile_image_url?: string | null
           owner_id?: string | null
+          placement?: string
           priority?: number
+          show_all_cities?: boolean
           start_at?: string
           subtitle?: string | null
           title?: string

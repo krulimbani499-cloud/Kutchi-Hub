@@ -1,20 +1,24 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getBannerAdsForCity } from "@/lib/businesses.functions";
 import { useCity } from "@/hooks/useCity";
 import { BannerImage, bannerCarouselHasMobileImage } from "@/components/BannerImage";
+import type { BannerPlacement } from "@/lib/banner-rules";
 
 interface Props {
   intervalMs?: number;
+  /** Which homepage slot: under the search box (default) or between Popular Categories and Nearby. Hidden when it has no banners. */
+  placement?: BannerPlacement;
 }
 
-export function MarketingBanner({ intervalMs = 4500 }: Props) {
+export function MarketingBanner({ intervalMs = 4500, placement = "home_top" }: Props) {
   const { city, allLocations } = useCity();
   const { data: banners = [] } = useQuery({
     // "All locations" is its own key: every active banner. No choice at all (null) still shows nothing, as before.
-    queryKey: ["banner-ads", city ?? (allLocations ? "__all__" : "none")],
-    queryFn: () => getBannerAdsForCity({ data: { city: city ?? undefined, all: allLocations || undefined } }),
+    queryKey: ["banner-ads", placement, city ?? (allLocations ? "__all__" : "none")],
+    queryFn: () => getBannerAdsForCity({ data: { city: city ?? undefined, all: allLocations || undefined, placement } }),
     staleTime: 60_000,
   });
   const [index, setIndex] = useState(0);
@@ -37,14 +41,21 @@ export function MarketingBanner({ intervalMs = 4500 }: Props) {
     // Phones: 8px side margins (wider, so taller at the same 3:1 ratio the banner images already have); md+ keeps 16px.
     <section className="mx-auto w-full max-w-7xl px-2 pt-4 md:px-4">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <a
-          href={current.cta_url ?? "#"}
-          target={current.cta_url ? "_blank" : undefined}
-          rel={current.cta_url ? "noreferrer" : undefined}
-          className="block"
-        >
-          <BannerImage banner={current} carouselHasMobile={carouselHasMobile} />
-        </a>
+        {current.cta_url ? (
+          // An address typed on the banner wins ...
+          <a href={current.cta_url} target="_blank" rel="noreferrer" className="block">
+            <BannerImage banner={current} carouselHasMobile={carouselHasMobile} />
+          </a>
+        ) : current.business_slug ? (
+          // ... otherwise a banner made for a business opens that business's page.
+          <Link to="/business/$slug" params={{ slug: current.business_slug }} className="block">
+            <BannerImage banner={current} carouselHasMobile={carouselHasMobile} />
+          </Link>
+        ) : (
+          <div className="block">
+            <BannerImage banner={current} carouselHasMobile={carouselHasMobile} />
+          </div>
+        )}
 
         {banners.length > 1 && (
           <>

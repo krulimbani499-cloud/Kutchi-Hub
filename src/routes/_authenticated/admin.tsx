@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -13,6 +13,7 @@ import {
   adminCreateBannerAd,
   adminUpdateBannerAd,
   adminDeleteBannerAd,
+  adminBannerBusinessOptions,
   adminListPublishedBusinesses,
   adminSetVerified,
   adminListAuditLogs,
@@ -26,10 +27,12 @@ import { AdSlotsManager } from "@/components/admin/AdSlotsManager";
 import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
 import { PlansRevenueOverview } from "@/components/admin/PlansRevenueOverview";
 import { BusinessesAdmin } from "@/components/admin/BusinessesAdmin";
+import { BannerBusinessPicker } from "@/components/admin/BannerBusinessPicker";
+import { BANNER_PLACEMENT_LABEL, BANNER_SLOT_WARNING_ABOVE, countLiveBannersBySlot, type BannerPlacement } from "@/lib/banner-rules";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save, Plus, Image as ImageIcon, BadgeCheck, Flag, Upload, Loader2 } from "lucide-react";
+import { Check, X, ExternalLink, MapPin, Phone, Mail, Globe, Pencil, Trash2, Save, Plus, Image as ImageIcon, BadgeCheck, Flag, Upload, Loader2, TriangleAlert } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,6 +62,11 @@ const pendingQueryOptions = queryOptions({
 const categoriesAdminQueryOptions = queryOptions({
   queryKey: ["admin", "categories"],
   queryFn: () => getCategories(),
+});
+
+const bannerBusinessesQueryOptions = queryOptions({
+  queryKey: ["admin", "banner-business-options"],
+  queryFn: () => adminBannerBusinessOptions(),
 });
 
 const bannersAdminQueryOptions = queryOptions({
@@ -662,6 +670,11 @@ function CategoriesAdmin() {
 
 type BannerFormState = {
   id: string | null;
+  business_id: string;
+  /** Name shown in the picker when the chosen business is not in the published list. */
+  business_name: string;
+  placement: BannerPlacement;
+  show_all_cities: boolean;
   title: string;
   subtitle: string;
   image_url: string;
@@ -677,6 +690,10 @@ type BannerFormState = {
 
 const emptyBanner: BannerFormState = {
   id: null,
+  business_id: "",
+  business_name: "",
+  placement: "home_top",
+  show_all_cities: false,
   title: "",
   subtitle: "",
   image_url: "",
@@ -709,6 +726,7 @@ function readImageDimensions(file: File): Promise<{ width: number; height: numbe
 function BannersAdmin() {
   const { data: banners, refetch } = useSuspenseQuery(bannersAdminQueryOptions);
   const { data: categories } = useSuspenseQuery(categoriesAdminQueryOptions);
+  const { data: businessOptions = [] } = useQuery(bannerBusinessesQueryOptions);
   const createFn = useServerFn(adminCreateBannerAd);
   const updateFn = useServerFn(adminUpdateBannerAd);
   const deleteFn = useServerFn(adminDeleteBannerAd);
@@ -767,8 +785,13 @@ function BannersAdmin() {
   };
 
   const startEdit = (b: Tables<"banner_ads">) => {
+    const biz = (b as unknown as { business?: { name: string } | null }).business;
     setForm({
       id: b.id,
+      business_id: b.business_id ?? "",
+      business_name: biz?.name ?? "",
+      placement: b.placement === "home_middle" ? "home_middle" : "home_top",
+      show_all_cities: !!b.show_all_cities,
       title: b.title,
       subtitle: b.subtitle ?? "",
       image_url: b.image_url,
@@ -790,7 +813,11 @@ function BannersAdmin() {
     }
     setBusy(true);
     try {
+      const homepage = !form.category_id;
       const payload = {
+        business_id: form.business_id || null,
+        placement: homepage ? form.placement : ("home_top" as const),
+        show_all_cities: homepage && !!form.business_id && form.show_all_cities,
         title: form.title.trim(),
         subtitle: form.subtitle.trim() || null,
         image_url: form.image_url.trim(),
@@ -833,6 +860,10 @@ function BannersAdmin() {
     }
   };
 
+  // Homepage banners only (category-page banners rotate on their own page).
+  const slotCounts = countLiveBannersBySlot(banners.filter((b) => !b.category_id));
+  const crowdedSlots = new Set(slotCounts.filter((c) => c.tooMany).map((c) => c.key));
+
   return (
     <div className="mt-10">
       <div className="mb-4 flex items-center justify-between">
@@ -853,6 +884,29 @@ function BannersAdmin() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Business</Label>
+              <BannerBusinessPicker
+                options={businessOptions}
+                value={form.business_id || null}
+                selectedLabel={form.business_name || null}
+                onPick={(o) =>
+                  // Picking a business fills the title and city (both stay editable). The all-cities box needs Enterprise.
+                  setForm((f) => ({
+                    ...f,
+                    business_id: o.id,
+                    business_name: o.name,
+                    title: o.name,
+                    city: o.city || f.city,
+                    show_all_cities: o.enterprise ? f.show_all_cities : false,
+                  }))
+                }
+                onClear={() => setForm((f) => ({ ...f, business_id: "", business_name: "", show_all_cities: false }))}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Clicking the banner on the site opens this business page (unless a CTA URL below is set).
+              </p>
+            </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Title *</Label>
               <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
@@ -974,6 +1028,48 @@ function BannersAdmin() {
                 ))}
               </select>
             </div>
+            {!form.category_id && (
+              <>
+                <div>
+                  <Label className="text-xs">Placement</Label>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={form.placement}
+                    onChange={(e) => setForm({ ...form, placement: e.target.value as BannerPlacement })}
+                  >
+                    <option value="home_top">Top - under the search box</option>
+                    <option value="home_middle">Middle - between Popular Categories and Nearby</option>
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">Top = Platinum ₹7,000 · Middle = Platinum ₹5,000 (3 years)</p>
+                </div>
+                <div>
+                  {(() => {
+                    const enterprise = businessOptions.find((o) => o.id === form.business_id)?.enterprise === true;
+                    return (
+                      <>
+                        <label className={`flex items-center gap-2 pt-6 text-sm ${enterprise ? "text-foreground" : "text-muted-foreground"}`}>
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4"
+                            checked={form.show_all_cities && enterprise}
+                            disabled={!enterprise}
+                            onChange={(e) => setForm({ ...form, show_all_cities: e.target.checked })}
+                          />
+                          Show in all cities
+                        </label>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {enterprise
+                            ? "Also shown in every other city, in the Middle slot (as long as the Enterprise plan is active)."
+                            : form.business_id
+                              ? "This business does not have an active Enterprise plan."
+                              : "Pick a business with an active Enterprise plan to enable this."}
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
             <div>
               <Label className="text-xs">Priority</Label>
               <Input
@@ -1012,6 +1108,29 @@ function BannersAdmin() {
         </CardContent>
       </Card>
 
+      {slotCounts.length > 0 && (
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              Live banners per city and slot (more than {BANNER_SLOT_WARNING_ABOVE} in one slot is too many to rotate)
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {slotCounts.map((c) => (
+                <Badge
+                  key={c.key}
+                  variant={c.tooMany ? "destructive" : "outline"}
+                  className="gap-1 text-xs font-normal"
+                  title={c.tooMany ? `More than ${BANNER_SLOT_WARNING_ABOVE} banners rotate here` : undefined}
+                >
+                  {c.tooMany && <TriangleAlert className="h-3 w-3" />}
+                  {c.city} · {BANNER_PLACEMENT_LABEL[c.placement]}: <strong>{c.count}</strong>
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-0">
           {banners.length === 0 ? (
@@ -1033,6 +1152,16 @@ function BannersAdmin() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate font-medium text-foreground">{b.title}</span>
                       <Badge variant="outline" className="text-xs">{b.city}</Badge>
+                      {b.business?.name && <Badge variant="secondary" className="text-xs">{b.business.name}</Badge>}
+                      {b.category_id ? (
+                        <Badge variant="outline" className="text-xs">Category page</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">{BANNER_PLACEMENT_LABEL[b.placement === "home_middle" ? "home_middle" : "home_top"]}</Badge>
+                      )}
+                      {b.show_all_cities && <Badge className="bg-[#ff6a00] text-xs text-white hover:bg-[#ff6a00]">All cities</Badge>}
+                      {!b.category_id && crowdedSlots.has(`${b.city.trim().toLowerCase()}|${b.placement === "home_middle" ? "home_middle" : "home_top"}`) && (
+                        <Badge variant="destructive" className="gap-1 text-xs"><TriangleAlert className="h-3 w-3" />Crowded slot</Badge>
+                      )}
                       {b.mobile_image_url && <Badge variant="outline" className="text-xs">Mobile image</Badge>}
                       {b.active ? (
                         <Badge className="bg-green-600 text-white hover:bg-green-600">Active</Badge>
