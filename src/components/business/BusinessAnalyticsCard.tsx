@@ -4,10 +4,12 @@ import { getBusinessAnalytics } from "@/lib/leads.functions";
 import { listBusinessDiscountClaims } from "@/lib/businesses.functions";
 import { Eye, Phone, MessageSquare, Globe, Navigation, Share2, Inbox, Tag, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 
 interface Props { businessId: string; businessName: string; analyticsAccess?: boolean }
 
 export function BusinessAnalyticsCard({ businessId, businessName, analyticsAccess = false }: Props) {
+  const isIosApp = useIsIosApp();
   if (!analyticsAccess) {
     return (
       <div className="rounded-lg border border-dashed border-border p-4">
@@ -17,10 +19,16 @@ export function BusinessAnalyticsCard({ businessId, businessName, analyticsAcces
             <Lock className="h-3 w-3" /> Locked
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">Analytics available on Silver plan and above.</p>
-        <Button asChild size="sm" className="mt-2 bg-[#ff6a00] text-white hover:bg-[#e65a00]">
-          <Link to="/pricing">Upgrade to unlock</Link>
-        </Button>
+        {isIosApp ? (
+          <p className="text-sm text-muted-foreground">Analytics is not available for this listing.</p>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">Analytics available on Silver plan and above.</p>
+            <Button asChild size="sm" className="mt-2 bg-[#ff6a00] text-white hover:bg-[#e65a00]">
+              <Link to="/pricing">Upgrade to unlock</Link>
+            </Button>
+          </>
+        )}
       </div>
     );
   }

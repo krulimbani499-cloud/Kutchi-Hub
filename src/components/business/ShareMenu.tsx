@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Share2, Copy, Check, MessageCircle, Facebook, Twitter, Mail } from "lucide-react";
+import { nativeShare } from "@/lib/native";
 
 interface Props {
   title: string;
@@ -30,7 +31,12 @@ export function ShareMenu({ title, text, onShare }: Props) {
     try { onShare?.(); } catch { /* noop */ }
   };
 
-  const handleNativeOrOpen = () => {
+  const handleNativeOrOpen = async () => {
+    // Inside the iOS / Android app: the real native share sheet.
+    if (await nativeShare({ title, text: shareText, url })) {
+      track();
+      return;
+    }
     if (typeof navigator !== "undefined" && "share" in navigator) {
       navigator
         .share({ title, text: shareText, url })

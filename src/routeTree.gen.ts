@@ -25,6 +25,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as BusinessSlugRouteImport } from './routes/business.$slug'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as CitySlugRouteImport } from './routes/city.$slug'
@@ -113,6 +114,11 @@ const AuthenticatedFavoritesRoute = AuthenticatedFavoritesRouteImport.update({
   path: '/favorites',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const BusinessSlugRoute = BusinessSlugRouteImport.update({
   id: '/business/$slug',
   path: '/business/$slug',
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorites': typeof AuthenticatedFavoritesRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/business/$slug': typeof BusinessSlugRoute
   '/category/$slug': typeof CategorySlugRoute
   '/city/$slug': typeof CitySlugRouteWithChildren
@@ -199,6 +206,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/favorites': typeof AuthenticatedFavoritesRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/business/$slug': typeof BusinessSlugRoute
   '/category/$slug': typeof CategorySlugRoute
   '/city/$slug': typeof CitySlugRouteWithChildren
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/favorites': typeof AuthenticatedFavoritesRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/business/$slug': typeof BusinessSlugRoute
   '/category/$slug': typeof CategorySlugRoute
   '/city/$slug': typeof CitySlugRouteWithChildren
@@ -253,6 +262,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/favorites'
+    | '/settings'
     | '/business/$slug'
     | '/category/$slug'
     | '/city/$slug'
@@ -278,6 +288,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/favorites'
+    | '/settings'
     | '/business/$slug'
     | '/category/$slug'
     | '/city/$slug'
@@ -304,6 +315,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/favorites'
+    | '/_authenticated/settings'
     | '/business/$slug'
     | '/category/$slug'
     | '/city/$slug'
@@ -448,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFavoritesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/business/$slug': {
       id: '/business/$slug'
       path: '/business/$slug'
@@ -511,6 +530,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFavoritesRoute: typeof AuthenticatedFavoritesRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedBusinessNewRoute: typeof AuthenticatedBusinessNewRoute
   AuthenticatedBusinessSlugClaimRoute: typeof AuthenticatedBusinessSlugClaimRoute
   AuthenticatedBusinessSlugEditRoute: typeof AuthenticatedBusinessSlugEditRoute
@@ -520,6 +540,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFavoritesRoute: AuthenticatedFavoritesRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedBusinessNewRoute: AuthenticatedBusinessNewRoute,
   AuthenticatedBusinessSlugClaimRoute: AuthenticatedBusinessSlugClaimRoute,
   AuthenticatedBusinessSlugEditRoute: AuthenticatedBusinessSlugEditRoute,

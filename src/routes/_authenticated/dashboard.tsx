@@ -105,6 +105,9 @@ It will disappear from the website. Its subscription and payment history are kep
           <Button className="bg-primary text-primary-foreground" asChild>
             <Link to="/business/new">Add New Business</Link>
           </Button>
+          <Button variant="outline" asChild>
+            <Link to="/settings">Settings</Link>
+          </Button>
           <Button variant="outline" onClick={() => signOut()}>
             <LogOut className="mr-1 h-4 w-4" />
             Sign out

@@ -25,15 +25,20 @@ function DeleteAccountPage() {
       <h1 className="mb-6 text-2xl font-bold text-foreground">Delete your account</h1>
       <div className="rounded-2xl border border-border bg-card p-5 text-muted-foreground sm:p-6">
         <p>
-          To delete your Kutchi Hub account and personal data, email{" "}
+          <strong className="text-foreground">In the app or on the website:</strong> sign in, open your Dashboard, choose{" "}
+          <em>Settings</em> and tap <em>Delete my account</em>. Your account, profile, reviews, saved businesses, reward points and
+          notifications are deleted straight away. Business listings you own are not deleted: they are archived (hidden from the
+          website) and no longer linked to you.
+        </p>
+        <p className="mt-4">
+          Cannot sign in? Email{" "}
           <a
             href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Delete my account")}`}
             className="text-primary underline"
           >
             {CONTACT_EMAIL}
           </a>{" "}
-          from your registered email address with the subject &lsquo;Delete my account&rsquo;. We will delete your
-          account, profile, reviews, saved businesses and any business listings you own within 30 days.
+          from your registered email address with the subject &lsquo;Delete my account&rsquo; and we will do it for you within 30 days.
         </p>
       </div>
     </div>

@@ -2,13 +2,23 @@ import { Link } from "@tanstack/react-router";
 import { Lock, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CONTACT_WHATSAPP } from "@/lib/contact";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 
 /**
  * Shown instead of an "add" form when the business's plan allows none of this kind (e.g. Silver: 0 products).
  * Existing items are untouched and stay listed above it; only adding new ones is closed.
  */
 export function PlanUpgradeCard({ what, businessName }: { what: "Products" | "Services"; businessName?: string }) {
+  const isIosApp = useIsIosApp();
   const text = `Hi, I want to upgrade my plan to add ${what.toLowerCase()}${businessName ? ` for "${businessName}"` : ""} on Kutchi Hub.`;
+  // Apple 3.1.1: inside the iOS app no upgrade / plan wording and no way to pay.
+  if (isIosApp) {
+    return (
+      <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
+        Adding {what.toLowerCase()} is not available for this listing.
+      </div>
+    );
+  }
   return (
     <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">
       <div className="flex items-start gap-3">

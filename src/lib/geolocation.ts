@@ -3,6 +3,7 @@
 // Client-only: never call from a loader or server function.
 import type { GeocodeCandidates } from "./geocode";
 import { INDIAN_CITIES } from "./cities";
+import { isNativeApp, nativeCurrentPosition } from "./native";
 
 export interface GeolocationResult {
   latitude: number;
@@ -30,6 +31,16 @@ function formatBrowserLocationError(error: GeolocationPositionError): string {
 
 export async function getCurrentLocation(): Promise<GeolocationResult> {
   if (typeof window === "undefined") throw new Error("Location is browser only.");
+  // Inside the iOS / Android app: the native location plugin (one real permission prompt). If it is missing from an older
+  // installed app, or fails for another reason than a refusal, the browser way below is used as before.
+  if (isNativeApp()) {
+    try {
+      const fix = await nativeCurrentPosition();
+      if (fix) return { ...fix, source: "gps" };
+    } catch (e) {
+      if ((e as LocationError).denied) throw e;
+    }
+  }
   if (!navigator.geolocation) throw new Error("Geolocation is not supported by this browser.");
 
   // Watch for a short window and keep the most accurate fix. The first

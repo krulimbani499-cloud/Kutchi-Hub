@@ -12,6 +12,7 @@ import { isValidIndianMobile, PHONE_ERROR } from "@/lib/phone";
 import { sortCategoriesAZ } from "@/lib/category-sort";
 import { readValidationError } from "@/lib/edit-lock";
 import { CONTACT_WHATSAPP } from "@/lib/contact";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 
 type Category = { id: string; name: string };
 type Errors = Partial<Record<"name" | "contactName" | "phone" | "city", string>>;
@@ -20,6 +21,7 @@ export const QUICK_LISTING_THANK_YOU = "Thank you! Kutchi Hub team will call you
 
 /** The screen after a successful submit. */
 export function QuickListingThanks({ name }: { name: string }) {
+  const isIosApp = useIsIosApp();
   const whatsappText = `Hi, I just listed "${name}" on Kutchi Hub. Please activate my listing.`;
   return (
     <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm sm:p-8" role="status">
@@ -34,9 +36,12 @@ export function QuickListingThanks({ name }: { name: string }) {
             <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp us
           </a>
         </Button>
-        <Button asChild size="lg" variant="outline">
-          <Link to="/pricing">View plans</Link>
-        </Button>
+        {/* Apple 3.1.1: no "View plans" inside the iOS app. */}
+        {!isIosApp && (
+          <Button asChild size="lg" variant="outline">
+            <Link to="/pricing">View plans</Link>
+          </Button>
+        )}
       </div>
       <p className="mt-5 text-sm">
         <Link to="/dashboard" className="text-primary hover:underline">Go to my dashboard</Link>

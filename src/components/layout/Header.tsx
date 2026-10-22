@@ -86,10 +86,10 @@ export function Header() {
               <Menu className="h-5 w-5" />
             </Link>
           </Button>
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
+          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild data-ios-hide>
             <Link to="/pricing">{t("nav.pricing")}</Link>
           </Button>
-          <Button variant="ghost" size="icon" className="sm:hidden" asChild title={t("nav.pricing")}>
+          <Button variant="ghost" size="icon" className="sm:hidden" asChild title={t("nav.pricing")} data-ios-hide>
             <Link to="/pricing" aria-label={t("nav.pricing")}>
               <Tag className="h-5 w-5" />
             </Link>

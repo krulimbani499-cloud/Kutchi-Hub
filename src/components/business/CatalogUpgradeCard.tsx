@@ -3,10 +3,20 @@ import { FileText, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CATALOG_PLAN_MESSAGE } from "@/lib/edit-lock";
 import { CONTACT_WHATSAPP } from "@/lib/contact";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 
 /** Shown instead of the catalog uploader when the business's plan does not include the catalog (Silver). */
 export function CatalogUpgradeCard({ businessName, hasExistingCatalog }: { businessName?: string; hasExistingCatalog?: boolean }) {
+  const isIosApp = useIsIosApp();
   const text = `Hi, I want to upgrade my plan to use the product catalog${businessName ? ` for "${businessName}"` : ""} on Kutchi Hub.`;
+  // Apple 3.1.1: inside the iOS app no upgrade / plan wording and no way to pay.
+  if (isIosApp) {
+    return (
+      <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
+        Catalog upload is not available for this listing.
+      </div>
+    );
+  }
   return (
     <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">
       <div className="flex items-start gap-3">

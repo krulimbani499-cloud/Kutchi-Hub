@@ -6,6 +6,7 @@ import { planPeriodMonths } from "@/lib/subscription-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BASE_URL } from "@/lib/seo";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 import { CONTACT_EMAIL, CONTACT_WHATSAPP, CONTACT_PHONE } from "@/lib/contact";
 import { Phone, MessageCircle, Mail, Megaphone } from "lucide-react";
 
@@ -47,6 +48,8 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function PricingPage() {
+  // Apple 3.1.1: no plan prices or buy / upgrade buttons inside the iOS app.
+  const isIosApp = useIsIosApp();
   const { data: plans } = useSuspenseQuery(plansQueryOptions);
   const { data: adSlots } = useSuspenseQuery(adSlotsQueryOptions);
   const cycle = "yearly" as const;
@@ -61,8 +64,17 @@ function PricingPage() {
     );
   };
 
+  if (isIosApp) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <h1 className="text-xl font-bold text-foreground">This page is not available in the app</h1>
+        <Link to="/" className="mt-4 inline-block text-primary underline">Back to home</Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
+    <div className="mx-auto max-w-6xl px-4 py-12" data-ios-hide>
       <div className="text-center">
         <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Grow your business on Kutchi Hub</h1>
         <p className="mt-3 text-lg text-muted-foreground">

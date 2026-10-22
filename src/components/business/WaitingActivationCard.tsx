@@ -2,12 +2,14 @@ import { Link } from "@tanstack/react-router";
 import { Hourglass, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CONTACT_WHATSAPP } from "@/lib/contact";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 
 /**
  * Shown instead of the edit form, photo upload and managers for a quick-listing business whose plan is not active yet.
  * (The database blocks owner edits in the same situation; this is the explanation.)
  */
 export function WaitingActivationCard({ businessName, compact = false }: { businessName?: string; compact?: boolean }) {
+  const isIosApp = useIsIosApp();
   const text = `Hi, I listed${businessName ? ` "${businessName}"` : " my business"} on Kutchi Hub. Please activate my listing.`;
   return (
     <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 sm:p-5">
@@ -29,9 +31,12 @@ export function WaitingActivationCard({ businessName, compact = false }: { busin
                 <MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp us
               </a>
             </Button>
-            <Button asChild size="sm" variant="outline" className="border-amber-400 bg-white/70">
-              <Link to="/pricing">View plans</Link>
-            </Button>
+            {/* Apple 3.1.1: no "View plans" inside the iOS app. */}
+            {!isIosApp && (
+              <Button asChild size="sm" variant="outline" className="border-amber-400 bg-white/70">
+                <Link to="/pricing">View plans</Link>
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -3,13 +3,23 @@ import { Lock, MessageCircle, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EDIT_LOCKED_MESSAGE } from "@/lib/edit-lock";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_WHATSAPP } from "@/lib/contact";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 
 /**
  * Shown instead of the edit form (and instead of the services / products managers) when the owner's
  * published business has no active plan. The database enforces the same rule, this is just the explanation.
  */
 export function EditLockedCard({ businessName, compact = false }: { businessName?: string; compact?: boolean }) {
+  const isIosApp = useIsIosApp();
   const whatsappText = `Hi, I want to activate a plan for my business${businessName ? ` "${businessName}"` : ""} on Kutchi Hub.`;
+  // Apple 3.1.1: inside the iOS app no plan wording, no pricing link, no way to pay.
+  if (isIosApp) {
+    return (
+      <div role="status" className="rounded-xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground sm:p-5">
+        Editing is not available for this listing right now. Contact Kutchi Hub if you need help.
+      </div>
+    );
+  }
   return (
     <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 sm:p-5">
       <div className="flex items-start gap-3">

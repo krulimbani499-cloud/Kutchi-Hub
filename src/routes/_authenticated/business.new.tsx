@@ -55,7 +55,7 @@ function NewBusinessPage() {
             <p className="mt-3 text-lg text-muted-foreground">
               with Kutchi Hub — Your Local Kutchi Search Engine
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground" data-ios-hide>
               Check out our{" "}
               <Link to="/pricing" className="font-medium text-[#ff6a00] hover:underline">
                 plans & pricing

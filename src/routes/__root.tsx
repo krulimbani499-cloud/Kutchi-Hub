@@ -20,6 +20,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BASE_URL, SITE_NAME, ldScript, organizationLd, websiteLd } from "@/lib/seo";
 import { ComingSoonGate } from "@/components/ComingSoonGate";
 import { NativeBackButton } from "@/components/NativeBackButton";
+import { NativePush } from "@/components/NativePush";
+import { OfflineScreen } from "@/components/OfflineScreen";
 import { Toaster } from "@/components/ui/sonner";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { Analytics } from "@vercel/analytics/react";
@@ -122,7 +124,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
     ],
-    scripts: [ldScript(organizationLd()), ldScript(websiteLd())],
+    scripts: [
+      ldScript(organizationLd()),
+      ldScript(websiteLd()),
+      // Inside the iOS app: mark <html> before the page paints, so payment-related parts marked data-ios-hide never flash.
+      {
+        children:
+          "try{var w=window,c=w.Capacitor,ios=(c&&c.getPlatform&&c.getPlatform()==='ios')||!!(w.webkit&&w.webkit.messageHandlers&&w.webkit.messageHandlers.bridge);if(ios)document.documentElement.setAttribute('data-native-ios','1')}catch(e){}",
+      },
+    ],
+    styles: [{ children: "html[data-native-ios] [data-ios-hide]{display:none!important}" }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -189,6 +200,8 @@ function RootComponent() {
           <MobileBottomNav />
           <SiteFooter />
           <NativeBackButton />
+          <NativePush />
+          <OfflineScreen />
           <Toaster position="top-center" />
           <WelcomeScreen />
           <Analytics />
