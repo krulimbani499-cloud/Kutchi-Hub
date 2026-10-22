@@ -20,6 +20,7 @@ import { ListSearchInput } from "@/components/ListSearchInput";
 import { ChipRow, type Chip } from "@/components/ChipRow";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { matchesSearch } from "@/lib/list-search";
+import { telHref, whatsappHref } from "@/lib/phone";
 
 type Row = Awaited<ReturnType<typeof adminListAllBusinesses>>[number];
 
@@ -53,7 +54,7 @@ export function BusinessesAdmin() {
   const shown = rows.filter(
     (r) =>
       (filter === "all" || r.status === filter) &&
-      matchesSearch(search, { text: [r.name, r.city, r.categoryName, r.slug, r.email, r.planName], phones: [r.phone, r.phoneSecondary] }),
+      matchesSearch(search, { text: [r.name, r.city, r.categoryName, r.slug, r.email, r.planName, r.contactName], phones: [r.phone, r.phoneSecondary] }),
   );
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin"] });
@@ -110,10 +111,27 @@ export function BusinessesAdmin() {
                       <span className="min-w-0 break-words font-medium text-foreground">{r.name}</span>
                       <Badge variant={r.status === "archived" ? "secondary" : "outline"} className="text-xs capitalize">{r.status}</Badge>
                       {r.planName && <Badge className="bg-[#ff6a00] text-xs text-white">{r.planName}</Badge>}
+                      {r.quickLead && r.status === "pending" && (
+                        <Badge className="bg-amber-500 text-xs text-white hover:bg-amber-500">
+                          {r.gaps.length > 0 ? "Quick lead - details incomplete" : "Quick lead"}
+                        </Badge>
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {[r.city, r.categoryName].filter(Boolean).join(" · ")}
                     </p>
+                    {r.quickLead && r.status === "pending" && (
+                      <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        {r.contactName && <span>Contact: <span className="font-medium text-foreground">{r.contactName}</span></span>}
+                        {r.phone && (
+                          <a href={telHref(r.phone)} className="font-medium text-foreground hover:underline">{r.phone}</a>
+                        )}
+                        {r.phone && whatsappHref(r.phone) && (
+                          <a href={whatsappHref(r.phone)!} target="_blank" rel="noreferrer" className="font-medium text-green-700 hover:underline">WhatsApp</a>
+                        )}
+                        <span>Signed up {new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      </p>
+                    )}
                   </div>
                   {r.status === "published" && (
                     <Link to="/business/$slug" params={{ slug: r.slug }} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">

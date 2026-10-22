@@ -584,7 +584,9 @@ export type Database = {
           app_discount_valid_until: string | null
           catalog_name: string | null
           catalog_url: string | null
-          category_id: string
+          category_id: string | null
+          contact_name: string | null
+          quick_lead: boolean
           city: string | null
           created_at: string
           current_plan_id: string | null
@@ -621,7 +623,9 @@ export type Database = {
           app_discount_valid_until?: string | null
           catalog_name?: string | null
           catalog_url?: string | null
-          category_id: string
+          category_id?: string | null
+          contact_name?: string | null
+          quick_lead?: boolean
           city?: string | null
           created_at?: string
           current_plan_id?: string | null
@@ -658,7 +662,9 @@ export type Database = {
           app_discount_valid_until?: string | null
           catalog_name?: string | null
           catalog_url?: string | null
-          category_id?: string
+          category_id?: string | null
+          contact_name?: string | null
+          quick_lead?: boolean
           city?: string | null
           created_at?: string
           current_plan_id?: string | null

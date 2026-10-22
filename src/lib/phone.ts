@@ -6,3 +6,9 @@ export const PHONE_ERROR = "Enter a 10-digit Indian mobile number (+91 allowed)"
 export const isValidIndianMobile = (value: string) => MOBILE.test(value.replace(/[\s\-().]/g, ""));
 
 export const telHref = (value: string) => `tel:${value.replace(/[^\d+]/g, "")}`;
+
+/** wa.me link for an Indian mobile ("95103 45341", "+91 95103 45341", "095103..." all work); null when it is not a valid mobile. */
+export const whatsappHref = (value: string, text?: string): string | null => {
+  const m = MOBILE.exec(value.replace(/[\s\-().]/g, ""));
+  return m ? `https://wa.me/91${m[1]}${text ? `?text=${encodeURIComponent(text)}` : ""}` : null;
+};

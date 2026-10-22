@@ -4,6 +4,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { getCategories, getBusinessForEdit } from "@/lib/businesses.functions";
 import { BusinessForm } from "@/components/business/BusinessForm";
 import { EditLockedCard } from "@/components/business/EditLockedCard";
+import { WaitingActivationCard } from "@/components/business/WaitingActivationCard";
 
 const categoriesQueryOptions = queryOptions({
   queryKey: ["categories"],
@@ -36,6 +37,17 @@ function EditBusinessPage() {
   const { data } = useSuspenseQuery(editBusinessQueryOptions(slug));
 
   if (!data.business) throw notFound();
+
+  // Quick listing whose plan is not active yet: no edit form, no photo upload, just "Waiting for activation".
+  if (data.editLocked && (data.business as { quick_lead?: boolean }).quick_lead) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-8">
+        <h1 className="mb-2 text-2xl font-bold text-foreground">Edit Business</h1>
+        <p className="mb-6 text-muted-foreground">{data.business.name}</p>
+        <WaitingActivationCard businessName={data.business.name} />
+      </div>
+    );
+  }
 
   // Published business without an active plan: no edit form, just the "plan needed" card.
   if (data.editLocked) {

@@ -237,6 +237,30 @@ export const getActiveSubscriptionsForBusiness = createServerFn({ method: "GET" 
       .map((r) => ({ id: r.id, planName: r.plans?.name ?? "plan", expiresAt: r.expires_at }));
   });
 
+/**
+ * A quick-listing owner is waiting for this plan: tell them in the app (the bell) that they can now complete their details.
+ * Only for businesses created through the quick form. Never lets a notification problem fail the assignment.
+ */
+async function notifyQuickLeadOwner(businessId: string, planId: string) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: biz } = await supabaseAdmin.from("businesses").select("owner_id, name, slug, quick_lead").eq("id", businessId).maybeSingle();
+    if (!biz || !biz.quick_lead || !biz.owner_id) return;
+    const { data: plan } = await supabaseAdmin.from("plans").select("name").eq("id", planId).maybeSingle();
+    await supabaseAdmin.from("notifications").insert({
+      user_id: biz.owner_id,
+      type: "plan_activated",
+      title: `Your ${plan?.name ?? ""} plan is active`.replace("  ", " "),
+      body: `Complete your business details so ${biz.name} can go live on Kutchi Hub.`,
+      link_url: `/business/${biz.slug}/edit`,
+      entity_type: "business",
+      entity_id: businessId,
+    });
+  } catch (e) {
+    console.error("[notifyQuickLeadOwner] failed", e);
+  }
+}
+
 export const assignPlanToBusiness = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => subSchema.parse(input))
@@ -281,6 +305,7 @@ export const assignPlanToBusiness = createServerFn({ method: "POST" })
     // update business cache
     if (data.status === "active") {
       await context.supabase.from("businesses").update({ current_plan_id: data.planId } as never).eq("id", data.businessId);
+      await notifyQuickLeadOwner(data.businessId, data.planId);
     }
     return sub;
   });

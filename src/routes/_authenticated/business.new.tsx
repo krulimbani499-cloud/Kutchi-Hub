@@ -1,13 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
-import { getCategories } from "@/lib/businesses.functions";
+import { getCategories, getListingFlow } from "@/lib/businesses.functions";
 import { BusinessForm } from "@/components/business/BusinessForm";
+import { QuickListingForm } from "@/components/business/QuickListingForm";
 import { CheckCircle2 } from "lucide-react";
 
 const categoriesQueryOptions = queryOptions({
   queryKey: ["categories"],
   queryFn: () => getCategories(),
+});
+
+const listingFlowQueryOptions = queryOptions({
+  queryKey: ["listing-flow"],
+  queryFn: () => getListingFlow(),
 });
 
 export const Route = createFileRoute("/_authenticated/business/new")({
@@ -17,12 +23,20 @@ export const Route = createFileRoute("/_authenticated/business/new")({
       { name: "description", content: "Add your business to Kutchi Hub directory." },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions),
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(categoriesQueryOptions),
+      context.queryClient.ensureQueryData(listingFlowQueryOptions),
+    ]);
+  },
   component: NewBusinessPage,
 });
 
 function NewBusinessPage() {
   const { data: categories } = useSuspenseQuery(categoriesQueryOptions);
+  const { data: flow } = useSuspenseQuery(listingFlowQueryOptions);
+  // Owners get the 4-field quick form once the database is ready; admins (and everyone, until then) get the full form.
+  const quick = !flow.isAdmin && flow.quickReady;
 
   return (
     <div className="bg-white">
@@ -67,13 +81,27 @@ function NewBusinessPage() {
 
       {/* Form */}
       <section className="mx-auto max-w-3xl px-4 py-10">
-        <h2 className="mb-2 text-2xl font-bold text-foreground">Add your business details</h2>
-        <p className="mb-6 text-muted-foreground">
-          Fill in the details below. Your listing will be reviewed by our admin before going live.
-        </p>
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <BusinessForm categories={categories} />
-        </div>
+        {quick ? (
+          <>
+            <h2 className="mb-2 text-2xl font-bold text-foreground">Tell us about your business</h2>
+            <p className="mb-6 text-muted-foreground">
+              Just 4 details. Our team will call you within 24 hours to activate your listing.
+            </p>
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <QuickListingForm categories={categories} />
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="mb-2 text-2xl font-bold text-foreground">Add your business details</h2>
+            <p className="mb-6 text-muted-foreground">
+              Fill in the details below. Your listing will be reviewed by our admin before going live.
+            </p>
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <BusinessForm categories={categories} />
+            </div>
+          </>
+        )}
       </section>
     </div>
   );

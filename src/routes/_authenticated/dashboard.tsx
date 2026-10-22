@@ -12,6 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, MapPin, Star, Archive, Flag, Edit, Lock, MessageSquare, Phone, Mail, Inbox, LogOut, Package, Wrench, ChevronDown, ChevronUp, Gift, LayoutDashboard, ShieldCheck } from "lucide-react";
 import { EditLockedCard } from "@/components/business/EditLockedCard";
+import { WaitingActivationCard } from "@/components/business/WaitingActivationCard";
+import { CompleteDetailsBanner } from "@/components/business/CompleteDetailsBanner";
 import { BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCard";
@@ -179,6 +181,7 @@ It will disappear from the website. Its subscription and payment history are kep
                           <Badge variant="outline" className="text-xs">
                             {b.status}
                           </Badge>
+                          {b.waitingActivation && <Badge className="bg-amber-500 text-xs text-white hover:bg-amber-500">Waiting for activation</Badge>}
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <MapPin className="h-3.5 w-3.5" />
@@ -186,11 +189,11 @@ It will disappear from the website. Its subscription and payment history are kep
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Star className="h-3.5 w-3.5" />
-                          {b.categoryName}
+                          {b.categoryName || "No category yet"}
                         </div>
                         </div>
                         <div className="flex gap-2">
-                        {b.editLocked ? (
+                        {b.editLocked || b.waitingActivation ? (
                           <Button variant="ghost" size="icon" disabled aria-label="Editing locked: no active plan" title="Editing locked: no active plan">
                             <Lock className="h-4 w-4" />
                           </Button>
@@ -216,13 +219,23 @@ It will disappear from the website. Its subscription and payment history are kep
                         )}
                         </div>
                       </div>
-                      {b.editLocked ? (
+                      {b.waitingActivation ? (
+                        /* Quick listing, plan not active yet: no edit form, no photos, no managers. */
+                        <div className="mt-3">
+                          <WaitingActivationCard businessName={b.name} />
+                        </div>
+                      ) : b.editLocked ? (
                         /* Published without an active plan: the database blocks edits, so show the explanation instead of the managers. */
                         <div className="mt-3">
                           <EditLockedCard businessName={b.name} compact />
                         </div>
                       ) : (
                       <>
+                      {b.checklist && (
+                        <div className="mt-3">
+                          <CompleteDetailsBanner planName={b.planName} slug={b.slug} checklist={b.checklist} />
+                        </div>
+                      )}
                       <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
                         <Button
                           size="sm"

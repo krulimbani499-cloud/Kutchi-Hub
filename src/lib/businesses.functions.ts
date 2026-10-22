@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { activeEnterpriseBusinessIds, createServerSupabaseClient, uniqueBusinessSlug } from "./businesses.server";
 import { BANNER_PLACEMENTS, composeHomeBanners, type BannerPlacement } from "./banner-rules";
+import { completionChecklist, publishGaps } from "./listing-completeness";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
@@ -998,6 +999,19 @@ async function resolveBusinessCoords(
   }
 }
 
+/** True when a query failed because a column does not exist yet (the quick-listing SQL has not been applied). */
+const isMissingColumnError = (error: { code?: string; message?: string } | null | undefined) =>
+  !!error && (error.code === "42703" || error.code === "PGRST204" || /does not exist|schema cache/i.test(error.message ?? ""));
+
+/** Rows in business_photos per business, for the businesses given. */
+async function photoCountsFor(supabase: ReturnType<typeof createServerSupabaseClient>, ids: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (ids.length === 0) return counts;
+  const { data } = await supabase.from("business_photos").select("business_id").in("business_id", ids).limit(20000);
+  for (const row of data ?? []) counts.set(row.business_id, (counts.get(row.business_id) ?? 0) + 1);
+  return counts;
+}
+
 /** True when an insert / update failed because another business already has that slug (unique index, SQLSTATE 23505). */
 function isSlugConflict(error: { code?: string; message?: string }): boolean {
   return error.code === "23505" && /slug/i.test(error.message ?? "");
@@ -1054,6 +1068,89 @@ export const createBusiness = createServerFn({ method: "POST" })
       await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: "business_owner" }).select();
     }
 
+    return business;
+  });
+
+const QUICK_NEEDS_MIGRATION =
+  "Quick listing is not switched on yet (supabase/pending/quick-listing/01_migration.sql has not been applied).";
+
+const quickListingSchema = z.object({
+  name: z.string().trim().min(2, "Enter the business name").max(120),
+  contactName: z.string().trim().min(2, "Enter the contact person's name").max(80),
+  phone: z.string().trim().max(30).refine(isValidIndianMobile, PHONE_ERROR),
+  city: z.string().trim().min(1, "Choose the city").max(120),
+  categoryId: z.string().uuid().nullable().optional(),
+});
+
+/** Which "list your business" form this person gets: admins always the full one; everyone else the quick one once the database is ready. */
+export const getListingFlow = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const probe = await context.supabase.from("businesses").select("quick_lead").limit(1);
+    return { isAdmin: !!isAdmin, quickReady: !probe.error };
+  });
+
+/**
+ * The quick form: business name, contact person, phone, city (category optional). Creates a PENDING business flagged as a
+ * quick lead; nothing is invented for the fields that were not asked. Admins use the full form instead.
+ */
+export const createQuickListing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => quickListingSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const userId = context.userId;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    if (isAdmin) throw new Error("Admins add businesses with the full form.");
+
+    // A double tap sends the same lead twice: return the one just created instead of adding a second.
+    const since = new Date(Date.now() - 10 * 60_000).toISOString();
+    const { data: recent, error: recentError } = await supabase
+      .from("businesses")
+      .select("id, slug")
+      .eq("owner_id", userId)
+      .eq("quick_lead", true)
+      .ilike("name", exactIlike(data.name))
+      .gte("created_at", since)
+      .limit(1);
+    if (recentError) throw new Error(isMissingColumnError(recentError) ? QUICK_NEEDS_MIGRATION : recentError.message);
+    if (recent && recent[0]) return { id: recent[0].id, slug: recent[0].slug };
+
+    const base = ensureSlug(data.name);
+    let business: { id: string; slug: string } | null = null;
+    for (let attempt = 0; attempt < 3 && !business; attempt++) {
+      const slug = await uniqueBusinessSlug(base, { fallbackClient: supabase });
+      const { data: inserted, error } = await supabase
+        .from("businesses")
+        .insert({
+          name: data.name,
+          slug,
+          city: data.city,
+          phone: data.phone,
+          contact_name: data.contactName,
+          category_id: data.categoryId ?? null,
+          owner_id: userId,
+          status: "pending",
+          quick_lead: true,
+        })
+        .select("id, slug")
+        .single();
+      if (!error) {
+        business = inserted;
+      } else if (isMissingColumnError(error) || error.code === "23502") {
+        throw new Error(QUICK_NEEDS_MIGRATION);
+      } else if (!isSlugConflict(error) || attempt === 2) {
+        throw new Error(error.message);
+      }
+    }
+    if (!business) throw new Error("Could not save your listing. Please try again.");
+
+    const { data: isOwner } = await supabase.rpc("has_role", { _user_id: userId, _role: "business_owner" });
+    if (!isOwner) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: "business_owner" }).select();
+    }
     return business;
   });
 
@@ -1140,32 +1237,60 @@ export const listPendingBusinesses = createServerFn({ method: "GET" })
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const { data, error } = await supabase
-      .from("businesses")
-      .select("id, name, slug, description, address, city, state, phone, phone_secondary, email, website, featured_image, status, created_at, owner_id, categories:category_id(name, slug)")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []).map((b) => ({
-      ...b,
-      categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
-    }));
+    const base =
+      "id, name, slug, description, address, city, state, phone, phone_secondary, email, website, featured_image, status, created_at, owner_id, category_id, categories:category_id(name, slug)";
+    const query = (cols: string) => supabase.from("businesses").select(cols).eq("status", "pending").order("created_at", { ascending: false });
+    // contact_name / quick_lead exist once the quick-listing SQL has run; until then the list works as before.
+    let res = await query(`${base}, contact_name, quick_lead`);
+    if (res.error && isMissingColumnError(res.error)) res = await query(base);
+    if (res.error) throw new Error(res.error.message);
+    const rows = (res.data ?? []) as unknown as Array<Record<string, unknown> & { id: string }>;
+    const photos = await photoCountsFor(supabase, rows.map((b) => b.id));
+    return rows.map((b) => {
+      const photoCount = photos.get(b.id) ?? 0;
+      return {
+        ...(b as unknown as {
+          id: string; name: string; slug: string; description: string | null; address: string | null; city: string | null;
+          state: string | null; phone: string | null; phone_secondary: string | null; email: string | null; website: string | null;
+          featured_image: string | null; status: string; created_at: string; owner_id: string | null;
+        }),
+        categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
+        contactName: (b.contact_name as string | null | undefined) ?? null,
+        quickLead: b.quick_lead === true,
+        photoCount,
+        gaps: publishGaps({ category_id: b.category_id as string | null, address: b.address as string | null, featured_image: b.featured_image as string | null, photoCount }),
+      };
+    });
   });
 
 export const reviewBusinessSubmission = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({ id: z.string().uuid(), action: z.enum(["approve", "reject"]) }).parse(input),
+    z.object({ id: z.string().uuid(), action: z.enum(["approve", "reject"]), force: z.boolean().optional() }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const supabase = context.supabase;
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
+    // Publishing a listing with no category, no address or no photo needs a second, deliberate confirmation.
+    if (data.action === "approve" && !data.force) {
+      const { data: biz, error: bizError } = await supabase
+        .from("businesses")
+        .select("category_id, address, featured_image")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (bizError) throw new Error(bizError.message);
+      if (!biz) throw new Error("Business not found");
+      const photoCount = (await photoCountsFor(supabase, [data.id])).get(data.id) ?? 0;
+      const gaps = publishGaps({ category_id: biz.category_id, address: biz.address, featured_image: biz.featured_image, photoCount });
+      if (gaps.length > 0) return { success: false as const, needsConfirm: true as const, gaps };
+    }
+
     const newStatus = data.action === "approve" ? "published" : "rejected";
     const { error } = await supabase.from("businesses").update({ status: newStatus }).eq("id", data.id);
     if (error) throw new Error(error.message);
-    return { success: true, status: newStatus };
+    return { success: true as const, needsConfirm: false as const, status: newStatus };
   });
 
 // -------- Admin: verified toggle --------
@@ -1331,14 +1456,18 @@ export const getDashboard = createServerFn({ method: "GET" })
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     const { data: isOwner } = await supabase.rpc("has_role", { _user_id: userId, _role: "business_owner" });
 
-    let businessesQuery = supabase
-      .from("businesses")
-      .select("id, name, slug, status, city, phone, phone_secondary, category_id, current_plan_id, plan_tier_order, plans:current_plan_id(name, slug, analytics_access), categories:category_id(name, slug)")
-      .order("created_at", { ascending: false });
-    if (!isAdmin) {
-      businessesQuery = businessesQuery.eq("owner_id", userId);
-    }
-    const { data: businesses, error: businessesError } = await businessesQuery;
+    const baseCols =
+      "id, name, slug, status, city, phone, phone_secondary, category_id, current_plan_id, plan_tier_order, plans:current_plan_id(name, slug, analytics_access), categories:category_id(name, slug)";
+    const buildQuery = (cols: string) => {
+      let q = supabase.from("businesses").select(cols).order("created_at", { ascending: false });
+      if (!isAdmin) q = q.eq("owner_id", userId);
+      return q;
+    };
+    // quick_lead & co exist once the quick-listing SQL has run; until then the dashboard works as before.
+    let businessesRes = await buildQuery(`${baseCols}, quick_lead, contact_name, address, description, hours, featured_image`);
+    if (businessesRes.error && isMissingColumnError(businessesRes.error)) businessesRes = await buildQuery(baseCols);
+    const businesses = businessesRes.data;
+    const businessesError = businessesRes.error;
     if (businessesError) throw new Error(businessesError.message);
 
     let claimsQuery = supabase
@@ -1366,7 +1495,33 @@ export const getDashboard = createServerFn({ method: "GET" })
       );
     }
 
+    // Quick leads (owner view): has a plan been activated yet? If not, they wait; if so, they complete their details.
+    type Quick = { quick_lead?: boolean; address?: string | null; description?: string | null; hours?: unknown; featured_image?: string | null; category_id?: string | null };
+    const planActive = new Map<string, boolean>();
+    const photos = new Map<string, number>();
+    const quickIds = (businesses ?? [])
+      .filter((b) => (b as unknown as Quick).quick_lead === true)
+      .map((b) => (b as unknown as { id: string }).id);
+    if (quickIds.length > 0) {
+      await Promise.all(
+        quickIds.map(async (id) => {
+          const { data: active, error: activeError } = await supabase.rpc("business_has_active_plan" as never, { _business_id: id } as never);
+          // If the function is not installed, fall back to the edit lock (a quick lead without a plan is locked).
+          planActive.set(id, activeError ? !lockedIds.has(id) : (active as unknown) === true);
+        }),
+      );
+      for (const [id, n] of await photoCountsFor(supabase, quickIds)) photos.set(id, n);
+    }
+
     const typedBusinesses = (businesses ?? []).map((b) => ({
+      quickLead: (b as unknown as Quick).quick_lead === true,
+      contactName: (b as unknown as { contact_name?: string | null }).contact_name ?? null,
+      // Owner view only: a quick lead whose plan is not active yet shows "Waiting for activation".
+      waitingActivation: !isAdmin && (b as unknown as Quick).quick_lead === true && planActive.get((b as unknown as { id: string }).id) !== true,
+      checklist:
+        !isAdmin && (b as unknown as Quick).quick_lead === true && planActive.get((b as unknown as { id: string }).id) === true
+          ? completionChecklist({ ...(b as unknown as Quick), photoCount: photos.get((b as unknown as { id: string }).id) ?? 0 })
+          : null,
       editLocked: lockedIds.has((b as unknown as { id: string }).id),
       id: (b as unknown as { id: string }).id,
       name: (b as unknown as { name: string }).name,
@@ -1440,13 +1595,22 @@ export const adminListAllBusinesses = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await requireAdmin(context as never);
-    const { data, error } = await context.supabase
-      .from("businesses")
-      .select("id, name, slug, city, phone, phone_secondary, email, status, verified, created_at, categories:category_id(name), plans:current_plan_id(name)")
-      .order("created_at", { ascending: false })
-      .limit(2000);
-    if (error) throw new Error(error.message);
-    return (data ?? []).map((b) => ({
+    const base =
+      "id, name, slug, city, phone, phone_secondary, email, status, verified, created_at, category_id, address, featured_image, categories:category_id(name), plans:current_plan_id(name)";
+    const query = (cols: string) => context.supabase.from("businesses").select(cols).order("created_at", { ascending: false }).limit(2000);
+    let res = await query(`${base}, contact_name, quick_lead`);
+    if (res.error && isMissingColumnError(res.error)) res = await query(base);
+    if (res.error) throw new Error(res.error.message);
+    const rows = (res.data ?? []) as unknown as Array<{
+      id: string; name: string; slug: string; city: string | null; phone: string | null; phone_secondary: string | null;
+      email: string | null; status: string; verified: boolean; created_at: string; category_id: string | null;
+      address: string | null; featured_image: string | null; contact_name?: string | null; quick_lead?: boolean;
+      categories: { name: string } | null; plans: { name: string } | null;
+    }>;
+    // Photo counts only for the leads that are still pending (that is where the warning is shown).
+    const pendingIds = rows.filter((b) => b.status === "pending").map((b) => b.id);
+    const photos = await photoCountsFor(context.supabase, pendingIds);
+    return rows.map((b) => ({
       id: b.id,
       name: b.name,
       slug: b.slug,
@@ -1457,8 +1621,11 @@ export const adminListAllBusinesses = createServerFn({ method: "GET" })
       status: b.status,
       verified: b.verified,
       created_at: b.created_at,
-      categoryName: (b as unknown as { categories: { name: string } | null }).categories?.name ?? "",
-      planName: (b as unknown as { plans: { name: string } | null }).plans?.name ?? null,
+      categoryName: b.categories?.name ?? "",
+      planName: b.plans?.name ?? null,
+      contactName: b.contact_name ?? null,
+      quickLead: b.quick_lead === true,
+      gaps: publishGaps({ category_id: b.category_id, address: b.address, featured_image: b.featured_image, photoCount: photos.get(b.id) ?? 0 }),
     }));
   });
 

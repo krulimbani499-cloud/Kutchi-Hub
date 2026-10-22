@@ -50,6 +50,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { slugify, slugifyInput } from "@/lib/slug";
+import { PUBLISH_GAP_LABEL, type PublishGap } from "@/lib/listing-completeness";
+import { telHref, whatsappHref } from "@/lib/phone";
 import { ListSearchInput } from "@/components/ListSearchInput";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { matchesSearch } from "@/lib/list-search";
@@ -137,7 +139,13 @@ function AdminPage() {
   const handleAction = async (id: string, action: "approve" | "reject") => {
     setBusyId(id);
     try {
-      await reviewFn({ data: { id, action } });
+      let result = await reviewFn({ data: { id, action } });
+      if (result.needsConfirm) {
+        // Missing category / address / photo: publish only after a deliberate second confirmation.
+        const missing = result.gaps.map((g: PublishGap) => PUBLISH_GAP_LABEL[g]).join(", ");
+        if (!confirm(`This business is missing: ${missing}.\n\nPublish it anyway?`)) return;
+        result = await reviewFn({ data: { id, action, force: true } });
+      }
       toast.success(action === "approve" ? "Business approved" : "Business rejected");
       await refetch();
     } catch (err) {
@@ -226,6 +234,11 @@ function AdminPage() {
                   <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
                     <span className="min-w-0 break-words">{b.name}</span>
                     {b.categoryName ? <Badge variant="outline">{b.categoryName}</Badge> : null}
+                    {b.quickLead && (
+                      <Badge className="bg-amber-500 text-xs text-white hover:bg-amber-500">
+                        {b.gaps.length > 0 ? "Quick lead - details incomplete" : "Quick lead"}
+                      </Badge>
+                    )}
                   </CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Submitted {new Date(b.created_at).toLocaleString()}
@@ -250,10 +263,23 @@ function AdminPage() {
                       <span>{[b.address, b.city, b.state].filter(Boolean).join(", ")}</span>
                     </div>
                   ) : null}
-                  {b.phone ? (
+                  {b.contactName ? (
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 shrink-0" />
-                      <span>{b.phone}</span>
+                      <Check className="h-4 w-4 shrink-0 opacity-0" />
+                      <span>Contact: <span className="font-medium text-foreground">{b.contactName}</span></span>
+                    </div>
+                  ) : null}
+                  {b.phone ? (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <a href={telHref(b.phone)} className="inline-flex items-center gap-2 font-medium text-foreground hover:underline">
+                        <Phone className="h-4 w-4 shrink-0" />
+                        {b.phone}
+                      </a>
+                      {whatsappHref(b.phone) && (
+                        <a href={whatsappHref(b.phone)!} target="_blank" rel="noreferrer" className="text-xs font-medium text-green-700 hover:underline">
+                          WhatsApp
+                        </a>
+                      )}
                     </div>
                   ) : null}
                   {b.email ? (
