@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { activeEnterpriseBusinessIds, createServerSupabaseClient, uniqueBusinessSlug } from "./businesses.server";
 import { BANNER_PLACEMENTS, composeHomeBanners, type BannerPlacement } from "./banner-rules";
 import { completionChecklist, publishGaps } from "./listing-completeness";
+import { cachedFor } from "./server-cache";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
@@ -160,6 +161,8 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     };
   });
 
+let profilesUnreadable = false;
+
 export const getBusinessBySlug = createServerFn({ method: "GET" })
   .inputValidator((input) =>
     z
@@ -207,19 +210,29 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
       throw inReview ? notFound({ data: { inReview: true } }) : notFound();
     }
 
-    const { data: reviews } = await supabase
-      .from("business_reviews")
-      .select("*")
-      .eq("business_id", business.id)
-      .order("created_at", { ascending: false });
+    // Reviews, photos and the catalog-plan check do not depend on each other: ask for all three at once.
+    const [{ data: reviews }, { data: photos }, catalogAllowed] = await Promise.all([
+      supabase.from("business_reviews").select("*").eq("business_id", business.id).order("created_at", { ascending: false }),
+      supabase.from("business_photos").select("*").eq("business_id", business.id).order("display_order", { ascending: true }),
+      // Show the catalog only while the business's active plan includes it. Nothing is deleted: the file and the
+      // saved values stay, they just are not shown. Fails open (shown, as before) if the database function is missing.
+      business.catalog_url
+        ? supabase
+            .rpc("business_can_use_catalog", { _business_id: business.id })
+            .then(({ data: canCatalog, error: canCatalogError }) => (canCatalogError ? true : canCatalog === true))
+        : Promise.resolve(true),
+    ]);
 
     const userIds = [...new Set((reviews ?? []).map((r) => r.user_id))];
-    let profiles: Record<string, { display_name: string | null; avatar_url: string | null }> = {};
-    if (userIds.length > 0) {
-      const { data: profileRows } = await supabase
+    const profiles: Record<string, { display_name: string | null; avatar_url: string | null }> = {};
+    // The public key has no read access to profiles (permission denied since the 2026-07-07 privacy change), so this lookup
+    // answers nothing. Once it has failed on this server instance it is not tried again (one wasted round trip per page view).
+    if (userIds.length > 0 && !profilesUnreadable) {
+      const { data: profileRows, error: profileError } = await supabase
         .from("profiles")
         .select("user_id, display_name, avatar_url")
         .in("user_id", userIds);
+      if (profileError && (profileError.code === "42501" || /permission denied/i.test(profileError.message))) profilesUnreadable = true;
       for (const p of profileRows ?? []) {
         profiles[p.user_id] = p;
       }
@@ -230,26 +243,10 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
       profiles: profiles[r.user_id] ?? null,
     }));
 
-    const { data: photos } = await supabase
-      .from("business_photos")
-      .select("*")
-      .eq("business_id", business.id)
-      .order("display_order", { ascending: true });
-
     const avgRating =
       reviews && reviews.length > 0
         ? Number((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1))
         : 0;
-
-    // Show the catalog only while the business's active plan includes it. Nothing is deleted: the file and the
-    // saved values stay, they just are not shown. Fails open (shown, as before) if the database function is missing.
-    let catalogAllowed = true;
-    if (business.catalog_url) {
-      const { data: canCatalog, error: canCatalogError } = await supabase.rpc("business_can_use_catalog", {
-        _business_id: business.id,
-      });
-      catalogAllowed = canCatalogError ? true : canCatalog === true;
-    }
 
     return {
       business: { ...business, catalog_allowed: catalogAllowed },
@@ -393,29 +390,15 @@ const normalizeBannerImageUrl = (url: string) => {
 // because PostgREST treats it as "%". No real city name contains any of these.
 const exactIlike = (value: string) => value.replace(/\*/g, "").replace(/[\\%_]/g, "\\$&");
 
-const BANNER_SELECT = "id, business_id, title, subtitle, image_url, mobile_image_url, cta_label, cta_url, city, priority, created_at";
+// `business` rides along in the same query: the slug of the business page a banner opens (only a published one is visible to the
+// public key; anything else comes back null). It replaces a second round trip.
+const BANNER_SELECT =
+  "id, business_id, title, subtitle, image_url, mobile_image_url, cta_label, cta_url, city, priority, created_at, business:business_id(slug, status)";
 const BANNER_SELECT_NEW = `${BANNER_SELECT}, placement, show_all_cities`;
 
 /** True when the database does not have the placement / show_all_cities columns yet (banner-placement/01_migration.sql). */
 const isMissingBannerColumns = (error: { code?: string; message?: string } | null) =>
   !!error && (error.code === "42703" || error.code === "PGRST204" || /placement|show_all_cities/.test(error.message ?? ""));
-
-/**
- * The business page each banner opens: banners that name a business get its slug (published businesses only, since a
- * visitor cannot open anything else). An explicit CTA URL on the banner still wins on the client.
- */
-async function attachBusinessSlugs<T extends { business_id: string | null }>(
-  supabase: ReturnType<typeof createServerSupabaseClient>,
-  banners: T[],
-): Promise<Array<T & { business_slug: string | null }>> {
-  const ids = [...new Set(banners.map((b) => b.business_id).filter((id): id is string => !!id))];
-  const slugs = new Map<string, string>();
-  if (ids.length > 0) {
-    const { data } = await supabase.from("businesses").select("id, slug").in("id", ids).eq("status", "published");
-    for (const row of data ?? []) slugs.set(row.id, row.slug);
-  }
-  return banners.map((b) => ({ ...b, business_slug: b.business_id ? slugs.get(b.business_id) ?? null : null }));
-}
 
 export const getBannerAdsForCity = createServerFn({ method: "GET" })
   // `all` = the person explicitly chose "All locations": every active banner, whatever its city.
@@ -457,6 +440,7 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
       city: string;
       priority: number;
       created_at: string;
+      business: { slug: string; status: string } | null;
     };
 
     let rows: Row[] = [];
@@ -505,9 +489,10 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
         rows = composeHomeBanners(rows, [], 10);
       }
     }
-    const withSlugs = await attachBusinessSlugs(supabase, rows);
-    return withSlugs.map((banner) => ({
+    // Banners that name a business open its page (published businesses only: a visitor cannot open anything else).
+    return rows.map(({ business, ...banner }) => ({
       ...banner,
+      business_slug: business && business.status === "published" ? business.slug : null,
       image_url: normalizeBannerImageUrl(banner.image_url),
       mobile_image_url: banner.mobile_image_url ? normalizeBannerImageUrl(banner.mobile_image_url) : null,
     }));
@@ -765,6 +750,22 @@ function rankPopularCategories<T extends { id: string; name: string }>(
   return [...picked, ...fill].slice(0, limit);
 }
 
+/**
+ * Rows that were selected with `business_reviews(rating)` embedded: turns the embedded ratings into avgRating / reviewCount.
+ * (Reading ratings in the SAME query replaces a second round trip to the database on every listing page.)
+ */
+function withRatingSummary<T extends { business_reviews?: Array<{ rating: number }> | null }>(rows: T[] | null | undefined) {
+  return (rows ?? []).map(({ business_reviews, ...rest }) => {
+    const reviews = business_reviews ?? [];
+    const sum = reviews.reduce((total, r) => total + r.rating, 0);
+    return {
+      ...rest,
+      avgRating: reviews.length ? Number((sum / reviews.length).toFixed(1)) : 0,
+      reviewCount: reviews.length,
+    };
+  });
+}
+
 export const getHomeData = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z.object({ city: z.string().optional() }).optional().parse(input) ?? {},
@@ -774,7 +775,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     const city = data?.city?.trim();
     let featuredQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
+      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)")
       .eq("status", "published")
       .order("plan_tier_order", { ascending: false })
       .order("plan_featured", { ascending: false })
@@ -785,7 +786,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     // Platinum spotlight: Platinum (4) & Enterprise (5) only — the auto-showcase perk
     let spotlightQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
+      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)")
       .eq("status", "published")
       .gte("plan_tier_order", 4)
       .order("plan_tier_order", { ascending: false })
@@ -796,7 +797,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     const today = new Date().toISOString().slice(0, 10);
     let offersQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color)")
+      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)")
       .eq("status", "published")
       .gt("app_discount_percent", 0)
       .or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`)
@@ -806,6 +807,8 @@ export const getHomeData = createServerFn({ method: "GET" })
 
     // Popular Categories are ranked by published businesses: in the selected city first, then (to fill the
     // tiles) overall. Two count queries run in parallel with the rest — never one query per category.
+    // Everything runs at once. The category list and the per-category counts change rarely, so each server instance keeps them
+    // for a minute (cachedFor) instead of asking the database on every home page view.
     const [
       { data: allCategories },
       { data: featured },
@@ -814,62 +817,22 @@ export const getHomeData = createServerFn({ method: "GET" })
       cityCounts,
       overallCounts,
     ] = await Promise.all([
-      supabase.from("categories").select("*").order("display_order", { ascending: true }),
+      cachedFor("home:categories", 60_000, async () => {
+        const res = await supabase.from("categories").select("*").order("display_order", { ascending: true });
+        if (res.error) throw new Error(res.error.message);
+        return res;
+      }),
       featuredQuery,
       offersQuery,
       spotlightQuery,
-      city ? countPublishedByCategory(supabase, city) : Promise.resolve(null),
-      countPublishedByCategory(supabase),
+      city ? cachedFor(`home:counts:${city.toLowerCase()}`, 60_000, () => countPublishedByCategory(supabase, city)) : Promise.resolve(null),
+      cachedFor("home:counts:*", 60_000, () => countPublishedByCategory(supabase)),
     ]);
     const categories = rankPopularCategories(allCategories ?? [], cityCounts, overallCounts, HOME_CATEGORY_TILES);
 
-  const businessIds = Array.from(
-    new Set([
-      ...(featured ?? []).map((b) => b.id),
-      ...(offers ?? []).map((b) => b.id),
-      ...(spotlight ?? []).map((b) => b.id),
-    ]),
-  );
-  let ratings = new Map<string, { count: number; sum: number }>();
-  if (businessIds.length > 0) {
-    const { data: counts } = await supabase
-      .from("business_reviews")
-      .select("business_id, rating")
-      .in("business_id", businessIds);
-    for (const r of counts ?? []) {
-      const entry = ratings.get(r.business_id) ?? { count: 0, sum: 0 };
-      entry.count += 1;
-      entry.sum += r.rating;
-      ratings.set(r.business_id, entry);
-    }
-  }
-
-  const listings = (featured ?? []).map((b) => {
-    const rating = ratings.get(b.id);
-    return {
-      ...b,
-      avgRating: rating ? Number((rating.sum / rating.count).toFixed(1)) : 0,
-      reviewCount: rating?.count ?? 0,
-    };
-  });
-
-    const topOffers = (offers ?? []).map((b) => {
-      const rating = ratings.get(b.id);
-      return {
-        ...b,
-        avgRating: rating ? Number((rating.sum / rating.count).toFixed(1)) : 0,
-        reviewCount: rating?.count ?? 0,
-      };
-    });
-
-    const platinumSpotlight = (spotlight ?? []).map((b) => {
-      const rating = ratings.get(b.id);
-      return {
-        ...b,
-        avgRating: rating ? Number((rating.sum / rating.count).toFixed(1)) : 0,
-        reviewCount: rating?.count ?? 0,
-      };
-    });
+    const listings = withRatingSummary(featured);
+    const topOffers = withRatingSummary(offers);
+    const platinumSpotlight = withRatingSummary(spotlight);
 
     return { categories, featured: listings, topOffers, platinumSpotlight };
   });
@@ -1453,8 +1416,10 @@ export const getDashboard = createServerFn({ method: "GET" })
     const supabase = context.supabase;
     const userId = context.userId;
 
-    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-    const { data: isOwner } = await supabase.rpc("has_role", { _user_id: userId, _role: "business_owner" });
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
+      supabase.rpc("has_role", { _user_id: userId, _role: "business_owner" }),
+    ]);
 
     const baseCols =
       "id, name, slug, status, city, phone, phone_secondary, category_id, current_plan_id, plan_tier_order, plans:current_plan_id(name, slug, analytics_access), categories:category_id(name, slug)";
@@ -1464,12 +1429,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       return q;
     };
     // quick_lead & co exist once the quick-listing SQL has run; until then the dashboard works as before.
-    let businessesRes = await buildQuery(`${baseCols}, quick_lead, contact_name, address, description, hours, featured_image`);
-    if (businessesRes.error && isMissingColumnError(businessesRes.error)) businessesRes = await buildQuery(baseCols);
-    const businesses = businessesRes.data;
-    const businessesError = businessesRes.error;
-    if (businessesError) throw new Error(businessesError.message);
-
+    // The businesses and the claims are independent: ask for both at once.
     let claimsQuery = supabase
       .from("business_claims")
       .select("id, business_id, user_id, status, message, created_at, businesses:business_id(name, slug, city)")
@@ -1477,7 +1437,16 @@ export const getDashboard = createServerFn({ method: "GET" })
     if (!isAdmin) {
       claimsQuery = claimsQuery.eq("user_id", userId);
     }
-    const { data: claims, error: claimsError } = await claimsQuery;
+    let [businessesRes, claimsRes] = await Promise.all([
+      buildQuery(`${baseCols}, quick_lead, contact_name, address, description, hours, featured_image`),
+      claimsQuery,
+    ]);
+    if (businessesRes.error && isMissingColumnError(businessesRes.error)) businessesRes = await buildQuery(baseCols);
+    const businesses = businessesRes.data;
+    const businessesError = businessesRes.error;
+    if (businessesError) throw new Error(businessesError.message);
+    const claims = claimsRes.data;
+    const claimsError = claimsRes.error;
     if (claimsError) throw new Error(claimsError.message);
 
     // Which of the owner's businesses are locked for editing (published, no active plan). Admins are never locked.
@@ -1689,44 +1658,33 @@ export const getBusinessForEdit = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase;
-    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     // Old data can hold two businesses with one slug: take the caller's own (an admin: the oldest) instead of failing
-    // with "multiple rows". No match at all is a normal not-found page.
-    const { data: found, error } = await supabase
-      .from("businesses")
-      .select("*, categories:category_id(id, name, slug, color, icon)")
-      .eq("slug", data.slug)
-      .order("created_at", { ascending: true })
-      .limit(10);
+    // with "multiple rows". No match at all is a normal not-found page. The role check and the lookup run at once.
+    const [{ data: isAdmin }, { data: found, error }] = await Promise.all([
+      supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      supabase
+        .from("businesses")
+        .select("*, categories:category_id(id, name, slug, color, icon)")
+        .eq("slug", data.slug)
+        .order("created_at", { ascending: true })
+        .limit(10),
+    ]);
     if (error) throw new Error(error.message);
     if (!found || found.length === 0) throw notFound();
     const business = found.find((b) => b.owner_id === context.userId) ?? found[0];
     if (business.owner_id !== context.userId && !isAdmin) throw new Error("Unauthorized");
 
-    const { data: photos } = await supabase
-      .from("business_photos")
-      .select("*")
-      .eq("business_id", business.id)
-      .order("display_order", { ascending: true });
-
-    // Owner of a published business without an active plan: the edit form is replaced by a "plan needed" card.
-    // The database is the source of truth (business_owner_can_edit); if that function is not installed yet
-    // the check is skipped (fails open) and the page behaves as before.
-    let editLocked = false;
-    // Catalog (PDF) is only for plans that allow it. Admins always can; if business_can_use_catalog is not
-    // installed yet (error) the owner keeps the uploader, exactly as before.
-    let catalogAllowed = true;
-    if (!isAdmin) {
-      const { data: canEdit, error: canEditError } = await supabase.rpc("business_owner_can_edit", {
-        _business_id: business.id,
-      });
-      editLocked = !canEditError && canEdit === false;
-
-      const { data: canCatalog, error: canCatalogError } = await supabase.rpc("business_can_use_catalog", {
-        _business_id: business.id,
-      });
-      catalogAllowed = canCatalogError ? true : canCatalog === true;
-    }
+    // Photos and the two plan checks are independent: all at once. Owner of a published business without an active plan: the
+    // edit form is replaced by a "plan needed" card. The database is the source of truth (business_owner_can_edit); if that
+    // function is not installed yet the check is skipped (fails open) and the page behaves as before. The catalog (PDF) is only
+    // for plans that allow it (admins always can); if business_can_use_catalog is not installed yet the owner keeps the uploader.
+    const [{ data: photos }, canEditRes, canCatalogRes] = await Promise.all([
+      supabase.from("business_photos").select("*").eq("business_id", business.id).order("display_order", { ascending: true }),
+      isAdmin ? Promise.resolve(null) : supabase.rpc("business_owner_can_edit", { _business_id: business.id }),
+      isAdmin ? Promise.resolve(null) : supabase.rpc("business_can_use_catalog", { _business_id: business.id }),
+    ]);
+    const editLocked = !!canEditRes && !canEditRes.error && canEditRes.data === false;
+    const catalogAllowed = canCatalogRes ? (canCatalogRes.error ? true : canCatalogRes.data === true) : true;
 
     return { business, photos: photos ?? [], editLocked, catalogAllowed };
   });
@@ -1737,50 +1695,28 @@ export const getCategoryPageData = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
-    const { data: category, error: catErr } = await supabase
-      .from("categories")
-      .select("*")
-      .eq("slug", data.slug)
-      .maybeSingle();
+    // The category row and its businesses are independent (the businesses are matched through the category slug), and the
+    // ratings come back embedded: one round of queries instead of three in a row.
+    const [{ data: category, error: catErr }, { data: businesses, error }] = await Promise.all([
+      supabase.from("categories").select("*").eq("slug", data.slug).maybeSingle(),
+      supabase
+        .from("businesses")
+        .select(
+          "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id!inner(id, name, slug, color), business_reviews(rating)",
+        )
+        .eq("status", "published")
+        .eq("categories.slug", data.slug)
+        .order("plan_tier_order", { ascending: false })
+        .order("plan_featured", { ascending: false })
+        .order("verified", { ascending: false })
+        .order("name", { ascending: true })
+        .limit(60),
+    ]);
     if (catErr) throw new Error(catErr.message);
     if (!category) throw new Error("Category not found");
-
-    const { data: businesses, error } = await supabase
-      .from("businesses")
-      .select(
-        "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id(id, name, slug, color)",
-      )
-      .eq("status", "published")
-      .eq("category_id", category.id)
-      .order("plan_tier_order", { ascending: false })
-      .order("plan_featured", { ascending: false })
-      .order("verified", { ascending: false })
-      .order("name", { ascending: true })
-      .limit(60);
     if (error) throw new Error(error.message);
 
-    const ids = (businesses ?? []).map((b) => b.id);
-    const ratings = new Map<string, { count: number; sum: number }>();
-    if (ids.length > 0) {
-      const { data: rs } = await supabase
-        .from("business_reviews")
-        .select("business_id, rating")
-        .in("business_id", ids);
-      for (const r of rs ?? []) {
-        const e = ratings.get(r.business_id) ?? { count: 0, sum: 0 };
-        e.count += 1;
-        e.sum += r.rating;
-        ratings.set(r.business_id, e);
-      }
-    }
-    const listings = (businesses ?? []).map((b) => {
-      const r = ratings.get(b.id);
-      return {
-        ...b,
-        avgRating: r ? Number((r.sum / r.count).toFixed(1)) : 0,
-        reviewCount: r?.count ?? 0,
-      };
-    });
+    const listings = withRatingSummary(businesses);
     const cities = Array.from(new Set(listings.map((b) => b.city).filter(Boolean))) as string[];
     return { category, businesses: listings, cities };
   });
@@ -1798,7 +1734,7 @@ export const getCityPageData = createServerFn({ method: "GET" })
     const { data: businesses, error } = await supabase
       .from("businesses")
       .select(
-        "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id(id, name, slug, color)",
+        "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id(id, name, slug, color), business_reviews(rating)",
       )
       .eq("status", "published")
       .ilike("city", `%${cityName}%`)
@@ -1809,28 +1745,7 @@ export const getCityPageData = createServerFn({ method: "GET" })
       .limit(80);
     if (error) throw new Error(error.message);
 
-    const ids = (businesses ?? []).map((b) => b.id);
-    const ratings = new Map<string, { count: number; sum: number }>();
-    if (ids.length > 0) {
-      const { data: rs } = await supabase
-        .from("business_reviews")
-        .select("business_id, rating")
-        .in("business_id", ids);
-      for (const r of rs ?? []) {
-        const e = ratings.get(r.business_id) ?? { count: 0, sum: 0 };
-        e.count += 1;
-        e.sum += r.rating;
-        ratings.set(r.business_id, e);
-      }
-    }
-    const listings = (businesses ?? []).map((b) => {
-      const r = ratings.get(b.id);
-      return {
-        ...b,
-        avgRating: r ? Number((r.sum / r.count).toFixed(1)) : 0,
-        reviewCount: r?.count ?? 0,
-      };
-    });
+    const listings = withRatingSummary(businesses);
 
     // Group by category for the "browse by category" section
     const byCategory = new Map<string, { name: string; slug: string; count: number }>();
@@ -1888,52 +1803,27 @@ export const getCityCategoryPageData = createServerFn({ method: "GET" })
       .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
       .join(" ");
 
-    const { data: category, error: catErr } = await supabase
-      .from("categories")
-      .select("*")
-      .eq("slug", data.category)
-      .maybeSingle();
+    const [{ data: category, error: catErr }, { data: businesses, error }] = await Promise.all([
+      supabase.from("categories").select("*").eq("slug", data.category).maybeSingle(),
+      supabase
+        .from("businesses")
+        .select(
+          "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id!inner(id, name, slug, color), business_reviews(rating)",
+        )
+        .eq("status", "published")
+        .eq("categories.slug", data.category)
+        .ilike("city", `%${cityName}%`)
+        .order("plan_tier_order", { ascending: false })
+        .order("plan_featured", { ascending: false })
+        .order("verified", { ascending: false })
+        .order("name", { ascending: true })
+        .limit(80),
+    ]);
     if (catErr) throw new Error(catErr.message);
     if (!category) throw new Error("Category not found");
-
-    const { data: businesses, error } = await supabase
-      .from("businesses")
-      .select(
-        "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id(id, name, slug, color)",
-      )
-      .eq("status", "published")
-      .eq("category_id", category.id)
-      .ilike("city", `%${cityName}%`)
-      .order("plan_tier_order", { ascending: false })
-      .order("plan_featured", { ascending: false })
-      .order("verified", { ascending: false })
-      .order("name", { ascending: true })
-      .limit(80);
     if (error) throw new Error(error.message);
 
-    const ids = (businesses ?? []).map((b) => b.id);
-    const ratings = new Map<string, { count: number; sum: number }>();
-    if (ids.length > 0) {
-      const { data: rs } = await supabase
-        .from("business_reviews")
-        .select("business_id, rating")
-        .in("business_id", ids);
-      for (const r of rs ?? []) {
-        const e = ratings.get(r.business_id) ?? { count: 0, sum: 0 };
-        e.count += 1;
-        e.sum += r.rating;
-        ratings.set(r.business_id, e);
-      }
-    }
-    const listings = (businesses ?? []).map((b) => {
-      const r = ratings.get(b.id);
-      return {
-        ...b,
-        avgRating: r ? Number((r.sum / r.count).toFixed(1)) : 0,
-        reviewCount: r?.count ?? 0,
-      };
-    });
-    return { cityName, category, businesses: listings };
+    return { cityName, category, businesses: withRatingSummary(businesses) };
   });
 
 export const getSitemapData = createServerFn({ method: "GET" }).handler(async () => {

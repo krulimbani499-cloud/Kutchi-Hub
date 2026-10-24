@@ -254,6 +254,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 src={coverSrc}
                 alt={business.name}
                 loading="eager"
+                width={1200}
                 fallback={
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 text-5xl font-bold text-primary">
                     {business.name.charAt(0)}
@@ -560,6 +561,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                         src={photo.url}
                         alt={photo.caption ?? "Business photo"}
                         loading="lazy"
+                        width={480}
                         imgClassName="transition-transform hover:scale-105"
                       />
                     </div>

@@ -9,6 +9,8 @@ import { WaitingActivationCard } from "@/components/business/WaitingActivationCa
 const categoriesQueryOptions = queryOptions({
   queryKey: ["categories"],
   queryFn: () => getCategories(),
+  // The category list changes a few times a year: keep it for 10 minutes instead of asking again on every visit.
+  staleTime: 10 * 60_000,
 });
 
 const editBusinessQueryOptions = (slug: string) =>
@@ -25,8 +27,10 @@ export const Route = createFileRoute("/_authenticated/business/$slug/edit")({
     ],
   }),
   loader: async ({ context, params }) => {
-    await context.queryClient.ensureQueryData(categoriesQueryOptions);
-    await context.queryClient.ensureQueryData(editBusinessQueryOptions(params.slug));
+    await Promise.all([
+      context.queryClient.ensureQueryData(categoriesQueryOptions),
+      context.queryClient.ensureQueryData(editBusinessQueryOptions(params.slug)),
+    ]);
   },
   component: EditBusinessPage,
 });

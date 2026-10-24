@@ -30,6 +30,7 @@ export function RecentlyViewed() {
                     alt={b.name}
                     className="h-full w-full object-cover transition-transform group-hover:scale-105"
                     loading="lazy"
+                    width={288}
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 text-lg font-bold text-primary">

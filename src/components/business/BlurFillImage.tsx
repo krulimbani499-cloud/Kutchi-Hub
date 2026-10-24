@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useResolvedBusinessPhotoSrc } from "./BusinessPhotoImage";
+import { useBusinessPhotoSrc } from "./BusinessPhotoImage";
 import { SafeImage } from "./SafeImage";
 
 /**
@@ -17,6 +17,7 @@ export function BlurFillImage({
   loading = "lazy",
   fallback,
   imgClassName = "",
+  width,
 }: {
   src: string | null | undefined;
   alt: string;
@@ -24,8 +25,10 @@ export function BlurFillImage({
   fallback?: ReactNode;
   /** Extra classes for the sharp picture only (e.g. a hover zoom). */
   imgClassName?: string;
+  /** Ask for a resized picture of about this width (2x the width it is shown at); the full file is used if that fails. */
+  width?: number;
 }) {
-  const resolved = useResolvedBusinessPhotoSrc(src);
+  const { src: resolved, fallBackToOriginal } = useBusinessPhotoSrc(src, width);
   // Remember WHICH url failed / was measured, so a changed photo is handled again.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [shape, setShape] = useState<{ src: string; ratio: number } | null>(null);
@@ -62,6 +65,7 @@ export function BlurFillImage({
           alt=""
           aria-hidden
           loading={loading}
+          decoding="async"
           data-blur-layer
           className="absolute inset-0 h-full w-full scale-[1.2] object-cover blur-[20px] brightness-90 saturate-[1.2]"
         />
@@ -73,7 +77,7 @@ export function BlurFillImage({
         className={`relative h-full w-full transition-opacity duration-200 ${
           known === null ? "object-contain opacity-0" : tall ? "object-cover object-center" : "object-contain"
         } ${imgClassName}`}
-        onFail={() => setFailedSrc(resolved)}
+        onFail={() => { if (!fallBackToOriginal()) setFailedSrc(resolved); }}
         onLoad={(img) => {
           if (img.naturalWidth > 0 && img.naturalHeight > 0) setShape({ src: resolved, ratio: img.naturalWidth / img.naturalHeight });
         }}

@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { useRef, useState } from "react";
 import { pickEmoji } from "@/components/business/CategoryGrid";
 import { SafeImage } from "@/components/business/SafeImage";
+import { markResizeBroken, resizedPublicUrl } from "@/components/business/BusinessPhotoImage";
 
 type Category = {
   id: string;
@@ -55,6 +56,7 @@ function PopularCardMedia({ cat }: { cat: Category }) {
   // Remember WHICH url failed (not just "something failed"), so a changed url is tried again.
   const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
   const [failedIcon, setFailedIcon] = useState<string | null>(null);
+  const [resizedFailed, setResizedFailed] = useState(false);
 
   if (photo && failedPhoto !== photo) {
     return (
@@ -71,10 +73,17 @@ function PopularCardMedia({ cat }: { cat: Category }) {
     <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100/70">
       {icon && failedIcon !== icon ? (
         <SafeImage
-          src={icon}
+          src={resizedFailed ? icon : resizedPublicUrl(icon, 240)}
           loading="lazy"
           className="h-20 w-20 object-contain transition-transform duration-500 group-hover:scale-110"
-          onFail={() => setFailedIcon(icon)}
+          onFail={() => {
+            if (!resizedFailed && resizedPublicUrl(icon, 240) !== icon) {
+              markResizeBroken();
+              setResizedFailed(true);
+            } else {
+              setFailedIcon(icon);
+            }
+          }}
         />
       ) : (
         <span aria-hidden className="text-6xl leading-none">

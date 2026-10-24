@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { Tables } from "@/integrations/supabase/types";
 import { useT } from "@/lib/i18n";
 import { SafeImage } from "./SafeImage";
+import { markResizeBroken, resizedPublicUrl } from "./BusinessPhotoImage";
 
 // Colorful emoji icons in JustDial style — mapped by icon key or category slug/name.
 const emojiMap: Record<string, string> = {
@@ -133,8 +134,24 @@ function CategoryTileIcon({ category }: { category: Tables<"categories"> }) {
   const iconUrl = (category as unknown as { icon_url?: string | null }).icon_url?.trim() || null;
   // Remember WHICH url failed, so a changed url is tried again.
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [resizedFailed, setResizedFailed] = useState(false);
   if (iconUrl && failedUrl !== iconUrl) {
-    return <SafeImage src={iconUrl} className="h-10 w-10 object-contain" onFail={() => setFailedUrl(iconUrl)} />;
+    // Shown at 40 px: a 120 px copy instead of the original (up to 350 KB each, 27 of them = 5 MB on a phone).
+    const shown = resizedFailed ? iconUrl : resizedPublicUrl(iconUrl, 120);
+    return (
+      <SafeImage
+        src={shown}
+        className="h-10 w-10 object-contain"
+        onFail={() => {
+          if (!resizedFailed && shown !== iconUrl) {
+            markResizeBroken();
+            setResizedFailed(true);
+          } else {
+            setFailedUrl(iconUrl);
+          }
+        }}
+      />
+    );
   }
   return <span aria-hidden>{pickEmoji(category.icon, category.slug, category.name)}</span>;
 }

@@ -65,6 +65,7 @@ export function BusinessCard({ business, delayMs }: BusinessCardProps) {
           src={imageSrc}
           alt={business.name}
           loading="lazy"
+          width={640}
           imgClassName="transition-transform group-hover:scale-105"
           fallback={
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted/50 text-muted-foreground">

@@ -39,6 +39,8 @@ const searchInfiniteOptions = (q: string, category: string, city: string, sort: 
 const categoriesQueryOptions = queryOptions({
   queryKey: ["categories"],
   queryFn: () => getCategories(),
+  // The category list changes a few times a year: keep it for 10 minutes instead of asking again on every visit.
+  staleTime: 10 * 60_000,
 });
 
 export const Route = createFileRoute("/search")({

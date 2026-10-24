@@ -201,6 +201,7 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
                 src={photo.url}
                 alt={photo.caption ?? "Business photo"}
                 className="pointer-events-none aspect-square w-full object-cover"
+                width={400}
               />
               {featured === photo.url && (
                 <div className="pointer-events-none absolute left-1 top-1 flex items-center gap-1 rounded bg-rating px-1.5 py-0.5 text-[10px] font-bold text-white">

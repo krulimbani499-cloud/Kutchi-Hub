@@ -19,7 +19,7 @@ export function MarketingBanner({ intervalMs = 4500, placement = "home_top" }: P
     // "All locations" is its own key: every active banner. No choice at all (null) still shows nothing, as before.
     queryKey: ["banner-ads", placement, city ?? (allLocations ? "__all__" : "none")],
     queryFn: () => getBannerAdsForCity({ data: { city: city ?? undefined, all: allLocations || undefined, placement } }),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
   const [index, setIndex] = useState(0);
 

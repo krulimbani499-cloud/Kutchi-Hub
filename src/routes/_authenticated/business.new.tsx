@@ -9,6 +9,8 @@ import { CheckCircle2 } from "lucide-react";
 const categoriesQueryOptions = queryOptions({
   queryKey: ["categories"],
   queryFn: () => getCategories(),
+  // The category list changes a few times a year: keep it for 10 minutes instead of asking again on every visit.
+  staleTime: 10 * 60_000,
 });
 
 const listingFlowQueryOptions = queryOptions({

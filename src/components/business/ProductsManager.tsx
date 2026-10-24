@@ -334,6 +334,7 @@ function ProductRow({ product: p, onEdit, onDelete }: { product: Product; onEdit
             src={cover}
             alt={p.name}
             className="h-full w-full object-cover transition-transform hover:scale-105"
+            width={160}
             fallback={<div className="flex h-full w-full items-center justify-center text-muted-foreground"><Package className="h-5 w-5" /></div>}
           />
         </button>
