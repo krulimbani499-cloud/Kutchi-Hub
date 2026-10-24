@@ -18,7 +18,7 @@ export function LanguageSelector({ compact = false }: { compact?: boolean }) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-9 gap-1 px-2 text-foreground"
+          className="h-8 gap-1 px-1.5 text-foreground sm:h-9 sm:px-2"
           aria-label={t("nav.language")}
           title={t("nav.language")}
         >

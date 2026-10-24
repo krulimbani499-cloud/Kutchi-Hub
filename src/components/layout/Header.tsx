@@ -44,7 +44,7 @@ export function Header() {
       <div className="mx-auto grid min-h-16 max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-2 sm:flex sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0">
         <Link to="/" className="flex min-w-0 shrink items-center gap-0 font-bold -ml-2 sm:-ml-1">
           <img src={logoUrl} alt="Kutchi Hub" className="h-11 w-auto shrink-0 object-contain sm:h-12" />
-          <span className="-ml-6 sm:-ml-8 truncate text-lg sm:text-2xl tracking-tight uppercase font-['Baloo_2',system-ui,sans-serif] font-extrabold">
+          <span className="-ml-6 sm:-ml-8 whitespace-nowrap text-base min-[400px]:text-lg sm:text-2xl tracking-tight uppercase font-['Baloo_2',system-ui,sans-serif] font-extrabold">
             <span className="text-[#ff6a00]">KUTCHI</span> <span className="text-black">HUB</span>
           </span>
         </Link>
@@ -79,7 +79,7 @@ export function Header() {
           </button>
         </form>
 
-        <div className="flex shrink-0 items-center gap-1 sm:ml-0 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-0.5 sm:ml-0 sm:gap-2">
           <LanguageSelector compact />
           <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
             <Link to="/categories" title={t("nav.categories")}>
@@ -89,7 +89,7 @@ export function Header() {
           <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild data-ios-hide>
             <Link to="/pricing">{t("nav.pricing")}</Link>
           </Button>
-          <Button variant="ghost" size="icon" className="sm:hidden" asChild title={t("nav.pricing")} data-ios-hide>
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild title={t("nav.pricing")} data-ios-hide>
             <Link to="/pricing" aria-label={t("nav.pricing")}>
               <Tag className="h-5 w-5" />
             </Link>
@@ -97,7 +97,7 @@ export function Header() {
           <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
             <Link to="/about">{t("nav.about")}</Link>
           </Button>
-          <Button variant="ghost" size="icon" className="sm:hidden" asChild title={t("nav.about")}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild title={t("nav.about")}>
             <Link to="/about" aria-label={t("nav.about")}>
               <Info className="h-5 w-5" />
             </Link>
@@ -113,7 +113,7 @@ export function Header() {
                       <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
                         <Link to="/admin">{t("nav.admin")}</Link>
                       </Button>
-                      <Button variant="ghost" size="icon" className="sm:hidden" asChild title={t("nav.admin")}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild title={t("nav.admin")}>
                         <Link to="/admin" aria-label={t("nav.admin")}>
                           <Shield className="h-5 w-5 text-[#ff6a00]" />
                         </Link>
@@ -152,14 +152,14 @@ export function Header() {
                     <LogOut className="mr-1 h-4 w-4" />
                     {t("nav.signOut")}
                   </Button>
-                  <Button variant="ghost" size="icon" className="sm:hidden" asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild>
                     <Link to={isAdmin || hasListings ? "/dashboard" : "/list-your-business"}>
                       <User className="h-5 w-5" />
                     </Link>
                   </Button>
                 </div>
               ) : (
-                <Button size="sm" className="bg-primary text-primary-foreground" asChild>
+                <Button size="sm" className="h-8 bg-primary px-2.5 text-primary-foreground sm:h-9 sm:px-3" asChild>
                   <Link to="/auth">{t("nav.signIn")}</Link>
                 </Button>
               )}

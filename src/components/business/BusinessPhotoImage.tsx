@@ -3,13 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { BUSINESS_PHOTOS_BUCKET, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, getBusinessPhotoStorageKey } from "@/lib/business-photos";
 
 // ---- Signed URLs for stored photos ------------------------------------------------------------------------------------
-// One signed URL per stored photo, shared by every <img> on the page, and now:
-//   - BATCHED: every photo asked for within a few milliseconds is signed by ONE request (createSignedUrls), not one request
-//     per card (a page with 20 businesses used to make 20 round trips to Supabase before a single picture could start).
+// One signed URL per stored photo, shared by every <img> on the page, and:
+//   - BATCHED: full-size photos asked for within a few milliseconds are signed by ONE request (createSignedUrls).
 //   - REMEMBERED on the device (localStorage) for half the URL's life, so the next page / visit needs no signing call at all
 //     and the browser can reuse the picture it already downloaded (the URL stays the same).
-//   - RESIZED on request: a card only needs ~640 px, not the 1-4 MB original from a phone camera. The same signed token is
-//     used with Supabase's image endpoint (/render/image/sign) and a width.
+//   - RESIZED on request: a card only needs ~640 px, not the 1-4 MB original from a phone camera. Supabase bakes the size into
+//     the signed token, so a resized picture is signed one by one with { transform: { width, resize: "contain" } }
+//     ("contain" = scaled down in proportion, NEVER cropped; width alone would keep the original height and crop the sides).
 type Cached = { url: string; expires: number };
 
 const STORE_KEY = "kh:signed-photos:v1";
@@ -83,29 +83,48 @@ function cachedUrl(key: string): string | null {
   return hit && hit.expires > Date.now() ? hit.url : null;
 }
 
-function signedUrlFor(key: string): Promise<string> {
-  const hit = cachedUrl(key);
-  if (hit) return Promise.resolve(hit);
-  const inFlight = pending.get(key);
-  if (inFlight) return inFlight;
-  const promise = new Promise<string>((resolve) => {
-    queue.push({ key, resolve });
-    if (!flushTimer) flushTimer = setTimeout(() => void flush(), FLUSH_MS);
-  });
-  pending.set(key, promise);
-  return promise;
-}
+const cacheKey = (key: string, width?: number) => (width ? `${key}@${Math.round(width)}` : key);
 
-/** The resized version of a signed URL (same token, Supabase image endpoint). Other URLs are returned unchanged. */
-export function resizedSignedUrl(url: string, width: number): string {
-  if (resizeBroken || !url.includes("/storage/v1/object/sign/")) return url;
-  return `${url.replace("/storage/v1/object/sign/", "/storage/v1/render/image/sign/")}&width=${Math.round(width)}&quality=72`;
+function signedUrlFor(key: string, width?: number): Promise<string> {
+  const id = cacheKey(key, width);
+  const hit = cachedUrl(id);
+  if (hit) return Promise.resolve(hit);
+  const inFlight = pending.get(id);
+  if (inFlight) return inFlight;
+  let promise: Promise<string>;
+  if (width && !resizeBroken) {
+    // Resized: signed on its own (the size is part of the token). On any failure the caller falls back to the original.
+    promise = supabase.storage
+      .from(BUSINESS_PHOTOS_BUCKET)
+      .createSignedUrl(key, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, { transform: { width: Math.round(width), resize: "contain", quality: 72 } })
+      .then(({ data, error }) => {
+        const url = error ? "" : data?.signedUrl ?? "";
+        if (url) {
+          memory.set(id, { url, expires: Date.now() + REUSE_MS });
+          saveStoreSoon();
+        }
+        pending.delete(id);
+        return url;
+      })
+      .catch(() => {
+        pending.delete(id);
+        return "";
+      });
+  } else {
+    promise = new Promise<string>((resolve) => {
+      queue.push({ key, resolve });
+      if (!flushTimer) flushTimer = setTimeout(() => void flush(), FLUSH_MS);
+    });
+  }
+  pending.set(id, promise);
+  return promise;
 }
 
 /** A public (non-signed) storage picture as a resized one, e.g. category icons. */
 export function resizedPublicUrl(url: string, width: number): string {
   if (resizeBroken || !url.includes("/storage/v1/object/public/")) return url;
-  return `${url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/")}?width=${Math.round(width)}&quality=72`;
+  // resize=contain: scaled down in proportion. Without it a width alone keeps the ORIGINAL height and crops the sides.
+  return `${url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/")}?width=${Math.round(width)}&quality=72&resize=contain`;
 }
 
 /** Call when a resized picture failed to load: from now on the originals are used. */
@@ -124,6 +143,7 @@ export function useBusinessPhotoSrc(src: string | null | undefined, width?: numb
     return key ? "" : src ?? "";
   });
   const [original, setOriginal] = useState(false);
+  const wanted = original || resizeBroken ? undefined : width;
 
   useEffect(() => {
     let cancelled = false;
@@ -140,20 +160,22 @@ export function useBusinessPhotoSrc(src: string | null | undefined, width?: numb
     }
 
     // Already signed on this device: no waiting, no request.
-    const known = cachedUrl(key);
+    const known = cachedUrl(cacheKey(key, wanted));
     if (known) {
       setResolvedSrc(known);
       return;
     }
     setResolvedSrc("");
-    void signedUrlFor(key).then((url) => {
-      if (!cancelled) setResolvedSrc(url);
+    void signedUrlFor(key, wanted).then(async (url) => {
+      // Could not sign the resized one: use the full-size file instead (never an empty picture).
+      const final = url || (wanted ? await signedUrlFor(key) : "");
+      if (!cancelled) setResolvedSrc(final);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [src, wanted]);
 
   const fallBackToOriginal = useCallback(() => {
     if (original || !width) return false;
@@ -162,8 +184,7 @@ export function useBusinessPhotoSrc(src: string | null | undefined, width?: numb
     return true;
   }, [original, width]);
 
-  const final = resolvedSrc && width && !original ? resizedSignedUrl(resolvedSrc, width) : resolvedSrc;
-  return { src: final, fallBackToOriginal };
+  return { src: resolvedSrc, fallBackToOriginal };
 }
 
 /** Same as useBusinessPhotoSrc, for callers that only need the URL. */
