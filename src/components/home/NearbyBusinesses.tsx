@@ -7,7 +7,7 @@ import { getNearbyBusinesses } from "@/lib/businesses.functions";
 import { getCurrentLocation, type LocationError } from "@/lib/geolocation";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
-import { ScrollReveal } from "@/components/ScrollReveal";
+import { HorizontalCardRow } from "@/components/home/HorizontalCardRow";
 
 export function NearbyBusinesses() {
   const sectionRef = useScrollAnimation<HTMLElement>();
@@ -99,9 +99,12 @@ export function NearbyBusinesses() {
         )}
 
         {coords && isLoading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Finding businesses near you…
-          </div>
+          // Same horizontal skeleton row as the Featured section.
+          <HorizontalCardRow>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-64 animate-pulse rounded-xl bg-muted" aria-label="Finding businesses near you" />
+            ))}
+          </HorizontalCardRow>
         )}
 
         {coords && data && businesses.length === 0 && (
@@ -111,18 +114,17 @@ export function NearbyBusinesses() {
         )}
 
         {businesses.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {businesses.map((b, i) => (
-              <ScrollReveal key={b.id} delayMs={i * 100}>
-                <div className="relative">
-                  <BusinessCard business={b} />
-                  <span className="absolute right-2 top-2 z-10 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-semibold text-foreground shadow">
-                    {b.distanceKm.toFixed(1)} km
-                  </span>
-                </div>
-              </ScrollReveal>
+          // The same swipeable row (scroll-snap, next card peeks in, arrows on desktop) as Featured businesses.
+          <HorizontalCardRow>
+            {businesses.map((b) => (
+              <div key={b.id} className="relative flex flex-col [&>*:first-child]:flex-1">
+                <BusinessCard business={b} />
+                <span className="absolute right-2 top-10 z-10 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-semibold text-foreground shadow">
+                  {b.distanceKm.toFixed(1)} km
+                </span>
+              </div>
             ))}
-          </div>
+          </HorizontalCardRow>
         )}
       </div>
     </section>
