@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { Search, Menu, User, LogOut, Heart, Shield, Tag, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth, signOut } from "@/lib/auth";
@@ -11,7 +11,16 @@ import { NotificationsBell } from "@/components/layout/NotificationsBell";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
 import { useT } from "@/lib/i18n";
 
-export function Header() {
+/**
+ * TEMPORARY: the home page already has its own search (location picker + mic) in the hero, so the header search is hidden there.
+ * Set this to false to bring the header search back on the home page. Every other page always keeps it.
+ * (A page can also force it with the `hideSearch` prop of <Header />.)
+ */
+export const HIDE_HEADER_SEARCH_ON_HOME = true;
+
+export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const hideHeaderSearch = hideSearch ?? (HIDE_HEADER_SEARCH_ON_HOME && pathname === "/");
   const { user, isLoading } = useAuth();
   const t = useT();
   const [search, setSearch] = useState("");
@@ -53,31 +62,33 @@ export function Header() {
           <CitySelector compact />
         </div>
 
-        <form
-          className="relative order-last col-span-2 flex min-w-0 items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#ff6a00] sm:order-none sm:col-span-1 sm:flex-1 sm:max-w-xl"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (search.trim()) {
-              window.location.href = `/search?q=${encodeURIComponent(search.trim())}`;
-            }
-          }}
-        >
-          <Input
-            type="search"
-            placeholder="Search businesses..."
-            aria-label={t("nav.search")}
-            className="h-10 min-w-0 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <button
-            type="submit"
-            aria-label="Search"
-            className="flex shrink-0 items-center justify-center bg-[#ff6a00] px-3 text-white hover:bg-[#e65a00] transition-colors sm:px-4"
+        {!hideHeaderSearch && (
+          <form
+            className="relative order-last col-span-2 flex min-w-0 items-stretch overflow-hidden rounded-md border border-border bg-white focus-within:border-[#ff6a00] sm:order-none sm:col-span-1 sm:flex-1 sm:max-w-xl"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (search.trim()) {
+                window.location.href = `/search?q=${encodeURIComponent(search.trim())}`;
+              }
+            }}
           >
-            <Search className="h-4 w-4" />
-          </button>
-        </form>
+            <Input
+              type="search"
+              placeholder="Search businesses..."
+              aria-label={t("nav.search")}
+              className="h-10 min-w-0 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <button
+              type="submit"
+              aria-label="Search"
+              className="flex shrink-0 items-center justify-center bg-[#ff6a00] px-3 text-white hover:bg-[#e65a00] transition-colors sm:px-4"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </form>
+        )}
 
         <div className="flex shrink-0 items-center gap-0.5 sm:ml-0 sm:gap-2">
           <LanguageSelector compact />
