@@ -73,3 +73,45 @@ export async function activeEnterpriseBusinessIds(businessIds: readonly string[]
   if (pubError) throw new Error(pubError.message);
   return new Set((published ?? []).map((b) => b.id));
 }
+
+/**
+ * Sign-in accounts, looked up by e-mail or id. Uses the service client, so call it ONLY from admin-checked server functions.
+ * (The auth API has no "find by e-mail", so the accounts are read page by page; the list is small.)
+ */
+async function eachAuthUserPage(visit: (users: Array<{ id: string; email?: string | null }>) => boolean | void): Promise<void> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const perPage = 1000;
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) throw new Error(error.message);
+    const users = data?.users ?? [];
+    if (visit(users) === true || users.length < perPage) return;
+  }
+}
+
+export async function findAuthUserByEmail(email: string): Promise<{ id: string; email: string } | null> {
+  const wanted = email.trim().toLowerCase();
+  let found: { id: string; email: string } | null = null;
+  await eachAuthUserPage((users) => {
+    const hit = users.find((u) => (u.email ?? "").toLowerCase() === wanted);
+    if (hit) found = { id: hit.id, email: hit.email ?? wanted };
+    return !!hit;
+  });
+  return found;
+}
+
+export async function authEmailsByIds(ids: readonly string[]): Promise<Map<string, string>> {
+  const missing = new Set(ids);
+  const out = new Map<string, string>();
+  if (missing.size === 0) return out;
+  await eachAuthUserPage((users) => {
+    for (const u of users) {
+      if (missing.has(u.id)) {
+        if (u.email) out.set(u.id, u.email);
+        missing.delete(u.id);
+      }
+    }
+    return missing.size === 0;
+  });
+  return out;
+}

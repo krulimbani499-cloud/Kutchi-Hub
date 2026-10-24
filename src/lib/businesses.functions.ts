@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { notFound } from "@tanstack/react-router";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { activeEnterpriseBusinessIds, createServerSupabaseClient, uniqueBusinessSlug } from "./businesses.server";
+import { activeEnterpriseBusinessIds, authEmailsByIds, createServerSupabaseClient, findAuthUserByEmail, uniqueBusinessSlug } from "./businesses.server";
 import { BANNER_PLACEMENTS, composeHomeBanners, type BannerPlacement } from "./banner-rules";
 import { completionChecklist, publishGaps } from "./listing-completeness";
 import { cachedFor } from "./server-cache";
@@ -1565,7 +1565,7 @@ export const adminListAllBusinesses = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await requireAdmin(context as never);
     const base =
-      "id, name, slug, city, phone, phone_secondary, email, status, verified, created_at, category_id, address, featured_image, categories:category_id(name), plans:current_plan_id(name)";
+      "id, name, slug, city, phone, phone_secondary, email, status, verified, created_at, category_id, address, featured_image, owner_id, categories:category_id(name), plans:current_plan_id(name)";
     const query = (cols: string) => context.supabase.from("businesses").select(cols).order("created_at", { ascending: false }).limit(2000);
     let res = await query(`${base}, contact_name, quick_lead`);
     if (res.error && isMissingColumnError(res.error)) res = await query(base);
@@ -1573,13 +1573,22 @@ export const adminListAllBusinesses = createServerFn({ method: "GET" })
     const rows = (res.data ?? []) as unknown as Array<{
       id: string; name: string; slug: string; city: string | null; phone: string | null; phone_secondary: string | null;
       email: string | null; status: string; verified: boolean; created_at: string; category_id: string | null;
-      address: string | null; featured_image: string | null; contact_name?: string | null; quick_lead?: boolean;
+      address: string | null; featured_image: string | null; owner_id: string | null; contact_name?: string | null; quick_lead?: boolean;
       categories: { name: string } | null; plans: { name: string } | null;
     }>;
     // Photo counts only for the leads that are still pending (that is where the warning is shown).
     const pendingIds = rows.filter((b) => b.status === "pending").map((b) => b.id);
     const photos = await photoCountsFor(context.supabase, pendingIds);
+    // Who owns each business, as an e-mail (service client, admin-only function). If it cannot be read the list still works.
+    let ownerEmails = new Map<string, string>();
+    try {
+      ownerEmails = await authEmailsByIds([...new Set(rows.map((b) => b.owner_id).filter((id): id is string => !!id))]);
+    } catch (e) {
+      console.error("[adminListAllBusinesses] owner e-mails unavailable", e);
+    }
     return rows.map((b) => ({
+      ownerId: b.owner_id,
+      ownerEmail: b.owner_id ? ownerEmails.get(b.owner_id) ?? null : null,
       id: b.id,
       name: b.name,
       slug: b.slug,
@@ -1596,6 +1605,78 @@ export const adminListAllBusinesses = createServerFn({ method: "GET" })
       quickLead: b.quick_lead === true,
       gaps: publishGaps({ category_id: b.category_id, address: b.address, featured_image: b.featured_image, photoCount: photos.get(b.id) ?? 0 }),
     }));
+  });
+
+const NO_ACCOUNT_MESSAGE = "No account with this email – ask the client to sign up first.";
+
+/** Admin: find the sign-in account for an e-mail (step 1 of "Assign owner"; the dialog then asks for confirmation). */
+export const adminLookupOwnerByEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ email: z.string().trim().toLowerCase().email("Enter a valid email address") }).parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context as never);
+    let user: { id: string; email: string } | null = null;
+    try {
+      user = await findAuthUserByEmail(data.email);
+    } catch (e) {
+      console.error("[adminLookupOwnerByEmail] lookup failed", e);
+      throw new Error("Could not look up accounts right now. Please try again.");
+    }
+    if (!user) throw new Error(NO_ACCOUNT_MESSAGE);
+    return { userId: user.id, email: user.email };
+  });
+
+/**
+ * Admin: make `userId` the owner of a business (step 2, after the admin confirmed the business name and the new owner e-mail).
+ * Only businesses.owner_id changes: subscriptions, plan and everything else stay attached to the business. The new owner gets the
+ * business_owner role if missing, and an in-app notification.
+ */
+export const adminAssignBusinessOwner = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ businessId: z.string().uuid(), userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context as never);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const [{ data: biz, error: bizError }, { data: userRes, error: userError }] = await Promise.all([
+      context.supabase.from("businesses").select("id, name, slug, owner_id, plans:current_plan_id(name)").eq("id", data.businessId).maybeSingle(),
+      supabaseAdmin.auth.admin.getUserById(data.userId),
+    ]);
+    if (bizError) throw new Error(bizError.message);
+    if (!biz) throw new Error("Business not found");
+    const newOwner = userRes?.user;
+    if (userError || !newOwner) throw new Error(NO_ACCOUNT_MESSAGE);
+    if (biz.owner_id === data.userId) throw new Error("This person already owns this business.");
+
+    // Runs as the admin: the row policy and the guard trigger both let only an admin change owner_id.
+    const { data: updated, error } = await context.supabase.from("businesses").update({ owner_id: data.userId }).eq("id", data.businessId).select("id");
+    if (error) throw new Error(error.message);
+    if (!updated || updated.length === 0) throw new Error("The database did not change the owner.");
+
+    // The new owner needs the owner role (same as when a claim is approved). Best effort: a duplicate is fine.
+    try {
+      const { data: hasRole } = await supabaseAdmin.from("user_roles").select("user_id").eq("user_id", data.userId).eq("role", "business_owner").limit(1);
+      if (!hasRole || hasRole.length === 0) await supabaseAdmin.from("user_roles").insert({ user_id: data.userId, role: "business_owner" });
+    } catch (e) {
+      console.error("[adminAssignBusinessOwner] could not add business_owner role", e);
+    }
+
+    // In-app notification. Never fails the transfer.
+    const planName = (biz as unknown as { plans: { name: string } | null }).plans?.name ?? "none";
+    try {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: data.userId,
+        type: "business_assigned",
+        title: `${biz.name} is now linked to your account`,
+        body: `${biz.name} is now linked to your account. Plan: ${planName}`,
+        link_url: "/dashboard",
+        entity_type: "business",
+        entity_id: data.businessId,
+      });
+    } catch (e) {
+      console.error("[adminAssignBusinessOwner] notification failed", e);
+    }
+    return { ok: true as const, ownerEmail: newOwner.email ?? null, planName };
   });
 
 /** Archive (hide everywhere public) or restore (back to 'published'). Nothing is deleted either way. */

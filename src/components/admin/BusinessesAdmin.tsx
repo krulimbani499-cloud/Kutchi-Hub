@@ -7,8 +7,10 @@ import {
   adminSetBusinessStatus,
   adminBusinessDeleteImpact,
   adminDeleteBusinessPermanently,
+  adminLookupOwnerByEmail,
+  adminAssignBusinessOwner,
 } from "@/lib/businesses.functions";
-import { Archive, ArchiveRestore, ExternalLink, Loader2, Trash2, TriangleAlert } from "lucide-react";
+import { Archive, ArchiveRestore, ExternalLink, Loader2, Trash2, TriangleAlert, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +22,7 @@ import { ListSearchInput } from "@/components/ListSearchInput";
 import { ChipRow, type Chip } from "@/components/ChipRow";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { matchesSearch } from "@/lib/list-search";
+import { readValidationError } from "@/lib/edit-lock";
 import { telHref, whatsappHref } from "@/lib/phone";
 
 type Row = Awaited<ReturnType<typeof adminListAllBusinesses>>[number];
@@ -43,6 +46,7 @@ export function BusinessesAdmin() {
   const search = useDebouncedValue(text, 150);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Row | null>(null);
+  const [toAssign, setToAssign] = useState<Row | null>(null);
 
   const chips: Chip<string>[] = useMemo(
     () => [
@@ -54,7 +58,7 @@ export function BusinessesAdmin() {
   const shown = rows.filter(
     (r) =>
       (filter === "all" || r.status === filter) &&
-      matchesSearch(search, { text: [r.name, r.city, r.categoryName, r.slug, r.email, r.planName, r.contactName], phones: [r.phone, r.phoneSecondary] }),
+      matchesSearch(search, { text: [r.name, r.city, r.categoryName, r.slug, r.email, r.planName, r.contactName, r.ownerEmail], phones: [r.phone, r.phoneSecondary] }),
   );
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin"] });
@@ -120,6 +124,12 @@ export function BusinessesAdmin() {
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {[r.city, r.categoryName].filter(Boolean).join(" · ")}
                     </p>
+                    <p className="mt-0.5 break-all text-xs text-muted-foreground">
+                      Owner:{" "}
+                      <span className="font-medium text-foreground">
+                        {r.ownerEmail ?? (r.ownerId ? "account without e-mail" : "no owner")}
+                      </span>
+                    </p>
                     {r.quickLead && r.status === "pending" && (
                       <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         {r.contactName && <span>Contact: <span className="font-medium text-foreground">{r.contactName}</span></span>}
@@ -139,6 +149,9 @@ export function BusinessesAdmin() {
                     </Link>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setToAssign(r)}>
+                      <UserCog className="mr-1 h-4 w-4" /> Assign owner
+                    </Button>
                     {r.status === "archived" ? (
                       <>
                         <Button size="sm" variant="outline" disabled={busyId === r.id} onClick={() => change(r, "published")}>
@@ -163,6 +176,15 @@ export function BusinessesAdmin() {
           </CardContent>
         </Card>
       )}
+
+      <AssignOwnerDialog
+        row={toAssign}
+        onClose={() => setToAssign(null)}
+        onDone={async () => {
+          setToAssign(null);
+          await refresh();
+        }}
+      />
 
       <PermanentDeleteDialog
         row={toDelete}
@@ -245,4 +267,127 @@ function PermanentDeleteDialog({ row, onClose, onDone }: { row: Row | null; onCl
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * Hand a business to a client by e-mail. Step 1: the e-mail is looked up on the server (admin only); an unknown e-mail shows
+ * "No account with this email". Step 2: a confirmation naming the business and the new owner; only then is the owner changed.
+ * The plan and subscriptions stay with the business.
+ */
+function AssignOwnerDialog({ row, onClose, onDone }: { row: Row | null; onClose: () => void; onDone: () => void | Promise<void> }) {
+  const lookupFn = useServerFn(adminLookupOwnerByEmail);
+  const assignFn = useServerFn(adminAssignBusinessOwner);
+  const [email, setEmail] = useState("");
+  const [found, setFound] = useState<{ userId: string; email: string } | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const close = () => {
+    if (busy) return;
+    setEmail("");
+    setFound(null);
+    setError("");
+    onClose();
+  };
+
+  const find = async () => {
+    if (busy || !email.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      setFound(await lookupFn({ data: { email: email.trim() } }));
+    } catch (e) {
+      setError(readableError(e, "Could not look up that email."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirm = async () => {
+    if (!row || !found || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await assignFn({ data: { businessId: row.id, userId: found.userId } });
+      toast.success(`"${row.name}" is now owned by ${found.email}`);
+      setEmail("");
+      setFound(null);
+      await onDone();
+    } catch (e) {
+      setError(readableError(e, "Could not assign the owner."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!row} onOpenChange={(open) => { if (!open) close(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{found ? "Confirm new owner" : "Assign owner"}</DialogTitle>
+          <DialogDescription>
+            {found ? "Check this before you save." : "Enter the e-mail the client signed up with. They need an account first."}
+          </DialogDescription>
+        </DialogHeader>
+        {row && (
+          <div className="space-y-3 text-sm">
+            {!found ? (
+              <>
+                <p className="rounded-md bg-muted/60 p-2">
+                  <span className="text-muted-foreground">Business: </span>
+                  <span className="font-medium text-foreground">{row.name}</span>
+                  <br />
+                  <span className="text-muted-foreground">Current owner: </span>
+                  <span className="break-all text-foreground">{row.ownerEmail ?? "none"}</span>
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="owner-email">Client e-mail</Label>
+                  <Input
+                    id="owner-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="off"
+                    value={email}
+                    placeholder="client@example.com"
+                    onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void find(); } }}
+                  />
+                </div>
+                {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="outline" onClick={close} disabled={busy}>Cancel</Button>
+                  <Button onClick={find} disabled={busy || !email.trim()}>
+                    {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Find account
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-950">
+                  Make <strong className="break-all">{found.email}</strong> the owner of <strong>{row.name}</strong>?
+                  <br />
+                  <span className="text-xs">
+                    Current owner: {row.ownerEmail ?? "none"}. They lose access. The plan and subscriptions stay with the business, and the
+                    new owner gets a notification.
+                  </span>
+                </p>
+                {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="outline" onClick={() => { setFound(null); setError(""); }} disabled={busy}>Back</Button>
+                  <Button onClick={confirm} disabled={busy}>
+                    {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <UserCog className="mr-1 h-4 w-4" />} Confirm transfer
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** The message of a failed server call; an input-check failure (zod) is turned into one readable line. */
+function readableError(e: unknown, fallback: string): string {
+  return readValidationError(e) ?? (e instanceof Error && e.message ? e.message : fallback);
 }
