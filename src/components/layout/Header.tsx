@@ -148,7 +148,7 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
                         {t("nav.myListings")}
                       </Link>
                     ) : (
-                      <Link to="/list-your-business">
+                      <Link to="/business/new">
                         <User className="mr-1 h-4 w-4" />
                         {t("nav.listBusiness")}
                       </Link>
@@ -164,7 +164,7 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
                     {t("nav.signOut")}
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild>
-                    <Link to={isAdmin || hasListings ? "/dashboard" : "/list-your-business"}>
+                    <Link to={isAdmin || hasListings ? "/dashboard" : "/business/new"}>
                       <User className="h-5 w-5" />
                     </Link>
                   </Button>

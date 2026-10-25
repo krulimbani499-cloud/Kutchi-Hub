@@ -49,7 +49,7 @@ export function SiteFooter() {
           <h4 className="text-sm font-semibold text-foreground">{t("footer.explore")}</h4>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li><Link to="/categories" className="hover:text-primary">{t("footer.allCategories")}</Link></li>
-            <li><Link to="/list-your-business" className="hover:text-primary">{t("nav.listBusiness")}</Link></li>
+            <li><Link to="/business/new" className="hover:text-primary">{t("nav.listBusiness")}</Link></li>
             <li><Link to="/events" className="hover:text-primary">{t("footer.events")}</Link></li>
           </ul>
         </div>

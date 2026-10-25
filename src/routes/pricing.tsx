@@ -94,7 +94,7 @@ function PricingPage() {
           if (isFree) {
             return (
               <div key={p.id}>
-                <Link to="/list-your-business" className="block">
+                <Link to="/business/new" className="block">
                   <PlanCard plan={p} cycle={cycle} />
                 </Link>
               </div>

@@ -137,7 +137,7 @@ function CityCategoryPage() {
       {businesses.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
           No {cat.name.toLowerCase()} listings in {cityName} yet.{" "}
-          <Link to="/list-your-business" className="text-primary underline">
+          <Link to="/business/new" className="text-primary underline">
             Be the first to list
           </Link>
         </div>

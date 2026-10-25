@@ -5,7 +5,7 @@ import { WHATSAPP_LISTING_MESSAGE, siteWhatsappHref } from "@/lib/contact";
 import { useT } from "@/lib/i18n";
 
 /** Pages where the button never shows: admin, dashboard / settings, forms to add or edit a business, sign-in. */
-const HIDDEN_PREFIXES = ["/admin", "/dashboard", "/settings", "/auth", "/reset-password", "/business/new", "/list-your-business", "/delete-account"];
+const HIDDEN_PREFIXES = ["/admin", "/dashboard", "/settings", "/auth", "/reset-password", "/business/new", "/delete-account"];
 const hiddenOn = (path: string) =>
   HIDDEN_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`)) || /^\/business\/[^/]+\/(edit|claim)(\/|$)/.test(path);
 

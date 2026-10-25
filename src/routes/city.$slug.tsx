@@ -114,7 +114,7 @@ function CityPage() {
       {businesses.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
           No listings in {cityName} yet.{" "}
-          <Link to="/list-your-business" className="text-primary underline">Be the first to list</Link>
+          <Link to="/business/new" className="text-primary underline">Be the first to list</Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

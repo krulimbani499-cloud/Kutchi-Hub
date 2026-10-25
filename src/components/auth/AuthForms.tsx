@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { Eye, EyeOff, Chrome, Loader2, Apple, Gift } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { applyReferralCode } from "@/lib/referrals.functions";
+import { rememberRedirect, safeRedirectPath } from "@/lib/redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,8 +43,20 @@ function isOAuthSupportedHost() {
   );
 }
 
-export function AuthForms({ initialMode }: { initialMode?: "signin" | "signup" }) {
+export function AuthForms({ initialMode, redirectTo: requestedRedirect }: { initialMode?: "signin" | "signup"; redirectTo?: string }) {
   const navigate = useNavigate();
+  const router = useRouter();
+  const redirectTo = safeRedirectPath(requestedRedirect); // never trust the URL: only a path on this site
+  // Where to go once signed in: the page the person was heading to, otherwise the home page.
+  const afterAuth = async () => {
+    rememberRedirect(undefined);
+    if (redirectTo) router.history.push(redirectTo);
+    else await navigate({ to: "/" });
+  };
+  // Sign-ups that finish through an e-mail link or Google / Apple come back to "/": keep the destination for PostAuthRedirect.
+  useEffect(() => {
+    rememberRedirect(redirectTo);
+  }, [redirectTo]);
   const [mode, setMode] = useState<"signin" | "signup" | "reset">(initialMode ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -124,7 +137,7 @@ export function AuthForms({ initialMode }: { initialMode?: "signin" | "signup" }
         if (data.session) {
           setMessage("Account created! You're all set.");
           await tryRedeemPending();
-          await navigate({ to: "/" });
+          await afterAuth();
         } else {
           setMessage("Check your email to confirm your account.");
         }
@@ -134,7 +147,7 @@ export function AuthForms({ initialMode }: { initialMode?: "signin" | "signup" }
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         await tryRedeemPending();
-        await navigate({ to: "/" });
+        await afterAuth();
       }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "An error occurred");

@@ -187,7 +187,7 @@ function HomePage() {
               </p>
             </div>
             <Button size="sm" className="relative z-10 h-11 shrink-0 rounded-full bg-[#ff6a00] px-4 text-sm text-white hover:bg-[#e65a00] md:mt-4 md:h-8 md:px-3 md:text-xs" asChild>
-              <Link to="/list-your-business">
+              <Link to="/business/new">
                 {t("home.getStarted")} <ArrowRight className="ml-1 hidden h-4 w-4 md:block" />
               </Link>
             </Button>
