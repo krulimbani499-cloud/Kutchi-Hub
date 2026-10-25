@@ -3,7 +3,7 @@ import { Facebook, Instagram, Twitter, Mail } from "lucide-react";
 import logoUrl from "@/assets/kutchi-hub-logo.png";
 import { useT } from "@/lib/i18n";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
-import { CONTACT_EMAIL, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/contact";
+import { CONTACT_EMAIL, FACEBOOK_URL, INSTAGRAM_HANDLE, INSTAGRAM_URL, X_URL } from "@/lib/contact";
 
 const TOP_CATEGORIES = [
   { slug: "restaurants", key: "cat.restaurants" },
@@ -72,11 +72,14 @@ export function SiteFooter() {
             <span>{t("footer.followInstagram")}</span>
           </a>
           <p className="mt-2 text-xs text-muted-foreground">{INSTAGRAM_HANDLE}</p>
-          {/* The other networks have no page yet: they stay as they were, still marked "Coming soon". */}
+          {/* Facebook / X are hidden until FACEBOOK_URL / X_URL in contact.ts hold an address (nothing is left behind: no icon, no tag, no gap). */}
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-muted-foreground">
-            <a href="https://facebook.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-primary"><Facebook className="h-5 w-5" /></a>
-            <a href="https://x.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="hover:text-primary"><Twitter className="h-5 w-5" /></a>
-            <span className="rounded-full bg-[#ff6a00]/10 px-2 py-0.5 text-[10px] font-medium text-[#ff6a00]">{t("footer.comingSoon")}</span>
+            {FACEBOOK_URL && (
+              <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-primary"><Facebook className="h-5 w-5" /></a>
+            )}
+            {X_URL && (
+              <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="hover:text-primary"><Twitter className="h-5 w-5" /></a>
+            )}
             <a href={`mailto:${CONTACT_EMAIL}`} aria-label="Email" className="hover:text-primary"><Mail className="h-5 w-5" /></a>
           </div>
         </div>
