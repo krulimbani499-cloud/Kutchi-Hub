@@ -20,6 +20,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BASE_URL, SITE_NAME, ldScript, organizationLd, websiteLd } from "@/lib/seo";
 import { ComingSoonGate } from "@/components/ComingSoonGate";
 import { NativeBackButton } from "@/components/NativeBackButton";
+import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
 import { NativePush } from "@/components/NativePush";
 import { OfflineScreen } from "@/components/OfflineScreen";
 import { Toaster } from "@/components/ui/sonner";
@@ -199,6 +200,7 @@ function RootComponent() {
           </main>
           <MobileBottomNav />
           <SiteFooter />
+          <FloatingWhatsApp />
           <NativeBackButton />
           <NativePush />
           <OfflineScreen />

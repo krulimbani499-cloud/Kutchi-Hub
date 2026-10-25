@@ -1,9 +1,22 @@
 import { Link } from "@tanstack/react-router";
-import { Facebook, Instagram, Twitter, Mail } from "lucide-react";
+import { Clock, Facebook, Instagram, MapPin, Mail, MessageCircle, Phone, Twitter } from "lucide-react";
 import logoUrl from "@/assets/kutchi-hub-logo.png";
 import { useT } from "@/lib/i18n";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
-import { CONTACT_EMAIL, FACEBOOK_URL, INSTAGRAM_HANDLE, INSTAGRAM_URL, X_URL } from "@/lib/contact";
+import {
+  CONTACT_EMAIL,
+  FACEBOOK_URL,
+  INSTAGRAM_HANDLE,
+  INSTAGRAM_URL,
+  SITE_ADDRESS,
+  SITE_HOURS,
+  SITE_MAILTO_HREF,
+  SITE_PHONE_DISPLAY,
+  SITE_TEL_HREF,
+  WHATSAPP_HELLO_MESSAGE,
+  X_URL,
+  siteWhatsappHref,
+} from "@/lib/contact";
 
 const TOP_CATEGORIES = [
   { slug: "restaurants", key: "cat.restaurants" },
@@ -58,7 +71,38 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold text-foreground">{t("footer.follow")}</h4>
+          <h4 className="text-sm font-semibold text-foreground">{t("footer.contact")}</h4>
+          {/* tel: / mailto: / wa.me: inside the Android / iOS app Capacitor hands these to the dialer, the mail app and WhatsApp. */}
+          <ul className="mt-3 space-y-2.5 text-sm text-muted-foreground">
+            <li>
+              <a href={SITE_TEL_HREF} className="flex min-h-9 items-center gap-2 hover:text-primary" aria-label={`${t("footer.callUs")} ${SITE_PHONE_DISPLAY}`}>
+                <Phone className="h-4 w-4 shrink-0 text-[#ff6a00]" /> {SITE_PHONE_DISPLAY}
+              </a>
+            </li>
+            <li>
+              <a href={siteWhatsappHref(WHATSAPP_HELLO_MESSAGE)} target="_blank" rel="noopener noreferrer" className="flex min-h-9 items-center gap-2 hover:text-primary">
+                <MessageCircle className="h-4 w-4 shrink-0 text-[#25D366]" /> WhatsApp {SITE_PHONE_DISPLAY}
+              </a>
+            </li>
+            <li>
+              <a href={SITE_MAILTO_HREF} className="flex min-h-9 items-center gap-2 break-all hover:text-primary">
+                <Mail className="h-4 w-4 shrink-0 text-[#ff6a00]" /> {CONTACT_EMAIL}
+              </a>
+            </li>
+            {SITE_ADDRESS && (
+              <li className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#ff6a00]" />
+                <span><span className="sr-only">{t("footer.address")}: </span>{SITE_ADDRESS}</span>
+              </li>
+            )}
+            {SITE_HOURS && (
+              <li className="flex items-start gap-2">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#ff6a00]" />
+                <span><span className="sr-only">{t("footer.hours")}: </span>{SITE_HOURS}</span>
+              </li>
+            )}
+          </ul>
+          <h4 className="mt-5 text-sm font-semibold text-foreground">{t("footer.follow")}</h4>
           {/* Instagram is live. target=_blank: a new tab on the website; inside the Android / iOS app Capacitor opens links to other
               sites outside the app (Instagram app if installed, else the browser), never inside our web view. */}
           <a

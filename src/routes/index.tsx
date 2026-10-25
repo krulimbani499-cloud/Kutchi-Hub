@@ -37,6 +37,7 @@ import { useCity } from "@/hooks/useCity";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { HorizontalCardRow } from "@/components/home/HorizontalCardRow";
 import { CityCoverageCard } from "@/components/home/CityCoverageCard";
+import { HelpSection } from "@/components/home/HelpSection";
 import { BASE_URL, ldScript, breadcrumbLd } from "@/lib/seo";
 import { useT } from "@/lib/i18n";
 
@@ -366,6 +367,9 @@ function HomePage() {
           </Button>
         </div>
       </ScrollReveal>
+
+      {/* Need help? Talk to us — last block before the footer */}
+      <HelpSection />
     </div>
   );
 }
