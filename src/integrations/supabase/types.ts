@@ -598,6 +598,7 @@ export type Database = {
           hours: Json | null
           id: string
           instagram_url: string | null
+          lead_source: string | null
           latitude: number | null
           longitude: number | null
           name: string
@@ -637,6 +638,7 @@ export type Database = {
           hours?: Json | null
           id?: string
           instagram_url?: string | null
+          lead_source?: string | null
           latitude?: number | null
           longitude?: number | null
           name: string
@@ -676,6 +678,7 @@ export type Database = {
           hours?: Json | null
           id?: string
           instagram_url?: string | null
+          lead_source?: string | null
           latitude?: number | null
           longitude?: number | null
           name?: string

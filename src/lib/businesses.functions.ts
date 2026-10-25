@@ -6,6 +6,8 @@ import { activeEnterpriseBusinessIds, authEmailsByIds, createServerSupabaseClien
 import { BANNER_PLACEMENTS, composeHomeBanners, type BannerPlacement } from "./banner-rules";
 import { completionChecklist, publishGaps } from "./listing-completeness";
 import { cachedFor } from "./server-cache";
+import { findPhoneDuplicate } from "./quick-add";
+import type { TablesInsert } from "@/integrations/supabase/types";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
@@ -1567,13 +1569,15 @@ export const adminListAllBusinesses = createServerFn({ method: "GET" })
     const base =
       "id, name, slug, city, phone, phone_secondary, email, status, verified, created_at, category_id, address, featured_image, owner_id, categories:category_id(name), plans:current_plan_id(name)";
     const query = (cols: string) => context.supabase.from("businesses").select(cols).order("created_at", { ascending: false }).limit(2000);
-    let res = await query(`${base}, contact_name, quick_lead`);
+    // lead_source exists once supabase/pending/quick-add has run, contact_name / quick_lead once quick-listing has: fall back step by step.
+    let res = await query(`${base}, contact_name, quick_lead, lead_source`);
+    if (res.error && isMissingColumnError(res.error)) res = await query(`${base}, contact_name, quick_lead`);
     if (res.error && isMissingColumnError(res.error)) res = await query(base);
     if (res.error) throw new Error(res.error.message);
     const rows = (res.data ?? []) as unknown as Array<{
       id: string; name: string; slug: string; city: string | null; phone: string | null; phone_secondary: string | null;
       email: string | null; status: string; verified: boolean; created_at: string; category_id: string | null;
-      address: string | null; featured_image: string | null; owner_id: string | null; contact_name?: string | null; quick_lead?: boolean;
+      address: string | null; featured_image: string | null; owner_id: string | null; contact_name?: string | null; quick_lead?: boolean; lead_source?: string | null;
       categories: { name: string } | null; plans: { name: string } | null;
     }>;
     // Photo counts only for the leads that are still pending (that is where the warning is shown).
@@ -1603,7 +1607,113 @@ export const adminListAllBusinesses = createServerFn({ method: "GET" })
       planName: b.plans?.name ?? null,
       contactName: b.contact_name ?? null,
       quickLead: b.quick_lead === true,
+      leadSource: b.lead_source ?? null,
       gaps: publishGaps({ category_id: b.category_id, address: b.address, featured_image: b.featured_image, photoCount: photos.get(b.id) ?? 0 }),
+    }));
+  });
+
+const adminQuickAddSchema = z.object({
+  name: z.string().trim().min(2, "Enter the business name").max(120),
+  contactName: z.string().trim().min(2, "Enter the contact person's name").max(80),
+  phone: z.string().trim().max(30).refine(isValidIndianMobile, PHONE_ERROR),
+  categoryId: z.string().uuid("Choose a category"),
+  city: z.string().trim().min(1, "Choose the city").max(120),
+  source: z.string().trim().max(120).nullable().optional(),
+  /** true = the admin saw the "this phone already exists" warning and chose to save anyway. */
+  force: z.boolean().optional(),
+});
+
+/**
+ * Admin "Quick add" (leads collected at an event). Creates the business exactly like the owner quick listing: pending, quick_lead,
+ * contact name, phone, unique slug; the admin is the owner for now. A phone number that already belongs to a business is NOT saved
+ * unless `force` is set: the existing business is returned instead so the admin can look at it.
+ */
+export const adminQuickAddBusiness = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => adminQuickAddSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context as never);
+    const supabase = context.supabase;
+
+    if (!data.force) {
+      const { data: existing, error: existingError } = await supabase
+        .from("businesses")
+        .select("id, name, slug, city, status, phone, phone_secondary")
+        .limit(5000);
+      if (existingError) throw new Error(existingError.message);
+      const dup = findPhoneDuplicate(existing ?? [], data.phone);
+      if (dup) {
+        return {
+          saved: null,
+          sourceSaved: true,
+          duplicate: { id: dup.id, name: dup.name, slug: dup.slug, city: dup.city, status: dup.status, phone: dup.phone ?? dup.phone_secondary },
+        };
+      }
+    }
+
+    const base = ensureSlug(data.name);
+    const source = data.source?.trim() || null;
+    let sourceSaved = true;
+    let saved: { id: string; slug: string; name: string } | null = null;
+    for (let attempt = 0; attempt < 3 && !saved; attempt++) {
+      const slug = await uniqueBusinessSlug(base, { fallbackClient: supabase });
+      const row: TablesInsert<"businesses"> = {
+        name: data.name,
+        slug,
+        city: data.city,
+        phone: data.phone,
+        contact_name: data.contactName,
+        category_id: data.categoryId,
+        owner_id: context.userId,
+        status: "pending",
+        quick_lead: true,
+      };
+      if (source && sourceSaved) row.lead_source = source;
+      let res = await supabase.from("businesses").insert(row).select("id, slug, name").single();
+      if (res.error && source && sourceSaved && isMissingColumnError(res.error)) {
+        // supabase/pending/quick-add has not been run yet: save the lead without its source and say so.
+        sourceSaved = false;
+        delete row.lead_source;
+        res = await supabase.from("businesses").insert(row).select("id, slug, name").single();
+      }
+      if (!res.error) {
+        saved = res.data;
+      } else if (isMissingColumnError(res.error) || res.error.code === "23502") {
+        throw new Error(QUICK_NEEDS_MIGRATION);
+      } else if (!isSlugConflict(res.error) || attempt === 2) {
+        throw new Error(res.error.message);
+      }
+    }
+    if (!saved) throw new Error("Could not save the lead. Please try again.");
+    return { saved, sourceSaved: !source || sourceSaved, duplicate: null };
+  });
+
+/** The last few quick leads (newest first) for the list under the Quick add form. */
+export const adminRecentQuickLeads = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireAdmin(context as never);
+    const query = (cols: string) =>
+      context.supabase.from("businesses").select(cols).eq("quick_lead", true).order("created_at", { ascending: false }).limit(5);
+    let res = await query("id, name, contact_name, phone, city, created_at, lead_source, categories:category_id(name)");
+    if (res.error && isMissingColumnError(res.error)) res = await query("id, name, contact_name, phone, city, created_at, categories:category_id(name)");
+    if (res.error) {
+      // quick-listing SQL not applied yet: no quick leads exist.
+      if (isMissingColumnError(res.error)) return [];
+      throw new Error(res.error.message);
+    }
+    return ((res.data ?? []) as unknown as Array<{
+      id: string; name: string; contact_name: string | null; phone: string | null; city: string | null; created_at: string;
+      lead_source?: string | null; categories: { name: string } | null;
+    }>).map((r) => ({
+      id: r.id,
+      name: r.name,
+      contactName: r.contact_name,
+      phone: r.phone,
+      city: r.city,
+      createdAt: r.created_at,
+      leadSource: r.lead_source ?? null,
+      categoryName: r.categories?.name ?? "",
     }));
   });
 

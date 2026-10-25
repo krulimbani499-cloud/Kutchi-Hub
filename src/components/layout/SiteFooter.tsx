@@ -3,7 +3,7 @@ import { Facebook, Instagram, Twitter, Mail } from "lucide-react";
 import logoUrl from "@/assets/kutchi-hub-logo.png";
 import { useT } from "@/lib/i18n";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
-import { CONTACT_EMAIL } from "@/lib/contact";
+import { CONTACT_EMAIL, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/contact";
 
 const TOP_CATEGORIES = [
   { slug: "restaurants", key: "cat.restaurants" },
@@ -58,14 +58,25 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold text-foreground">
-            {t("footer.follow")} <span className="ml-1 rounded-full bg-[#ff6a00]/10 px-2 py-0.5 text-[10px] font-medium text-[#ff6a00]">{t("footer.comingSoon")}</span>
-          </h4>
-          <p className="mt-3 text-xs text-muted-foreground">@kutchihub</p>
-          <div className="mt-3 flex gap-3 text-muted-foreground">
-            <a href="https://instagram.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-primary"><Instagram className="h-5 w-5" /></a>
+          <h4 className="text-sm font-semibold text-foreground">{t("footer.follow")}</h4>
+          {/* Instagram is live. target=_blank: a new tab on the website; inside the Android / iOS app Capacitor opens links to other
+              sites outside the app (Instagram app if installed, else the browser), never inside our web view. */}
+          <a
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${t("footer.followInstagram")} (${INSTAGRAM_HANDLE})`}
+            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-[#ff6a00]/50 hover:text-primary"
+          >
+            <Instagram className="h-5 w-5 shrink-0" />
+            <span>{t("footer.followInstagram")}</span>
+          </a>
+          <p className="mt-2 text-xs text-muted-foreground">{INSTAGRAM_HANDLE}</p>
+          {/* The other networks have no page yet: they stay as they were, still marked "Coming soon". */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-muted-foreground">
             <a href="https://facebook.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-primary"><Facebook className="h-5 w-5" /></a>
             <a href="https://x.com/kutchihub" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="hover:text-primary"><Twitter className="h-5 w-5" /></a>
+            <span className="rounded-full bg-[#ff6a00]/10 px-2 py-0.5 text-[10px] font-medium text-[#ff6a00]">{t("footer.comingSoon")}</span>
             <a href={`mailto:${CONTACT_EMAIL}`} aria-label="Email" className="hover:text-primary"><Mail className="h-5 w-5" /></a>
           </div>
         </div>

@@ -10,7 +10,7 @@ import {
   adminLookupOwnerByEmail,
   adminAssignBusinessOwner,
 } from "@/lib/businesses.functions";
-import { Archive, ArchiveRestore, ExternalLink, Loader2, Trash2, TriangleAlert, UserCog } from "lucide-react";
+import { Archive, ArchiveRestore, Download, ExternalLink, Loader2, MessageCircle, Phone, Plus, Trash2, TriangleAlert, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,8 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { matchesSearch } from "@/lib/list-search";
 import { readValidationError } from "@/lib/edit-lock";
 import { telHref, whatsappHref } from "@/lib/phone";
+import { buildLeadsCsv } from "@/lib/quick-add";
+import { QuickAddLead } from "@/components/admin/QuickAddLead";
 
 type Row = Awaited<ReturnType<typeof adminListAllBusinesses>>[number];
 
@@ -47,21 +49,38 @@ export function BusinessesAdmin() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Row | null>(null);
   const [toAssign, setToAssign] = useState<Row | null>(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const chips: Chip<string>[] = useMemo(
     () => [
       { value: "all", label: "All", count: rows.length },
+      { value: "quick", label: "Quick leads", count: rows.filter((r) => r.quickLead).length },
       ...STATUSES.map((s) => ({ value: s, label: s[0].toUpperCase() + s.slice(1), count: rows.filter((r) => r.status === s).length })),
     ],
     [rows],
   );
   const shown = rows.filter(
     (r) =>
-      (filter === "all" || r.status === filter) &&
-      matchesSearch(search, { text: [r.name, r.city, r.categoryName, r.slug, r.email, r.planName, r.contactName, r.ownerEmail], phones: [r.phone, r.phoneSecondary] }),
+      (filter === "all" || (filter === "quick" ? r.quickLead : r.status === filter)) &&
+      matchesSearch(search, { text: [r.name, r.city, r.categoryName, r.slug, r.email, r.planName, r.contactName, r.ownerEmail, r.leadSource], phones: [r.phone, r.phoneSecondary] }),
   );
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin"] });
+
+  const quickLeads = rows.filter((r) => r.quickLead);
+  /** All quick leads as a CSV file for the follow-up calls (opens in Excel / Sheets; UTF-8 with a BOM so Gujarati / Hindi names stay readable). */
+  const exportCsv = () => {
+    const csv = buildLeadsCsv(quickLeads.map((r) => ({ name: r.name, contactName: r.contactName, phone: r.phone, categoryName: r.categoryName, city: r.city, leadSource: r.leadSource, created_at: r.created_at })));
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kutchi-hub-quick-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast.success(`Exported ${quickLeads.length} lead${quickLeads.length === 1 ? "" : "s"}`);
+  };
 
   const change = async (r: Row, status: "archived" | "published") => {
     if (status === "archived" && !confirm(`Archive "${r.name}"?\n\nIt will disappear from the website. Its subscription and payment history are kept, and you can restore it from the Archived filter.`)) return;
@@ -79,6 +98,16 @@ export function BusinessesAdmin() {
 
   return (
     <div className="space-y-4">
+      <Button
+        size="lg"
+        className="h-12 w-full bg-[#ff6a00] text-base text-white hover:bg-[#e65a00] sm:w-auto"
+        onClick={() => setShowQuickAdd((v) => !v)}
+        aria-expanded={showQuickAdd}
+      >
+        <Plus className="mr-2 h-5 w-5" /> Quick add
+      </Button>
+      {showQuickAdd && <QuickAddLead onSaved={refresh} />}
+
       <div>
         <h2 className="text-xl font-bold text-foreground">Businesses</h2>
         <p className="text-sm text-muted-foreground">
@@ -88,9 +117,14 @@ export function BusinessesAdmin() {
 
       <ListSearchInput value={text} onChange={setText} className="sm:max-w-sm" />
       <ChipRow chips={chips} value={filter} onChange={setFilter} label="Filter by status" />
-      <p className="text-sm text-muted-foreground" aria-live="polite">
-        {shown.length} of {rows.length} businesses
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {shown.length} of {rows.length} businesses
+        </p>
+        <Button size="sm" variant="outline" onClick={exportCsv} disabled={quickLeads.length === 0}>
+          <Download className="mr-1 h-4 w-4" /> Export CSV ({quickLeads.length} quick lead{quickLeads.length === 1 ? "" : "s"})
+        </Button>
+      </div>
 
       {isPending && !data ? (
         <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">Loading…</CardContent></Card>
@@ -130,17 +164,26 @@ export function BusinessesAdmin() {
                         {r.ownerEmail ?? (r.ownerId ? "account without e-mail" : "no owner")}
                       </span>
                     </p>
-                    {r.quickLead && r.status === "pending" && (
-                      <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        {r.contactName && <span>Contact: <span className="font-medium text-foreground">{r.contactName}</span></span>}
+                    {r.quickLead && (
+                      <div className="mt-2 space-y-2">
+                        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          {r.contactName && <span>Contact: <span className="font-medium text-foreground">{r.contactName}</span></span>}
+                          {r.leadSource && <Badge variant="secondary" className="text-xs font-normal">Source: {r.leadSource}</Badge>}
+                          <span>Added {new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        </p>
                         {r.phone && (
-                          <a href={telHref(r.phone)} className="font-medium text-foreground hover:underline">{r.phone}</a>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button asChild size="sm" variant="outline" className="h-9">
+                              <a href={telHref(r.phone)}><Phone className="mr-1.5 h-4 w-4" /> Call {r.phone}</a>
+                            </Button>
+                            {whatsappHref(r.phone) && (
+                              <Button asChild size="sm" variant="outline" className="h-9 border-green-600/40 text-green-700 hover:bg-green-50">
+                                <a href={whatsappHref(r.phone)!} target="_blank" rel="noreferrer"><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</a>
+                              </Button>
+                            )}
+                          </div>
                         )}
-                        {r.phone && whatsappHref(r.phone) && (
-                          <a href={whatsappHref(r.phone)!} target="_blank" rel="noreferrer" className="font-medium text-green-700 hover:underline">WhatsApp</a>
-                        )}
-                        <span>Signed up {new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
-                      </p>
+                      </div>
                     )}
                   </div>
                   {r.status === "published" && (
