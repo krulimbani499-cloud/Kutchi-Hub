@@ -328,3 +328,22 @@
 #lovable-badge {
   display: none !important;
 }
+
+/* ---- Diwali toran: diyas whose flames gently flicker. Reduced motion: the diyas stay, the flames stand still. ---- */
+@keyframes diwali-flicker {
+  0%, 100% { transform: scale(1, 1) rotate(-1.5deg); opacity: 0.95; }
+  25% { transform: scale(0.94, 1.08) rotate(1.5deg); opacity: 1; }
+  50% { transform: scale(1.05, 0.93) rotate(-0.5deg); opacity: 0.9; }
+  75% { transform: scale(0.97, 1.05) rotate(1deg); opacity: 1; }
+}
+.diwali-flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: diwali-flicker 1.8s ease-in-out infinite;
+}
+.diwali-diya:nth-child(3n + 1) .diwali-flame { animation-delay: -0.35s; animation-duration: 1.6s; }
+.diwali-diya:nth-child(3n + 2) .diwali-flame { animation-delay: -0.9s; animation-duration: 2s; }
+.diwali-diya:nth-child(5n) .diwali-flame { animation-delay: -1.3s; }
+@media (prefers-reduced-motion: reduce) {
+  .diwali-flame { animation: none !important; }
+}

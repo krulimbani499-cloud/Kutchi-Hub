@@ -8,6 +8,8 @@ import { FavoriteButton } from "./FavoriteButton";
 import { isOpenNow, hasAnyHours } from "@/lib/business-hours";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { useDiwali } from "@/hooks/useDiwali";
+import { useT } from "@/lib/i18n";
 
 interface BusinessCardProps {
   business: {
@@ -34,6 +36,8 @@ interface BusinessCardProps {
 
 export function BusinessCard({ business, delayMs }: BusinessCardProps) {
   const animateOnScroll = delayMs !== undefined;
+  const diwali = useDiwali().active;
+  const t = useT();
   const cardRef = useScrollAnimation<HTMLDivElement>({ enabled: animateOnScroll });
   const imageSrc = business.featured_image_url ?? business.featured_image;
   const hasHours = hasAnyHours(business.hours);
@@ -87,9 +91,17 @@ export function BusinessCard({ business, delayMs }: BusinessCardProps) {
           </div>
         )}
         {discountActive && (
-          <div className="absolute right-2 bottom-2 z-10 flex items-center gap-1 rounded-full bg-[#ff6a00] px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
-            <Tag className="h-3 w-3" />
-            {business.app_discount_percent}% App Discount
+          <div className="absolute right-2 bottom-2 z-10 flex flex-col items-end gap-1">
+            {/* Diwali days only, and only on cards that really have an active app discount. */}
+            {diwali && (
+              <div data-diwali-offer className="flex items-center rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-2 py-0.5 text-[11px] font-bold text-[#5b2100] shadow-sm">
+                {t("diwali.offerTag")}
+              </div>
+            )}
+            <div className="flex items-center gap-1 rounded-full bg-[#ff6a00] px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
+              <Tag className="h-3 w-3" />
+              {business.app_discount_percent}% App Discount
+            </div>
           </div>
         )}
         <div className="absolute left-2 top-2 z-20">

@@ -38,6 +38,7 @@ import { ScrollReveal } from "@/components/ScrollReveal";
 import { HorizontalCardRow } from "@/components/home/HorizontalCardRow";
 import { CityCoverageCard } from "@/components/home/CityCoverageCard";
 import { HelpSection } from "@/components/home/HelpSection";
+import { DiwaliHome } from "@/components/diwali/DiwaliHome";
 import { BASE_URL, ldScript, breadcrumbLd } from "@/lib/seo";
 import { useT } from "@/lib/i18n";
 
@@ -106,6 +107,9 @@ function HomePage() {
 
   return (
     <div className="flex flex-col bg-muted/30">
+      {/* Diwali days only: greeting card + (first visit) fireworks. Draws nothing the rest of the year. */}
+      <DiwaliHome />
+
       {/* Search header — JustDial-style, clean white */}
       <ScrollReveal as="section" className="bg-background border-b border-border">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
