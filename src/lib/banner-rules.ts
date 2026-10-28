@@ -4,7 +4,8 @@
 //   Middle slot : banners of the visitor's own city whose placement is "home_middle", THEN the "show in all cities"
 //                 banners of other cities (Enterprise businesses with an active plan), whatever placement they were
 //                 given in their own city. Local ones first; inside each group best priority first.
-//   All locations: every active banner in its own placement, no cap.
+//   All locations: ONLY banners whose business has an ACTIVE Enterprise plan (the same check as "Show in all cities", whatever
+//                 that box says), each in its own placement, best priority first, no cap. None qualify = the slot is hidden.
 
 export type BannerPlacement = "home_top" | "home_middle";
 
@@ -67,4 +68,17 @@ export function countLiveBannersBySlot(banners: readonly BannerCountRow[], now =
   return [...map.values()]
     .map((r) => ({ ...r, key: `${r.city.toLowerCase()}|${r.placement}`, tooMany: r.count > BANNER_SLOT_WARNING_ABOVE }))
     .sort((a, b) => a.city.localeCompare(b.city) || a.placement.localeCompare(b.placement));
+}
+
+/**
+ * Does this banner show in "All locations"? Only a homepage banner (no category) that is live right now and whose business has an
+ * ACTIVE Enterprise plan. The "Show in all cities" box does not matter. `enterpriseBusinessIds` comes from the same plan check the
+ * visitor query uses (activeEnterpriseBusinessIds). Used for the badge in the admin banner list.
+ */
+export function showsInAllLocations(
+  b: { category_id?: string | null; business_id?: string | null; active: boolean; start_at?: string | null; end_at?: string | null },
+  enterpriseBusinessIds: ReadonlySet<string>,
+  now = Date.now(),
+): boolean {
+  return !b.category_id && !!b.business_id && enterpriseBusinessIds.has(b.business_id) && isBannerLive(b, now);
 }

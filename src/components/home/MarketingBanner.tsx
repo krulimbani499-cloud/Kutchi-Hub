@@ -39,7 +39,7 @@ export function MarketingBanner({ intervalMs = 4500, placement = "home_top" }: P
 
   return (
     // Phones: 8px side margins (wider, so taller at the same 3:1 ratio the banner images already have); md+ keeps 16px.
-    <section className="mx-auto w-full max-w-7xl px-2 pt-4 md:px-4">
+    <section data-banner-slot={placement} className="mx-auto w-full max-w-7xl px-2 pt-4 md:px-4">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         {current.cta_url ? (
           // An address typed on the banner wins ...

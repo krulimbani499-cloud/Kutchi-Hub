@@ -3,7 +3,7 @@ import { notFound } from "@tanstack/react-router";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { activeEnterpriseBusinessIds, authEmailsByIds, createServerSupabaseClient, findAuthUserByEmail, uniqueBusinessSlug } from "./businesses.server";
-import { BANNER_PLACEMENTS, composeHomeBanners, type BannerPlacement } from "./banner-rules";
+import { BANNER_PLACEMENTS, composeHomeBanners, showsInAllLocations, type BannerPlacement } from "./banner-rules";
 import { completionChecklist, publishGaps } from "./listing-completeness";
 import { cachedFor } from "./server-cache";
 import { findPhoneDuplicate } from "./quick-add";
@@ -445,13 +445,28 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
       business: { slug: string; status: string } | null;
     };
 
+    // "All locations": only banners of a business with an ACTIVE Enterprise plan (published, subscription active, started, not
+    // expired: the same check as "Show in all cities"), whatever the "Show in all cities" box says. Fails closed: if the plan
+    // cannot be checked, nothing shows. Nothing left = an empty list = the slot is not drawn.
+    const allLocationsOnly = !!data.all && !data.city;
+    const onlyActiveEnterprise = async (list: Row[]): Promise<Row[]> => {
+      try {
+        const ok = await activeEnterpriseBusinessIds(list.map((r) => r.business_id).filter((id): id is string => !!id));
+        return list.filter((r) => !!r.business_id && ok.has(r.business_id));
+      } catch {
+        return [];
+      }
+    };
+
     let rows: Row[] = [];
     // 1) The visitor's own city (or, with "All locations", every city) in this slot.
     let own = live(BANNER_SELECT_NEW)
       .eq("placement", placement)
       .order("priority", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(data.all ? 200 : 10);
+      .limit(allLocationsOnly ? 500 : data.all ? 200 : 10);
+    // All locations: a banner without a business can never be Enterprise, so it is left out before the plan check.
+    if (allLocationsOnly) own = own.not("business_id", "is", null);
     if (data.city) own = own.ilike("city", exactIlike(data.city));
     const ownRes = await own;
     if (isMissingBannerColumns(ownRes.error)) {
@@ -462,6 +477,7 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
       const legacyRes = await legacy;
       if (legacyRes.error) throw new Error(legacyRes.error.message);
       rows = (legacyRes.data ?? []) as unknown as Row[];
+      if (allLocationsOnly) rows = await onlyActiveEnterprise(rows);
     } else {
       if (ownRes.error) throw new Error(ownRes.error.message);
       rows = (ownRes.data ?? []) as unknown as Row[];
@@ -485,6 +501,8 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
         }
         const extra = candidates.filter((c) => c.business_id && allowed.has(c.business_id));
         rows = composeHomeBanners(rows, extra, 10);
+      } else if (allLocationsOnly) {
+        rows = composeHomeBanners(await onlyActiveEnterprise(rows), []);
       } else if (data.all) {
         rows = composeHomeBanners(rows, []);
       } else {
@@ -590,9 +608,18 @@ export const adminListBannerAds = createServerFn({ method: "GET" })
       .order("city", { ascending: true })
       .order("priority", { ascending: false });
     if (error) throw new Error(error.message);
+    // A banner shows in "All locations" when it is a homepage banner that is live now and its business has an ACTIVE Enterprise
+    // plan (the same check the visitor query uses). If the plan cannot be checked, none is flagged.
+    let enterprise = new Set<string>();
+    try {
+      enterprise = await activeEnterpriseBusinessIds((data ?? []).filter((b) => !b.category_id && b.business_id).map((b) => b.business_id as string));
+    } catch {
+      // no badges
+    }
     return (data ?? []).map((b) => ({
       ...b,
       business: (b as unknown as { business: { name: string; city: string | null; slug: string } | null }).business,
+      shows_in_all_locations: showsInAllLocations(b, enterprise),
     }));
   });
 

@@ -1164,7 +1164,8 @@ function BannersAdmin() {
           ) : (
             <ul className="divide-y divide-border">
               {banners.map((b) => (
-                <li key={b.id} className="flex items-center gap-3 p-3">
+                // Phones: the image + details on one line, Edit / Delete wrap underneath (the details column was ~70px wide and the badges ran under the buttons).
+                <li key={b.id} className="flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap">
                   <div className="h-14 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
                     {b.image_url ? (
                       <img src={b.image_url} alt="" className="h-full w-full object-cover" />
@@ -1174,7 +1175,7 @@ function BannersAdmin() {
                       </div>
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-40">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate font-medium text-foreground">{b.title}</span>
                       <Badge variant="outline" className="text-xs">{b.city}</Badge>
@@ -1185,6 +1186,7 @@ function BannersAdmin() {
                         <Badge variant="outline" className="text-xs">{BANNER_PLACEMENT_LABEL[b.placement === "home_middle" ? "home_middle" : "home_top"]}</Badge>
                       )}
                       {b.show_all_cities && <Badge className="bg-[#ff6a00] text-xs text-white hover:bg-[#ff6a00]">All cities</Badge>}
+                      {b.shows_in_all_locations && <Badge data-shows-all-locations className="bg-emerald-600 text-xs text-white hover:bg-emerald-600">Shows in All locations</Badge>}
                       {!b.category_id && crowdedSlots.has(`${b.city.trim().toLowerCase()}|${b.placement === "home_middle" ? "home_middle" : "home_top"}`) && (
                         <Badge variant="destructive" className="gap-1 text-xs"><TriangleAlert className="h-3 w-3" />Crowded slot</Badge>
                       )}
