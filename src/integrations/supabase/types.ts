@@ -369,6 +369,7 @@ export type Database = {
           id: string
           image_urls: string[]
           in_stock: boolean
+          link_url: string | null
           name: string
           price: number | null
           stock: number | null
@@ -385,6 +386,7 @@ export type Database = {
           id?: string
           image_urls?: string[]
           in_stock?: boolean
+          link_url?: string | null
           name: string
           price?: number | null
           stock?: number | null
@@ -401,6 +403,7 @@ export type Database = {
           id?: string
           image_urls?: string[]
           in_stock?: boolean
+          link_url?: string | null
           name?: string
           price?: number | null
           stock?: number | null
@@ -582,6 +585,7 @@ export type Database = {
           app_discount_label: string | null
           app_discount_percent: number | null
           app_discount_valid_until: string | null
+          catalog_link: string | null
           catalog_name: string | null
           catalog_url: string | null
           category_id: string | null
@@ -624,6 +628,7 @@ export type Database = {
           app_discount_label?: string | null
           app_discount_percent?: number | null
           app_discount_valid_until?: string | null
+          catalog_link?: string | null
           catalog_name?: string | null
           catalog_url?: string | null
           category_id?: string | null
@@ -666,6 +671,7 @@ export type Database = {
           app_discount_label?: string | null
           app_discount_percent?: number | null
           app_discount_valid_until?: string | null
+          catalog_link?: string | null
           catalog_name?: string | null
           catalog_url?: string | null
           category_id?: string | null

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
 import { EDIT_LOCKED_MESSAGE, friendlyEditError } from "./edit-lock";
+import { httpsLink } from "./url";
 
 export const listBusinessProducts = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
@@ -32,7 +33,13 @@ const productSchema = z.object({
   imageUrls: z.array(z.string().max(1000)).max(8).optional(),
   displayOrder: z.coerce.number().int().min(0).max(9999).optional(),
   active: z.boolean().optional(),
+  // Optional link (Drive / website), https:// only. "" clears it. Sent only when there is one or it is being cleared.
+  linkUrl: httpsLink(),
 });
+
+const PRODUCT_LINK_NEEDS_MIGRATION = "The product link needs a database update first (supabase/pending/catalog-link). Nothing was saved.";
+const isMissingLinkColumn = (error: { code?: string; message?: string }) =>
+  (error.code === "42703" || error.code === "PGRST204" || /does not exist|schema cache/i.test(error.message ?? "")) && /link_url/.test(error.message ?? "");
 
 export const upsertBusinessProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -50,6 +57,7 @@ export const upsertBusinessProduct = createServerFn({ method: "POST" })
       image_urls: data.imageUrls ?? [],
       display_order: data.displayOrder ?? 0,
       active: data.active ?? true,
+      ...(data.linkUrl !== undefined ? { link_url: data.linkUrl || null } : {}),
     };
     if (data.id) {
       const { data: row, error } = await context.supabase
@@ -59,7 +67,7 @@ export const upsertBusinessProduct = createServerFn({ method: "POST" })
         .select("*")
         .single();
       // An update the database refuses (owner without an active plan) comes back as "no row": friendly message.
-      if (error) throw new Error(friendlyEditError(error, error.message));
+      if (error) throw new Error(isMissingLinkColumn(error) ? PRODUCT_LINK_NEEDS_MIGRATION : friendlyEditError(error, error.message));
       return row;
     }
     const { data: row, error } = await context.supabase
@@ -67,7 +75,7 @@ export const upsertBusinessProduct = createServerFn({ method: "POST" })
       .insert(payload)
       .select("*")
       .single();
-    if (error) throw new Error(friendlyEditError(error, error.message));
+    if (error) throw new Error(isMissingLinkColumn(error) ? PRODUCT_LINK_NEEDS_MIGRATION : friendlyEditError(error, error.message));
     return row;
   });
 

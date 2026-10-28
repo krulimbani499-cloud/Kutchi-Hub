@@ -29,7 +29,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { slugify, slugifyInput, ensureSlug } from "@/lib/slug";
 import { sortCategoriesAZ } from "@/lib/category-sort";
 import { isValidIndianMobile, PHONE_ERROR } from "@/lib/phone";
-import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "@/lib/url";
+import { optionalUrl, requiredUrl, httpsLink, normalizeHttpsLink, isGoogleDriveLink, DRIVE_HINT, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "@/lib/url";
 import { EDIT_LOCKED_MESSAGE, friendlyEditError, isEditLockedError } from "@/lib/edit-lock";
 import { toast } from "sonner";
 
@@ -62,6 +62,7 @@ const businessFormSchema = z.object({
     .optional(),
   app_discount_label: z.string().max(80).optional(),
   app_discount_valid_until: z.string().max(20).optional(),
+  catalog_link: httpsLink(),
 });
 
 interface BusinessFormProps {
@@ -81,6 +82,9 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
   // "Show Services / Products on my profile". A missing value (the section-toggles SQL is not applied yet) counts as ON: that is how profiles behave today.
   const [sections, setSections] = useState({ services: initial?.show_services ?? true, products: initial?.show_products ?? true });
   const [savedSections, setSavedSections] = useState(sections);
+  // Catalog link (Google Drive, ...). Sent only when it changed, so a save that does not touch it never needs the new column.
+  const [catalogLink, setCatalogLink] = useState(initial?.catalog_link ?? "");
+  const [savedCatalogLink, setSavedCatalogLink] = useState(normalizeHttpsLink(initial?.catalog_link ?? ""));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
@@ -143,10 +147,12 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
         app_discount_label: form.app_discount_label || undefined,
         app_discount_valid_until: form.app_discount_valid_until || undefined,
       };
+      const catalogLinkChanged = !!initial && normalizeHttpsLink(catalogLink) !== savedCatalogLink;
       const payload = businessFormSchema.parse({
         ...normalized,
         slug: ensureSlug(form.slug.trim() ? form.slug : form.name),
         hours,
+        ...(catalogLinkChanged ? { catalog_link: catalogLink } : {}),
       });
       if (initial) {
         // The two switches are sent only when they changed, so a save that does not touch them never needs the new columns.
@@ -156,6 +162,11 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
         };
         const saved = await updateFn({ data: { ...payload, ...toggles, id: initial.id } });
         setSavedSections(sections);
+        if (catalogLinkChanged) {
+          setSavedCatalogLink(payload.catalog_link ?? "");
+          setCatalogLink(payload.catalog_link ?? "");
+          void queryClient.invalidateQueries({ queryKey: ["business"] });
+        }
         void queryClient.invalidateQueries({ queryKey: sectionTogglesKey(initial.id) });
         if (saved.slug !== payload.slug) {
           // Another business already had that slug: the server saved the next free one. Show it in the form.
@@ -517,7 +528,7 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
 
       {initial && (
         <div className="rounded-lg border border-border bg-muted/50 p-4">
-          <Label className="mb-2 block">Catalog (PDF)</Label>
+          <Label className="mb-2 block">Catalog (PDF or link)</Label>
           {catalogAllowed ? (
             <>
               <p className="mb-3 text-xs text-muted-foreground">
@@ -528,6 +539,27 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
                 initialUrl={initial.catalog_url ?? null}
                 initialName={initial.catalog_name ?? null}
               />
+              <div className="mt-4 space-y-2 border-t border-border pt-4">
+                <Label htmlFor="catalog-link">Catalog link (Google Drive, etc.)</Label>
+                <Input
+                  id="catalog-link"
+                  type="text"
+                  inputMode="url"
+                  autoComplete="off"
+                  placeholder="https://drive.google.com/..."
+                  value={catalogLink}
+                  maxLength={500}
+                  onChange={(e) => setCatalogLink(e.target.value)}
+                  aria-invalid={!!errors.catalog_link}
+                />
+                {errors.catalog_link && <p className="text-xs text-destructive">{errors.catalog_link}</p>}
+                {isGoogleDriveLink(catalogLink) && (
+                  <p data-drive-hint className="text-xs font-medium text-amber-700">{DRIVE_HINT}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Optional. You can add a PDF, a link, or both. Customers see a "View catalog" button for each. Saved with "Update Business".
+                </p>
+              </div>
             </>
           ) : (
             // Plan without the catalog (Silver): explain instead of offering the uploader. Admins always get the uploader.

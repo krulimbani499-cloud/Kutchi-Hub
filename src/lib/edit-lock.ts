@@ -6,7 +6,7 @@ import { SHOW_PUBLIC_PRICING } from "./features";
 export const EDIT_LOCKED_MESSAGE = "Plan active nahi hai — business edit karne ke liye plan activate karein";
 
 // The product catalog (PDF) is only for plans that allow it (Gold, Platinum, Enterprise; not Silver).
-export const CATALOG_PLAN_MESSAGE = "Product catalog (PDF) Gold aur Platinum plan me available hai";
+export const CATALOG_PLAN_MESSAGE = "Product catalog (PDF / link) Gold aur Platinum plan me available hai";
 
 type ErrorLike = { message?: string; code?: string } | null | undefined;
 
@@ -14,7 +14,11 @@ type ErrorLike = { message?: string; code?: string } | null | undefined;
 export function isCatalogNotAllowedError(err: unknown): boolean {
   const e = err as ErrorLike;
   const message = (e?.message ?? (typeof err === "string" ? err : "")).toLowerCase();
-  return message.includes("product catalog (pdf) is available on") || message.includes(CATALOG_PLAN_MESSAGE.toLowerCase());
+  return (
+    message.includes("product catalog (pdf) is available on") ||
+    message.includes("product catalog (pdf or link) is available on") ||
+    message.includes(CATALOG_PLAN_MESSAGE.toLowerCase())
+  );
 }
 
 /**
@@ -50,7 +54,7 @@ export function friendlyEditError(err: unknown, fallback?: string): string {
 
 const FIELD_LABEL: Record<string, string> = {
   name: "Name", description: "Description", price: "Price", discountPrice: "Discount price", stock: "Stock",
-  category: "Category", imageUrls: "Images", businessId: "Business",
+  category: "Category", imageUrls: "Images", businessId: "Business", linkUrl: "Link", catalog_link: "Catalog link",
 };
 
 /**

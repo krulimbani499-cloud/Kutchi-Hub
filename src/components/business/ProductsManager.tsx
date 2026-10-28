@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, IndianRupee, Upload, X, Package, Pencil } from "lucide-react";
+import { Trash2, Plus, IndianRupee, Upload, X, Package, Pencil, ExternalLink } from "lucide-react";
+import { normalizeHttpsLink, isValidHttpsLink, safeHttpsHref, isGoogleDriveLink, DRIVE_HINT, LINK_ERROR } from "@/lib/url";
 import { toast } from "sonner";
 import { friendlyEditError, isEditLockedError, readValidationError, withoutUpgradeWording } from "@/lib/edit-lock";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
@@ -72,6 +73,7 @@ export function ProductsManager({ businessId, visibleOnProfile }: Props) {
     category: "",
     stock: "",
     inStock: true,
+    linkUrl: "",
   };
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(empty);
@@ -97,6 +99,7 @@ export function ProductsManager({ businessId, visibleOnProfile }: Props) {
       category: p.category ?? "",
       stock: p.stock != null ? String(p.stock) : "",
       inStock: p.in_stock,
+      linkUrl: p.link_url ?? "",
     });
     setImages(p.image_urls ?? []);
     setError("");
@@ -134,6 +137,15 @@ export function ProductsManager({ businessId, visibleOnProfile }: Props) {
       toast.error("Product name too short");
       return;
     }
+    // The optional link: https:// only (the server checks the same thing again).
+    const link = normalizeHttpsLink(form.linkUrl);
+    if (link && !isValidHttpsLink(link)) {
+      setError(LINK_ERROR);
+      toast.error(LINK_ERROR);
+      return;
+    }
+    // Sent when there is a link, or to clear one this product had; otherwise not sent at all (needs no database change).
+    const hadLink = !!products.find((x) => x.id === editingId)?.link_url;
     setBusy(true);
     try {
       await upsert({
@@ -148,6 +160,7 @@ export function ProductsManager({ businessId, visibleOnProfile }: Props) {
           stock: form.stock ? Number(form.stock) : null,
           inStock: form.inStock,
           imageUrls: images,
+          ...(link ? { linkUrl: link } : hadLink ? { linkUrl: "" } : {}),
         },
       });
       toast.success(editingId ? "Product updated" : "Product added");
@@ -159,7 +172,7 @@ export function ProductsManager({ businessId, visibleOnProfile }: Props) {
       const msg = invalid ?? (e instanceof Error ? e.message : "Could not save product.");
       console.error("[ProductsManager] upsert failed:", e);
       // Plan-limit text is written for owners; anything else (database errors) stays out of the toast.
-      const shown = invalid ?? (msg.startsWith("Plan limit reached") || isEditLockedError(e) ? friendlyEditError(e, withoutUpgradeWording(msg)) : "Could not save product. Please try again.");
+      const shown = invalid ?? (msg.startsWith("Plan limit reached") || isEditLockedError(e) ? friendlyEditError(e, withoutUpgradeWording(msg)) : msg.includes("needs a database update") ? msg : "Could not save product. Please try again.");
       setError(shown);
       toast.error(shown);
     } finally {
@@ -260,6 +273,19 @@ export function ProductsManager({ businessId, visibleOnProfile }: Props) {
             value={form.stock}
             onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
           />
+        </div>
+        <div className="space-y-1">
+          <Input
+            type="text"
+            inputMode="url"
+            autoComplete="off"
+            placeholder="Link (Drive / website) (optional)"
+            aria-label="Link (Drive / website), optional"
+            value={form.linkUrl}
+            onChange={(e) => setForm((f) => ({ ...f, linkUrl: e.target.value }))}
+            maxLength={500}
+          />
+          {isGoogleDriveLink(form.linkUrl) && <p data-drive-hint className="text-xs font-medium text-amber-700">{DRIVE_HINT}</p>}
         </div>
         <label className="inline-flex items-center gap-2 text-sm text-foreground">
           <input
@@ -372,6 +398,18 @@ function ProductRow({ product: p, onEdit, onDelete }: { product: Product; onEdit
             ) : null}
           </div>
           {p.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{p.description}</p>}
+          {safeHttpsHref(p.link_url) && (
+            // Opens in a new tab; inside the Android / iOS app any address outside kutchihub.com opens in the phone's browser or the Drive app.
+            <a
+              href={safeHttpsHref(p.link_url)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-product-link
+              className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              View details <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
         </div>
       </div>
       {(onEdit || onDelete) && (

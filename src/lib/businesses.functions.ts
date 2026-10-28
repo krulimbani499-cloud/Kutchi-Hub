@@ -10,8 +10,8 @@ import { findPhoneDuplicate } from "./quick-add";
 import type { TablesInsert } from "@/integrations/supabase/types";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
-import { optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
-import { EDIT_LOCKED_MESSAGE, friendlyEditError } from "./edit-lock";
+import { httpsLink, optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
+import { CATALOG_PLAN_MESSAGE, EDIT_LOCKED_MESSAGE, friendlyEditError, isCatalogNotAllowedError } from "./edit-lock";
 import { compareCategoryName } from "./category-sort";
 import { canonicalCityName } from "./geolocation";
 import { resolveCoords } from "./coords.server";
@@ -218,7 +218,7 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
       supabase.from("business_photos").select("*").eq("business_id", business.id).order("display_order", { ascending: true }),
       // Show the catalog only while the business's active plan includes it. Nothing is deleted: the file and the
       // saved values stay, they just are not shown. Fails open (shown, as before) if the database function is missing.
-      business.catalog_url
+      business.catalog_url || business.catalog_link
         ? supabase
             .rpc("business_can_use_catalog", { _business_id: business.id })
             .then(({ data: canCatalog, error: canCatalogError }) => (canCatalogError ? true : canCatalog === true))
@@ -941,7 +941,12 @@ const businessFormSchema = z.object({
   // "Show Services / Products on my profile". Sent by the edit form only when the owner changed them.
   show_services: z.boolean().optional(),
   show_products: z.boolean().optional(),
+  // Catalog link (Google Drive, ...): https:// only. "" clears it. Sent by the edit form only when it changed.
+  catalog_link: httpsLink(),
 });
+
+const CATALOG_LINK_NEEDS_MIGRATION =
+  "The catalog link needs a database update first (supabase/pending/catalog-link). Nothing was saved.";
 
 const SECTION_TOGGLES_NEED_MIGRATION =
   "The Services / Products switches need a database update first (supabase/pending/section-toggles). Nothing was saved.";
@@ -1173,6 +1178,7 @@ export const updateBusiness = createServerFn({ method: "POST" })
       youtube_url: rest.youtube_url || null,
       google_maps_url: rest.google_maps_url || null,
       featured_image: rest.featured_image || null,
+      ...(rest.catalog_link !== undefined ? { catalog_link: rest.catalog_link || null } : {}),
       app_discount_percent:
         rest.app_discount_percent == null || Number.isNaN(rest.app_discount_percent)
           ? null
@@ -1190,6 +1196,8 @@ export const updateBusiness = createServerFn({ method: "POST" })
       if (error) {
         if (slugChanged && isSlugConflict(error) && attempt < 2) continue;
         if (isMissingColumnError(error) && /show_(services|products)/.test(error.message ?? "")) throw new Error(SECTION_TOGGLES_NEED_MIGRATION);
+        if (isMissingColumnError(error) && /catalog_link/.test(error.message ?? "")) throw new Error(CATALOG_LINK_NEEDS_MIGRATION);
+        if (isCatalogNotAllowedError(error)) throw new Error(CATALOG_PLAN_MESSAGE);
         throw new Error(friendlyEditError(error, error.message));
       }
       // The database silently skips an update the row-level-security policy refuses (owner of a published

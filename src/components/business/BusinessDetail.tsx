@@ -17,7 +17,8 @@ import {
   Camera,
   Tag,
 } from "lucide-react";
-import { FileText } from "lucide-react";
+import { FileText, Link2 } from "lucide-react";
+import { safeHttpsHref } from "@/lib/url";
 import { supabase } from "@/integrations/supabase/client";
 import { BUSINESS_PHOTOS_BUCKET, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, getBusinessPhotoStorageKey } from "@/lib/business-photos";
 import { Instagram, Facebook, Youtube } from "lucide-react";
@@ -451,10 +452,17 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               </section>
             )}
 
-            {/* Catalog (PDF): only when there is one and the plan includes it. */}
-            {business.catalog_url && business.catalog_allowed !== false && (
+            {/* Catalog: the PDF and / or the link, each only when it exists and the plan includes the catalog. Both -> both buttons. */}
+            {(() => {
+              const catalogOn = business.catalog_allowed !== false;
+              const linkHref = catalogOn ? safeHttpsHref(business.catalog_link) : null;
+              const hasPdf = !!business.catalog_url && catalogOn;
+              if (!hasPdf && !linkHref) return null;
+              return (
               <section>
                 <h2 className="mb-2 text-lg font-semibold text-foreground">Catalog</h2>
+                <div className="space-y-2">
+                {hasPdf && (
                 <div className="flex items-center gap-3 rounded-lg border border-border p-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-orange-50 text-[#ff6a00]">
                     <FileText className="h-5 w-5" />
@@ -479,8 +487,26 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     View catalog
                   </Button>
                 </div>
+                )}
+                {linkHref && (
+                  <div className="flex items-center gap-3 rounded-lg border border-border p-3" data-catalog-link-row>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-orange-50 text-[#ff6a00]">
+                      <Link2 className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">Catalog link</p>
+                      <p className="truncate text-xs text-muted-foreground">{new URL(linkHref).hostname}</p>
+                    </div>
+                    {/* New tab; inside the Android / iOS app an address outside kutchihub.com opens in the phone's browser or the Drive app. */}
+                    <Button asChild size="sm" className="shrink-0 bg-[#ff6a00] text-white hover:bg-[#e65a00]">
+                      <a href={linkHref} target="_blank" rel="noopener noreferrer">View catalog</a>
+                    </Button>
+                  </div>
+                )}
+                </div>
               </section>
-            )}
+              );
+            })()}
 
             {/* Services / Products: the public sees a section only when the owner switched it on AND it has at least one item.
                 A missing switch (the section-toggles SQL is not applied yet) counts as on, as before. The owner always gets the manager. */}
