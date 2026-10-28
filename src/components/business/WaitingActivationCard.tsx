@@ -3,6 +3,8 @@ import { Hourglass, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CONTACT_WHATSAPP } from "@/lib/contact";
 import { useIsIosApp } from "@/hooks/useIsIosApp";
+import { usePricingVisible } from "@/hooks/usePricingVisible";
+import { ContactToActivate } from "@/components/ContactToActivate";
 
 /**
  * Shown instead of the edit form, photo upload and managers for a quick-listing business whose plan is not active yet.
@@ -10,6 +12,7 @@ import { useIsIosApp } from "@/hooks/useIsIosApp";
  */
 export function WaitingActivationCard({ businessName, compact = false }: { businessName?: string; compact?: boolean }) {
   const isIosApp = useIsIosApp();
+  const showPlans = usePricingVisible();
   const text = `Hi, I listed${businessName ? ` "${businessName}"` : " my business"} on Kutchi Hub. Please activate my listing.`;
   return (
     <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 sm:p-5">
@@ -25,7 +28,9 @@ export function WaitingActivationCard({ businessName, compact = false }: { busin
               category, address, opening hours, photos and description.
             </p>
           )}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          {/* Prices are hidden for everyone but admins (SHOW_PUBLIC_PRICING): Call / WhatsApp, no "View plans". */}
+          {!showPlans && <ContactToActivate className="mt-3" label="Contact us to activate" message={text} />}
+          {showPlans && <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button asChild size="sm" className="bg-[#25D366] text-white hover:bg-[#1fb957]">
               <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
                 <MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp us
@@ -37,7 +42,7 @@ export function WaitingActivationCard({ businessName, compact = false }: { busin
                 <Link to="/pricing">View plans</Link>
               </Button>
             )}
-          </div>
+          </div>}
         </div>
       </div>
     </div>

@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { useQuery, queryOptions } from "@tanstack/react-query";
 import { listActivePlans, listAdSlots } from "@/lib/plans.functions";
 import { PlanCard } from "@/components/pricing/PlanCard";
+import { ContactToActivate } from "@/components/ContactToActivate";
 import { planPeriodMonths } from "@/lib/subscription-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BASE_URL } from "@/lib/seo";
-import { useIsIosApp } from "@/hooks/useIsIosApp";
+import { SHOW_PUBLIC_PRICING } from "@/lib/features";
+import { usePricingVisible } from "@/hooks/usePricingVisible";
 import { CONTACT_EMAIL, CONTACT_WHATSAPP, CONTACT_PHONE } from "@/lib/contact";
 import { Phone, MessageCircle, Mail, Megaphone } from "lucide-react";
 
@@ -21,18 +23,27 @@ const adSlotsQueryOptions = queryOptions({
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
-    meta: [
-      { title: "Pricing — Grow your business on Kutchi Hub" },
-      { name: "description", content: "Simple, transparent pricing for Kutchi businesses. Choose Free, Silver, Gold or Platinum plans and get more customers on Kutchi Hub." },
-      { property: "og:title", content: "Pricing — Kutchi Hub" },
-      { property: "og:description", content: "Simple, transparent pricing for Kutchi businesses." },
-      { property: "og:url", content: `${BASE_URL}/pricing` },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [{ rel: "canonical", href: `${BASE_URL}/pricing` }],
+    meta: SHOW_PUBLIC_PRICING
+      ? [
+          { title: "Pricing — Grow your business on Kutchi Hub" },
+          { name: "description", content: "Simple, transparent pricing for Kutchi businesses. Choose Free, Silver, Gold or Platinum plans and get more customers on Kutchi Hub." },
+          { property: "og:title", content: "Pricing — Kutchi Hub" },
+          { property: "og:description", content: "Simple, transparent pricing for Kutchi businesses." },
+          { property: "og:url", content: `${BASE_URL}/pricing` },
+          { property: "og:type", content: "website" },
+          { name: "twitter:card", content: "summary_large_image" },
+        ]
+      : [
+          // Prices are hidden for now (src/lib/features.ts): nothing about pricing in the page's own description, and not for search engines.
+          { title: "Plans — Kutchi Hub" },
+          { name: "description", content: "Contact the Kutchi Hub team for plans." },
+          { name: "robots", content: "noindex,follow" },
+        ],
+    links: SHOW_PUBLIC_PRICING ? [{ rel: "canonical", href: `${BASE_URL}/pricing` }] : [],
   }),
+  // Plans and prices are only fetched for the people who may see them: with the switch off, the public page never asks for them.
   loader: async ({ context }) => {
+    if (!SHOW_PUBLIC_PRICING) return;
     await Promise.all([
       context.queryClient.ensureQueryData(plansQueryOptions),
       context.queryClient.ensureQueryData(adSlotsQueryOptions),
@@ -41,17 +52,42 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-3xl px-4 py-12 text-center">
-      <p className="text-sm text-destructive">Failed to load pricing: {error instanceof Error ? error.message : String(error)}</p>
+      <p className="text-sm text-destructive">Failed to load this page: {error instanceof Error ? error.message : String(error)}</p>
     </div>
   ),
   notFoundComponent: () => <div className="p-8 text-center">Not found</div>,
 });
 
 function PricingPage() {
-  // Apple 3.1.1: no plan prices or buy / upgrade buttons inside the iOS app.
-  const isIosApp = useIsIosApp();
-  const { data: plans } = useSuspenseQuery(plansQueryOptions);
-  const { data: adSlots } = useSuspenseQuery(adSlotsQueryOptions);
+  // Admins (and everyone, once SHOW_PUBLIC_PRICING is on, except in the iOS app: Apple 3.1.1) get the plans; the rest get "contact us".
+  const visible = usePricingVisible();
+  return visible ? <PricingPlans /> : <PricingContact />;
+}
+
+/** What the public sees while prices are hidden: no plans, no amounts, just how to reach the team. */
+function PricingContact() {
+  return (
+    <div className="mx-auto max-w-xl px-4 py-16 text-center" data-pricing-contact>
+      <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Contact the Kutchi Hub team for plans</h1>
+      <p className="mt-3 text-lg text-muted-foreground">
+        Tell us about your business and we will help you pick the right option and activate your listing.
+      </p>
+      <ContactToActivate
+        className="mt-8 text-center [&>div]:justify-center"
+        label={null}
+        size="lg"
+        message="Hi, I'd like to know about plans for my business on Kutchi Hub."
+      />
+      <p className="mt-8 text-sm">
+        <Link to="/" className="text-primary underline">Back to home</Link>
+      </p>
+    </div>
+  );
+}
+
+function PricingPlans() {
+  const { data: plans = [], isLoading } = useQuery(plansQueryOptions);
+  const { data: adSlots = [] } = useQuery(adSlotsQueryOptions);
   const cycle = "yearly" as const;
 
   const contactHref = `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent("Hi, I'd like to upgrade my Kutchi Hub listing.")}`;
@@ -64,17 +100,20 @@ function PricingPage() {
     );
   };
 
-  if (isIosApp) {
+  if (isLoading) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <h1 className="text-xl font-bold text-foreground">This page is not available in the app</h1>
-        <Link to="/" className="mt-4 inline-block text-primary underline">Back to home</Link>
+      <div className="mx-auto max-w-6xl px-4 py-12">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-80 animate-pulse rounded-xl bg-muted" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12" data-ios-hide>
+    <div className="mx-auto max-w-6xl px-4 py-12" data-pricing-plans>
       <div className="text-center">
         <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Grow your business on Kutchi Hub</h1>
         <p className="mt-3 text-lg text-muted-foreground">

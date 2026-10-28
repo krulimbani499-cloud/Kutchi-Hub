@@ -13,6 +13,8 @@ import { sortCategoriesAZ } from "@/lib/category-sort";
 import { readValidationError } from "@/lib/edit-lock";
 import { CONTACT_WHATSAPP } from "@/lib/contact";
 import { useIsIosApp } from "@/hooks/useIsIosApp";
+import { usePricingVisible } from "@/hooks/usePricingVisible";
+import { ContactToActivate } from "@/components/ContactToActivate";
 
 type Category = { id: string; name: string };
 type Errors = Partial<Record<"name" | "contactName" | "phone" | "city", string>>;
@@ -22,6 +24,7 @@ export const QUICK_LISTING_THANK_YOU = "Thank you! Kutchi Hub team will call you
 /** The screen after a successful submit. */
 export function QuickListingThanks({ name }: { name: string }) {
   const isIosApp = useIsIosApp();
+  const showPlans = usePricingVisible();
   const whatsappText = `Hi, I just listed "${name}" on Kutchi Hub. Please activate my listing.`;
   return (
     <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm sm:p-8" role="status">
@@ -30,7 +33,9 @@ export function QuickListingThanks({ name }: { name: string }) {
       <p className="mt-2 text-sm text-muted-foreground">
         "{name}" is saved. You can also message us right now to get started faster.
       </p>
-      <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+      {/* Prices are hidden for everyone but admins (SHOW_PUBLIC_PRICING): Call / WhatsApp, no "View plans". */}
+      {!showPlans && <ContactToActivate size="lg" className="mt-6 text-center [&>div]:justify-center" label="Contact us to activate" message={whatsappText} />}
+      {showPlans && <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
         <Button asChild size="lg" className="bg-[#25D366] text-white hover:bg-[#1fb957]">
           <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noreferrer">
             <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp us
@@ -42,7 +47,7 @@ export function QuickListingThanks({ name }: { name: string }) {
             <Link to="/pricing">View plans</Link>
           </Button>
         )}
-      </div>
+      </div>}
       <p className="mt-5 text-sm">
         <Link to="/dashboard" className="text-primary hover:underline">Go to my dashboard</Link>
       </p>

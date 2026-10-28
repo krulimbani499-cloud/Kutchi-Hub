@@ -1,3 +1,5 @@
+import { SHOW_PUBLIC_PRICING } from "./features";
+
 // Owners can only edit a published business while it has an active plan. The database enforces this
 // (see supabase/pending/edit-requires-plan); these helpers turn its rejections into one friendly message.
 
@@ -29,6 +31,14 @@ export function isEditLockedError(err: unknown): boolean {
     e?.code === "PGRST116" ||
     (e?.code === "42501" && message.includes("policy"))
   );
+}
+
+/**
+ * While prices are hidden (SHOW_PUBLIC_PRICING off) an owner-facing "Upgrade ..." sentence from the database becomes "Contact Kutchi
+ * Hub ...": no upgrade wording anywhere. Admins are never held to plan limits, so they never meet these messages.
+ */
+export function withoutUpgradeWording(message: string): string {
+  return SHOW_PUBLIC_PRICING ? message : message.replace(/\s*Upgrade[^.]*\./i, " Contact Kutchi Hub to add more.");
 }
 
 /** The text to show for a failed owner save: the friendly lock message, else `fallback` (or the error text). */

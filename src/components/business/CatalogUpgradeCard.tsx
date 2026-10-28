@@ -4,16 +4,20 @@ import { Button } from "@/components/ui/button";
 import { CATALOG_PLAN_MESSAGE } from "@/lib/edit-lock";
 import { CONTACT_WHATSAPP } from "@/lib/contact";
 import { useIsIosApp } from "@/hooks/useIsIosApp";
+import { usePricingVisible } from "@/hooks/usePricingVisible";
+import { ContactToActivate } from "@/components/ContactToActivate";
 
 /** Shown instead of the catalog uploader when the business's plan does not include the catalog (Silver). */
 export function CatalogUpgradeCard({ businessName, hasExistingCatalog }: { businessName?: string; hasExistingCatalog?: boolean }) {
   const isIosApp = useIsIosApp();
+  const showPlans = usePricingVisible();
   const text = `Hi, I want to upgrade my plan to use the product catalog${businessName ? ` for "${businessName}"` : ""} on Kutchi Hub.`;
   // Apple 3.1.1: inside the iOS app no upgrade / plan wording and no way to pay.
   if (isIosApp) {
     return (
       <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
-        Catalog upload is not available for this listing.
+        <p>Catalog upload is not available for this listing.</p>
+        <ContactToActivate className="mt-3 text-foreground" message={text} />
       </div>
     );
   }
@@ -30,16 +34,21 @@ export function CatalogUpgradeCard({ businessName, hasExistingCatalog }: { busin
               Aapka purana catalog saved hai, par customers ko tab tak nahi dikhega jab tak plan upgrade nahi hota.
             </p>
           )}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button asChild size="sm" className="bg-[#ff6a00] text-white hover:bg-[#e65a00]">
-              <Link to="/pricing">Upgrade</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="border-amber-400 bg-white/70">
-              <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
-                <MessageCircle className="mr-1.5 h-4 w-4" /> Contact Kutchi Hub
-              </a>
-            </Button>
-          </div>
+          {/* Prices are hidden for everyone but admins (SHOW_PUBLIC_PRICING): Call / WhatsApp instead of "Upgrade". */}
+          {showPlans ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button asChild size="sm" className="bg-[#ff6a00] text-white hover:bg-[#e65a00]">
+                <Link to="/pricing">Upgrade</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="border-amber-400 bg-white/70">
+                <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
+                  <MessageCircle className="mr-1.5 h-4 w-4" /> Contact Kutchi Hub
+                </a>
+              </Button>
+            </div>
+          ) : (
+            <ContactToActivate className="mt-3" message={text} />
+          )}
         </div>
       </div>
     </div>

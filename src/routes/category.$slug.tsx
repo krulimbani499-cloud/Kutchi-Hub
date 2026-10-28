@@ -6,6 +6,7 @@ import { BusinessCard } from "@/components/business/BusinessCard";
 import { CategoryBanner } from "@/components/category/CategoryBanner";
 import { MapPin } from "lucide-react";
 import { BASE_URL, breadcrumbLd, itemListLd, faqLd, ldScript } from "@/lib/seo";
+import { SHOW_PUBLIC_PRICING } from "@/lib/features";
 
 const categoryPageOptions = (slug: string) =>
   queryOptions({
@@ -63,7 +64,7 @@ export const Route = createFileRoute("/category/$slug")({
             },
             {
               q: `How do I list my ${name.toLowerCase()} business on Kutchi Hub?`,
-              a: `Click "List Your Business", add your details, photos, hours and contact info. Free to start; upgrade for verification badge, top placement and app-only discounts.`,
+              a: `Click "List Your Business", add your details, photos, hours and contact info. Free to start; ${SHOW_PUBLIC_PRICING ? "upgrade" : "contact the Kutchi Hub team"} for verification badge, top placement and app-only discounts.`,
             },
           ]),
         ),

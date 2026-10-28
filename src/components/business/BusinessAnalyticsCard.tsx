@@ -5,11 +5,14 @@ import { listBusinessDiscountClaims } from "@/lib/businesses.functions";
 import { Eye, Phone, MessageSquare, Globe, Navigation, Share2, Inbox, Tag, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsIosApp } from "@/hooks/useIsIosApp";
+import { usePricingVisible } from "@/hooks/usePricingVisible";
+import { ContactToActivate } from "@/components/ContactToActivate";
 
 interface Props { businessId: string; businessName: string; analyticsAccess?: boolean }
 
 export function BusinessAnalyticsCard({ businessId, businessName, analyticsAccess = false }: Props) {
   const isIosApp = useIsIosApp();
+  const showPlans = usePricingVisible();
   if (!analyticsAccess) {
     return (
       <div className="rounded-lg border border-dashed border-border p-4">
@@ -19,8 +22,11 @@ export function BusinessAnalyticsCard({ businessId, businessName, analyticsAcces
             <Lock className="h-3 w-3" /> Locked
           </span>
         </div>
-        {isIosApp ? (
-          <p className="text-sm text-muted-foreground">Analytics is not available for this listing.</p>
+        {isIosApp || !showPlans ? (
+          <>
+            <p className="text-sm text-muted-foreground">Analytics is not available for this listing yet.</p>
+            <ContactToActivate className="mt-3" message={`Hi, I want analytics for "${businessName}" on Kutchi Hub.`} />
+          </>
         ) : (
           <>
             <p className="text-sm text-muted-foreground">Analytics available on Silver plan and above.</p>

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { EDIT_LOCKED_MESSAGE } from "@/lib/edit-lock";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_WHATSAPP } from "@/lib/contact";
 import { useIsIosApp } from "@/hooks/useIsIosApp";
+import { usePricingVisible } from "@/hooks/usePricingVisible";
+import { ContactToActivate } from "@/components/ContactToActivate";
 
 /**
  * Shown instead of the edit form (and instead of the services / products managers) when the owner's
@@ -11,12 +13,14 @@ import { useIsIosApp } from "@/hooks/useIsIosApp";
  */
 export function EditLockedCard({ businessName, compact = false }: { businessName?: string; compact?: boolean }) {
   const isIosApp = useIsIosApp();
+  const showPlans = usePricingVisible();
   const whatsappText = `Hi, I want to activate a plan for my business${businessName ? ` "${businessName}"` : ""} on Kutchi Hub.`;
   // Apple 3.1.1: inside the iOS app no plan wording, no pricing link, no way to pay.
   if (isIosApp) {
     return (
       <div role="status" className="rounded-xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground sm:p-5">
-        Editing is not available for this listing right now. Contact Kutchi Hub if you need help.
+        <p>Editing is not available for this listing right now.</p>
+        <ContactToActivate className="mt-3 text-foreground" message={whatsappText} />
       </div>
     );
   }
@@ -34,7 +38,9 @@ export function EditLockedCard({ businessName, compact = false }: { businessName
               zaroori hai. Plan activate karne ke liye Kutchi Hub team se sampark karein.
             </p>
           )}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          {/* Prices are hidden for everyone but admins (SHOW_PUBLIC_PRICING): Call / WhatsApp instead of "View plans". */}
+          {!showPlans && <ContactToActivate className="mt-3" message={whatsappText} />}
+          {showPlans && <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button asChild size="sm" className="bg-[#ff6a00] text-white hover:bg-[#e65a00]">
               <a
                 href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(whatsappText)}`}
@@ -61,7 +67,7 @@ export function EditLockedCard({ businessName, compact = false }: { businessName
                 </Button>
               </>
             )}
-          </div>
+          </div>}
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
 import { EDIT_LOCKED_MESSAGE, friendlyEditError, isEditLockedError } from "./edit-lock";
+import { SHOW_PUBLIC_PRICING } from "./features";
 
 export const listBusinessServices = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
@@ -44,8 +45,8 @@ function describeServiceError(err: DbError): string {
   if (limit) {
     const n = Number(limit[1]);
     return n === 0
-      ? "Your plan does not include services. Upgrade your plan to add services."
-      : `Your plan allows ${n} service${n === 1 ? "" : "s"} and you already have ${n}. Upgrade your plan to add more.`;
+      ? `Your plan does not include services. ${SHOW_PUBLIC_PRICING ? "Upgrade your plan to add services." : "Contact Kutchi Hub to add services."}`
+      : `Your plan allows ${n} service${n === 1 ? "" : "s"} and you already have ${n}. ${SHOW_PUBLIC_PRICING ? "Upgrade your plan to add more." : "Contact Kutchi Hub to add more."}`;
   }
   if (isEditLockedError(err)) return EDIT_LOCKED_MESSAGE;
   if (err.code === "42501") return "Could not save the service: the server is missing a database permission (code 42501). Please contact support.";

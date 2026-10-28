@@ -10,6 +10,7 @@ import { CitySelector } from "@/components/layout/CitySelector";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
 import { useT } from "@/lib/i18n";
+import { usePricingVisible } from "@/hooks/usePricingVisible";
 
 /**
  * TEMPORARY: the home page already has its own search (location picker + mic) in the hero, so the header search is hidden there.
@@ -23,6 +24,7 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
   const hideHeaderSearch = hideSearch ?? (HIDE_HEADER_SEARCH_ON_HOME && pathname === "/");
   const { user, isLoading } = useAuth();
   const t = useT();
+  const showPricing = usePricingVisible(); // false for everyone but admins while SHOW_PUBLIC_PRICING is off (and always in the iOS app)
   const [search, setSearch] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasListings, setHasListings] = useState(false);
@@ -97,14 +99,18 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
               <Menu className="h-5 w-5" />
             </Link>
           </Button>
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild data-ios-hide>
-            <Link to="/pricing">{t("nav.pricing")}</Link>
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild title={t("nav.pricing")} data-ios-hide>
-            <Link to="/pricing" aria-label={t("nav.pricing")}>
-              <Tag className="h-5 w-5" />
-            </Link>
-          </Button>
+          {showPricing && (
+            <>
+              <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
+                <Link to="/pricing">{t("nav.pricing")}</Link>
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild title={t("nav.pricing")}>
+                <Link to="/pricing" aria-label={t("nav.pricing")}>
+                  <Tag className="h-5 w-5" />
+                </Link>
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
             <Link to="/about">{t("nav.about")}</Link>
           </Button>
