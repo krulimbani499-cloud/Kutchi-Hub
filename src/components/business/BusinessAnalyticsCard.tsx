@@ -24,7 +24,8 @@ export function BusinessAnalyticsCard({ businessId, businessName, analyticsAcces
         </div>
         {isIosApp || !showPlans ? (
           <>
-            <p className="text-sm text-muted-foreground">Analytics is not available for this listing yet.</p>
+            <p className="text-sm text-muted-foreground">Analytics is not available for this listing{isIosApp ? "." : " yet."}</p>
+            {/* No "contact us" action in the iOS app (Apple 3.1.1): ContactToActivate renders nothing there. */}
             <ContactToActivate className="mt-3" message={`Hi, I want analytics for "${businessName}" on Kutchi Hub.`} />
           </>
         ) : (

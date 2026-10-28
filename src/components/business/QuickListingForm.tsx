@@ -31,7 +31,7 @@ export function QuickListingThanks({ name }: { name: string }) {
       <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
       <h2 className="mt-3 text-2xl font-bold text-foreground">{QUICK_LISTING_THANK_YOU}</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        "{name}" is saved. You can also message us right now to get started faster.
+        "{name}" is saved.{!isIosApp && " You can also message us right now to get started faster."}
       </p>
       {/* Prices are hidden for everyone but admins (SHOW_PUBLIC_PRICING): Call / WhatsApp, no "View plans". */}
       {!showPlans && <ContactToActivate size="lg" className="mt-6 text-center [&>div]:justify-center" label="Contact us to activate" message={whatsappText} />}

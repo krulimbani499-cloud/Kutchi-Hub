@@ -16,8 +16,7 @@ export function CatalogUpgradeCard({ businessName, hasExistingCatalog }: { busin
   if (isIosApp) {
     return (
       <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
-        <p>Catalog upload is not available for this listing.</p>
-        <ContactToActivate className="mt-3 text-foreground" message={text} />
+        Catalog upload is not available for this listing.
       </div>
     );
   }

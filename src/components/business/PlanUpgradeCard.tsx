@@ -18,8 +18,7 @@ export function PlanUpgradeCard({ what, businessName }: { what: "Products" | "Se
   if (isIosApp) {
     return (
       <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
-        <p>Adding {what.toLowerCase()} is not available for this listing.</p>
-        <ContactToActivate className="mt-3 text-foreground" message={text} />
+        Adding {what.toLowerCase()} is not available for this listing.
       </div>
     );
   }

@@ -19,8 +19,7 @@ export function EditLockedCard({ businessName, compact = false }: { businessName
   if (isIosApp) {
     return (
       <div role="status" className="rounded-xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground sm:p-5">
-        <p>Editing is not available for this listing right now.</p>
-        <ContactToActivate className="mt-3 text-foreground" message={whatsappText} />
+        Editing is not available for this listing right now. Contact Kutchi Hub if you need help.
       </div>
     );
   }

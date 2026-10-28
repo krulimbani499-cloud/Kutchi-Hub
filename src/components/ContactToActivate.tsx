@@ -1,10 +1,13 @@
 import { MessageCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CONTACT_PHONE, CONTACT_WHATSAPP } from "@/lib/contact";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 
 /**
  * The action that replaces "View plans" / "Upgrade" / "Buy" while prices are hidden (see SHOW_PUBLIC_PRICING): ask the Kutchi Hub
  * team by phone or WhatsApp. The numbers come from lib/contact.ts. `message` is the ready-typed WhatsApp text.
+ * Renders NOTHING inside the iOS app: there, a "contact us to activate / for plans" action next to plan, upgrade or activation
+ * screens would point people to pay outside the app (Apple 3.1.1). Support contact (footer, help section, floating WhatsApp) is separate.
  */
 export function ContactToActivate({
   message,
@@ -18,6 +21,8 @@ export function ContactToActivate({
   size?: "sm" | "default" | "lg";
   className?: string;
 }) {
+  const isIosApp = useIsIosApp();
+  if (isIosApp) return null;
   return (
     <div className={className} data-contact-to-activate>
       {label && <p className="mb-2 text-sm font-medium">{label}</p>}

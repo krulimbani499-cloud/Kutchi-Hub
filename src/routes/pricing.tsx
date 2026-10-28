@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BASE_URL } from "@/lib/seo";
 import { SHOW_PUBLIC_PRICING } from "@/lib/features";
 import { usePricingVisible } from "@/hooks/usePricingVisible";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 import { CONTACT_EMAIL, CONTACT_WHATSAPP, CONTACT_PHONE } from "@/lib/contact";
 import { Phone, MessageCircle, Mail, Megaphone } from "lucide-react";
 
@@ -61,7 +62,17 @@ export const Route = createFileRoute("/pricing")({
 function PricingPage() {
   // Admins (and everyone, once SHOW_PUBLIC_PRICING is on, except in the iOS app: Apple 3.1.1) get the plans; the rest get "contact us".
   const visible = usePricingVisible();
-  return visible ? <PricingPlans /> : <PricingContact />;
+  const isIosApp = useIsIosApp();
+  if (visible) return <PricingPlans />;
+  // iOS app (Apple 3.1.1): one neutral line, no buttons, no links, no way to buy or to ask about buying.
+  if (isIosApp) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16 text-center" data-pricing-ios>
+        <p className="text-lg text-muted-foreground">Listings are activated by the Kutchi Hub team.</p>
+      </div>
+    );
+  }
+  return <PricingContact />;
 }
 
 /** What the public sees while prices are hidden: no plans, no amounts, just how to reach the team. */
