@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { useT } from "@/lib/i18n";
 import { SafeImage } from "./SafeImage";
@@ -130,7 +131,7 @@ interface CategoryGridProps {
 }
 
 /** The uploaded icon, or the emoji when there is no icon or the image fails to load. */
-function CategoryTileIcon({ category }: { category: Tables<"categories"> }) {
+function CategoryTileIcon({ category, imgClassName = "h-10 w-10" }: { category: Tables<"categories">; imgClassName?: string }) {
   const iconUrl = (category as unknown as { icon_url?: string | null }).icon_url?.trim() || null;
   // Remember WHICH url failed, so a changed url is tried again.
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -141,7 +142,7 @@ function CategoryTileIcon({ category }: { category: Tables<"categories"> }) {
     return (
       <SafeImage
         src={shown}
-        className="h-10 w-10 object-contain"
+        className={`${imgClassName} object-contain`}
         onFail={() => {
           if (!resizedFailed && shown !== iconUrl) {
             markResizeBroken();
@@ -196,5 +197,53 @@ export function CategoryGrid({ categories, size = "md" }: CategoryGridProps) {
         );
       })}
     </div>
+  );
+}
+
+/**
+ * One small tile for the home "Popular Categories" row: icon + name (and the number of businesses). Smaller than a business card.
+ * On a phone the count is just the number (the tile is about 66px wide); from md up it reads "12 businesses".
+ */
+export function CategoryTile({ category }: { category: GridCategory }) {
+  const t = useT();
+  const n = category.businessCount;
+  const label = n !== undefined ? `${n} ${n === 1 ? t("home.business1") : t("home.businessN")}` : null;
+  return (
+    <Link
+      to="/search"
+      search={{ category: category.slug }}
+      title={label ? `${category.name} - ${label}` : category.name}
+      className="group flex w-full min-w-0 flex-col items-center gap-1 rounded-xl p-0.5 text-center transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+    >
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/60 text-2xl leading-none transition-transform group-hover:scale-105 sm:h-12 sm:w-12 md:h-14 md:w-14 md:text-3xl">
+        <CategoryTileIcon category={category} imgClassName="h-8 w-8 md:h-10 md:w-10" />
+      </div>
+      {/* Up to 2 lines; min-h keeps every tile the same height. */}
+      <span className="line-clamp-2 min-h-[2.4em] w-full text-[10.5px] font-medium leading-tight text-foreground [overflow-wrap:anywhere] sm:text-xs md:text-sm">
+        {category.name}
+      </span>
+      {label !== null && (
+        <span className="-mt-0.5 w-full truncate text-[10px] leading-tight text-muted-foreground md:text-[11px]">
+          <span className="md:hidden">{n}</span>
+          <span className="hidden md:inline">{label}</span>
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/** The last tile of the row: opens the A-Z categories page. */
+export function CategoriesViewAllTile() {
+  const t = useT();
+  return (
+    <Link
+      to="/categories"
+      className="group flex w-full min-w-0 flex-col items-center gap-1 rounded-xl p-0.5 text-center transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+    >
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary transition-transform group-hover:scale-105 sm:h-12 sm:w-12 md:h-14 md:w-14">
+        <ArrowRight className="h-5 w-5 md:h-6 md:w-6" />
+      </div>
+      <span className="line-clamp-2 min-h-[2.4em] w-full text-[10.5px] font-semibold leading-tight text-primary sm:text-xs md:text-sm">{t("home.viewAll")}</span>
+    </Link>
   );
 }

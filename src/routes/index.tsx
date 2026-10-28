@@ -3,7 +3,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { getHomeData } from "@/lib/businesses.functions";
 import { listUpcomingEvents } from "@/lib/events.functions";
 import { useQuery } from "@tanstack/react-query";
-import { CategoryGrid } from "@/components/business/CategoryGrid";
+import { CategoryTile, CategoriesViewAllTile } from "@/components/business/CategoryGrid";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2, Mic, ArrowRight, Smartphone, Tag, Calendar, Crown } from "lucide-react";
@@ -262,26 +262,34 @@ function HomePage() {
         </div>
       </ScrollReveal>
 
-      {/* Categories — clean icon grid, JD style. Ranked by published businesses in the selected city (see getHomeData). */}
-      <ScrollReveal as="section" className="mx-auto w-full max-w-7xl px-4 py-6">
-        <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.popularCategories")}</h2>
-            <Link to="/categories" className="text-xs font-semibold text-primary hover:underline">
-              {t("home.viewAll")} →
-            </Link>
-          </div>
-          {home ? (
-            <CategoryGrid categories={home.categories} />
-          ) : (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-8">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
-              ))}
+      {/* Popular Categories: one swipeable row of small tiles (same scroll pattern as Featured / Nearby), ranked by published
+          businesses in the selected city (see getHomeData). Hidden when there are none. "View all" opens the A-Z page. */}
+      {(!home || home.categories.length > 0) && (
+        <ScrollReveal as="section" ariaLabel={t("home.popularCategories")} className="mx-auto w-full max-w-7xl px-4 py-6">
+          <div className="rounded-2xl border border-border bg-background p-5 sm:p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-bold text-foreground sm:text-lg">{t("home.popularCategories")}</h2>
+              <Link to="/categories" className="text-xs font-semibold text-primary hover:underline">
+                {t("home.viewAll")} →
+              </Link>
             </div>
-          )}
-        </div>
-      </ScrollReveal>
+            {home ? (
+              <HorizontalCardRow variant="tiles">
+                {home.categories.map((category) => (
+                  <CategoryTile key={category.id} category={category} />
+                ))}
+                <CategoriesViewAllTile />
+              </HorizontalCardRow>
+            ) : (
+              <HorizontalCardRow variant="tiles">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="h-[84px] animate-pulse rounded-xl bg-muted md:h-[104px]" />
+                ))}
+              </HorizontalCardRow>
+            )}
+          </div>
+        </ScrollReveal>
+      )}
 
       {/* Second sponsored slot: banners placed "Middle" (and the all-city Enterprise ones). Hidden when it has none. */}
       <Suspense fallback={null}><MarketingBanner placement="home_middle" /></Suspense>
