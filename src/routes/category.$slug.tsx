@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ListingPageSkeleton } from "@/components/layout/PageSkeleton";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getCategoryPageData } from "@/lib/businesses.functions";
-import { BusinessCard } from "@/components/business/BusinessCard";
+import { ResultsHeader } from "@/components/search/ResultsHeader";
+import { StaticResults } from "@/components/search/StaticResults";
 import { CategoryBanner } from "@/components/category/CategoryBanner";
 import { MapPin } from "lucide-react";
 import { BASE_URL, breadcrumbLd, itemListLd, faqLd, ldScript } from "@/lib/seo";
@@ -94,45 +95,47 @@ function CategoryPage() {
   const { category, businesses, cities } = data;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">Home</Link>
-        <span>›</span>
-        <Link to="/categories" className="hover:text-foreground">Categories</Link>
-        <span>›</span>
-        <span className="text-foreground">{category.name}</span>
-      </div>
+    <div className="mx-auto max-w-7xl px-4 py-5 sm:py-6">
+      <ResultsHeader category={category} total={businesses.length} />
+      <p className="-mt-2 mb-4 max-w-3xl text-sm text-muted-foreground">
+        Discover verified {category.name.toLowerCase()} businesses on Kutchi Hub. {businesses.length}+ listings with reviews, hours and contact info.
+      </p>
 
-      <CategoryBanner categoryId={category.id} />
+      {cities.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {cities.slice(0, 10).map((c) => (
+            <Link
+              key={c}
+              to="/city/$slug/category/$category"
+              params={{
+                slug: c
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+                  .replace(/^-+|-+$/g, ""),
+                category: category.slug,
+              }}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
+            >
+              <MapPin className="h-3 w-3" /> {c}
+            </Link>
+          ))}
+        </div>
+      )}
 
-      <div className="mb-8 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-primary/5 p-6">
-        <h1 className="text-3xl font-extrabold text-foreground">{category.name}</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Discover verified {category.name.toLowerCase()} businesses on Kutchi Hub. {businesses.length}+ listings with reviews, hours and contact info.
-        </p>
-        {cities.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {cities.slice(0, 10).map((c) => (
-              <Link
-                key={c}
-                to="/city/$slug/category/$category"
-                params={{
-                  slug: c
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, "-")
-                    .replace(/^-+|-+$/g, ""),
-                  category: category.slug,
-                }}
-                className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
-              >
-                <MapPin className="h-3 w-3" /> {c}
-              </Link>
-            ))}
+      <StaticResults
+        businesses={businesses}
+        category={category}
+        filterSearch={{ category: category.slug }}
+        banner={<CategoryBanner categoryId={category.id} />}
+        empty={
+          <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
+            No {category.name.toLowerCase()} listings yet.{" "}
+            <Link to="/business/new" className="text-primary underline">List yours first</Link>
           </div>
-        )}
-      </div>
+        }
+      />
 
-      <section className="mb-8 rounded-2xl border border-border bg-card p-6">
+      <section className="mt-8 rounded-2xl border border-border bg-card p-6">
         <h2 className="mb-3 text-lg font-semibold text-foreground">About {category.name} on Kutchi Hub</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           Looking for the best <strong>{category.name.toLowerCase()}</strong> in Kutch? Kutchi Hub brings together verified
@@ -142,22 +145,6 @@ function CategoryPage() {
           free and reach thousands of local customers every month.
         </p>
       </section>
-
-      {businesses.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
-          No {category.name.toLowerCase()} listings yet.{" "}
-          <Link to="/business/new" className="text-primary underline">List yours first</Link>
-        </div>
-      ) : (
-        <>
-          <h2 className="mb-4 text-lg font-semibold text-foreground">{businesses.length} listings</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {businesses.map((b, i) => (
-              <BusinessCard key={b.id} business={b} delayMs={i * 100} />
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }

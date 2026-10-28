@@ -27,6 +27,7 @@ import { AdSlotsManager } from "@/components/admin/AdSlotsManager";
 import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
 import { PlansRevenueOverview } from "@/components/admin/PlansRevenueOverview";
 import { BusinessesAdmin } from "@/components/admin/BusinessesAdmin";
+import { SearchLeadsManager } from "@/components/admin/SearchLeadsManager";
 import { BannerBusinessPicker } from "@/components/admin/BannerBusinessPicker";
 import { BANNER_PLACEMENT_LABEL, BANNER_SLOT_WARNING_ABOVE, countLiveBannersBySlot, type BannerPlacement } from "@/lib/banner-rules";
 import { Button } from "@/components/ui/button";
@@ -190,6 +191,7 @@ function AdminPage() {
           <TabsTrigger value="plans">Plans</TabsTrigger>
           <TabsTrigger value="adslots">Ad Slots</TabsTrigger>
           <TabsTrigger value="subs">Subscriptions</TabsTrigger>
+          <TabsTrigger value="leads">Search leads</TabsTrigger>
           <TabsTrigger value="audit">Audit Logs</TabsTrigger>
         </TabsList>
 
@@ -352,6 +354,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="subs" className="mt-0">
           <SubscriptionsManager planFilter={subsPlanFilter} onClearFilter={() => setSubsPlanFilter(null)} />
+        </TabsContent>
+        <TabsContent value="leads" className="mt-0">
+          <SearchLeadsManager />
         </TabsContent>
         <TabsContent value="audit" className="mt-0">
           <AuditLogsAdmin />

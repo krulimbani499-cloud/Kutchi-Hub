@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ListingPageSkeleton } from "@/components/layout/PageSkeleton";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import { getCityCategoryPageData } from "@/lib/businesses.functions";
-import { BusinessCard } from "@/components/business/BusinessCard";
+import { getBannerAdsForCategory, getCityCategoryPageData } from "@/lib/businesses.functions";
+import { ResultsHeader } from "@/components/search/ResultsHeader";
+import { StaticResults } from "@/components/search/StaticResults";
+import { CategoryBanner } from "@/components/category/CategoryBanner";
 import { BASE_URL, breadcrumbLd, itemListLd, faqLd, ldScript } from "@/lib/seo";
 
 const comboPageOptions = (city: string, category: string) =>
@@ -12,8 +14,13 @@ const comboPageOptions = (city: string, category: string) =>
   });
 
 export const Route = createFileRoute("/city/$slug/category/$category")({
-  loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData(comboPageOptions(params.slug, params.category)),
+  loader: async ({ context, params }) => {
+    const data = await context.queryClient.ensureQueryData(comboPageOptions(params.slug, params.category));
+    // The category banner is loaded with the page (it needs the category id): it is in the server-rendered page and in the
+    // page data, so it never pops in later and pushes the list down. A failing banner never breaks the page.
+    const banners = await getBannerAdsForCategory({ data: { categoryId: data.category.id, city: data.cityName } }).catch(() => []);
+    return { ...data, banners };
+  },
   head: ({ params, loaderData }) => {
     const cityName =
       loaderData?.cityName ??
@@ -92,67 +99,47 @@ export const Route = createFileRoute("/city/$slug/category/$category")({
 function CityCategoryPage() {
   const { slug, category } = Route.useParams();
   const { data } = useSuspenseQuery(comboPageOptions(slug, category));
+  const { banners } = Route.useLoaderData();
   const { cityName, category: cat, businesses } = data;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">
-          Home
+    <div className="mx-auto max-w-7xl px-4 py-5 sm:py-6">
+      <ResultsHeader city={cityName} category={cat} total={businesses.length} />
+      <p className="-mt-2 mb-4 max-w-3xl text-sm text-muted-foreground">
+        Explore {businesses.length}+ verified {cat.name.toLowerCase()} in {cityName} — reviews, ratings, hours, phone numbers and directions.
+      </p>
+      <div className="mb-5 flex flex-wrap gap-2">
+        <Link
+          to="/city/$slug"
+          params={{ slug }}
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
+        >
+          All in {cityName}
         </Link>
-        <span>›</span>
-        <Link to="/city/$slug" params={{ slug }} className="hover:text-foreground">
-          {cityName}
+        <Link
+          to="/category/$slug"
+          params={{ slug: category }}
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
+        >
+          {cat.name} in all cities
         </Link>
-        <span>›</span>
-        <span className="text-foreground">{cat.name}</span>
       </div>
 
-      <div className="mb-8 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-primary/5 p-6">
-        <h1 className="text-3xl font-extrabold text-foreground">
-          Best {cat.name} in {cityName}
-        </h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Explore {businesses.length}+ verified {cat.name.toLowerCase()} in {cityName} — reviews, ratings, hours, phone
-          numbers and directions.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link
-            to="/city/$slug"
-            params={{ slug }}
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
-          >
-            All in {cityName}
-          </Link>
-          <Link
-            to="/category/$slug"
-            params={{ slug: category }}
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
-          >
-            {cat.name} in all cities
-          </Link>
-        </div>
-      </div>
-
-      {businesses.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
-          No {cat.name.toLowerCase()} listings in {cityName} yet.{" "}
-          <Link to="/business/new" className="text-primary underline">
-            Be the first to list
-          </Link>
-        </div>
-      ) : (
-        <>
-          <h2 className="mb-4 text-lg font-semibold text-foreground">
-            {businesses.length} {cat.name.toLowerCase()} in {cityName}
-          </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {businesses.map((b) => (
-              <BusinessCard key={b.id} business={b} />
-            ))}
+      <StaticResults
+        businesses={businesses}
+        category={cat}
+        city={cityName}
+        filterSearch={{ category: cat.slug, city: cityName }}
+        banner={<CategoryBanner categoryId={cat.id} city={cityName} initialBanners={banners} />}
+        empty={
+          <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
+            No {cat.name.toLowerCase()} listings in {cityName} yet.{" "}
+            <Link to="/business/new" className="text-primary underline">
+              Be the first to list
+            </Link>
           </div>
-        </>
-      )}
+        }
+      />
     </div>
   );
 }

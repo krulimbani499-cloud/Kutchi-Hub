@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getBannerAdsForCategory } from "@/lib/businesses.functions";
 import { useCity } from "@/hooks/useCity";
@@ -9,21 +9,43 @@ interface Props {
   categoryId: string;
   city?: string | null;
   intervalMs?: number;
+  /** Banners the page already loaded (for this category and city), so nothing is fetched and nothing pops in later. */
+  initialBanners?: CategoryBannerList;
 }
 
-export function CategoryBanner({ categoryId, city, intervalMs = 4500 }: Props) {
-  const { city: selectedCity } = useCity();
-  // useCity() is null until it has read the stored choice (right after mount), so wait one
-  // tick before fetching; otherwise banners from every city would load and flash first.
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
-  const activeCity = city?.trim() || selectedCity?.trim() || null;
-  const { data: banners = [] } = useQuery({
-    queryKey: ["category-banner-ads", categoryId, activeCity?.toLowerCase() ?? "all"],
-    queryFn: () => getBannerAdsForCategory({ data: { categoryId, city: activeCity ?? undefined } }),
-    enabled: ready,
+export type CategoryBannerList = Awaited<ReturnType<typeof getBannerAdsForCategory>>;
+
+/** The banners of one category in one city (null = every city). Shared so a page can load them on the server too. */
+export const categoryBannersQuery = (categoryId: string, city: string | null) =>
+  queryOptions({
+    queryKey: ["category-banner-ads", categoryId, city?.toLowerCase() ?? "all"],
+    queryFn: () => getBannerAdsForCategory({ data: { categoryId, city: city ?? undefined } }),
     staleTime: 60_000,
   });
+
+/**
+ * The banners to show, and whether the answer is known yet (`settled`). A page that puts the banner above a list can keep its
+ * list behind a skeleton until `settled`, so the list is not pushed down when the banner arrives.
+ */
+export function useCategoryBanners(categoryId: string | null | undefined, city?: string | null, initialBanners?: CategoryBannerList) {
+  const { city: selectedCity } = useCity();
+  // useCity() is null until it has read the stored choice (right after mount), so wait one tick before fetching;
+  // otherwise banners from every city would load and flash first. A city given by the page needs no waiting.
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  const pageCity = city?.trim() || null;
+  const activeCity = pageCity ?? selectedCity?.trim() ?? null;
+  const { data, isPending } = useQuery({
+    ...categoryBannersQuery(categoryId ?? "", activeCity),
+    // Only a page that named its city can hand over banners (they were loaded for exactly that city).
+    initialData: pageCity !== null ? initialBanners : undefined,
+    enabled: !!categoryId && (ready || pageCity !== null),
+  });
+  return { banners: data ?? [], settled: !categoryId || (!isPending && (ready || pageCity !== null)) };
+}
+
+export function CategoryBanner({ categoryId, city, intervalMs = 4500, initialBanners }: Props) {
+  const { banners } = useCategoryBanners(categoryId, city, initialBanners);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {

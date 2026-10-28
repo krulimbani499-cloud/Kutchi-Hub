@@ -61,3 +61,21 @@ export function hasAnyHours(hours: unknown): boolean {
     Object.keys(hours as object).length > 0
   );
 }
+
+/**
+ * A Date whose local getters (getHours, getDay, ...) show the wall clock of `timeZone`, so isOpenNow gives the same answer on a
+ * server in any time zone. Opening hours are the shop's local time; the businesses are in India (Asia/Kolkata).
+ */
+export function wallClockDate(timeZone: string, now: Date = new Date()): Date {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const n = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return new Date(n("year"), n("month") - 1, n("day"), n("hour") % 24, n("minute"));
+}

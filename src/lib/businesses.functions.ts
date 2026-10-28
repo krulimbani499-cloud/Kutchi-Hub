@@ -15,7 +15,8 @@ import { CATALOG_PLAN_MESSAGE, EDIT_LOCKED_MESSAGE, friendlyEditError, isCatalog
 import { compareCategoryName } from "./category-sort";
 import { canonicalCityName } from "./geolocation";
 import { resolveCoords } from "./coords.server";
-import { cityKey } from "./places";
+import { cityKey, haversineKm } from "./places";
+import { isOpenNow, wallClockDate } from "./business-hours";
 import { NEARBY_WIDE_RADIUS_KM, rankNearby } from "./nearby";
 import cityCentres from "@/data/city-coords.json";
 
@@ -24,8 +25,15 @@ const searchSchema = z.object({
   category: z.string().optional(),
   city: z.string().optional(),
   minRating: z.coerce.number().min(0).max(5).optional(),
-  sort: z.enum(["relevance", "rating", "newest", "discount"]).optional().default("relevance"),
+  sort: z.enum(["relevance", "rating", "nearest", "newest", "discount"]).optional().default("relevance"),
   hasDiscount: z.coerce.boolean().optional().default(false),
+  /** Only verified businesses. */
+  verified: z.boolean().optional().default(false),
+  /** Only businesses open right now (India time). Businesses without opening hours are left out. */
+  openNow: z.boolean().optional().default(false),
+  /** Where the visitor is: needed for the "nearest" order and for the distance on each result. */
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(50).optional().default(20),
 });
@@ -41,7 +49,7 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       // categories is an inner join so the category filter below needs no separate lookup, and the
       // reviews come back embedded so ratings need no second query over the whole reviews table.
       .select(
-        "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, featured_image, hours, status, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id!inner(id, name, slug, color), business_reviews(rating)",
+        "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, featured_image, hours, status, latitude, longitude, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id!inner(id, name, slug, color), business_reviews(rating)",
         // The true number of matching businesses comes back with the same query (no extra round trip).
         { count: "exact" },
       )
@@ -109,6 +117,8 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       query = query.ilike("city", exactIlike(canonicalCityName(data.city)));
     }
 
+    if (data.verified) query = query.eq("verified", true);
+
     if (data.hasDiscount) {
       const today = new Date().toISOString().slice(0, 10);
       query = query
@@ -119,9 +129,12 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     // The order is decided in the database so every page continues exactly where the last one stopped:
     //   relevance: plan priority, featured, verified, name;  newest: newest first;  discount: biggest discount first.
     // `id` is the last tie-breaker, so two businesses can never swap places between pages (no duplicates, none skipped).
-    // "rating" and a minimum rating need the reviews of every match, so that mode loads all matches (the database caps
-    // a response at 1000 rows) and sorts / pages them here.
-    const inMemory = data.sort === "rating" || (data.minRating ?? 0) > 0;
+    // "rating" and a minimum rating need the reviews of every match, "nearest" needs the distance to every match and
+    // "open now" needs the opening hours of every match, so those modes load all matches (the database caps a response at
+    // 1000 rows) and filter / sort / page them here. The total is still the exact number of matches.
+    const here = data.lat !== undefined && data.lng !== undefined ? { lat: data.lat, lng: data.lng } : null;
+    const nearest = data.sort === "nearest" && here !== null; // "nearest" without a position falls back to the normal order
+    const inMemory = data.sort === "rating" || nearest || (data.minRating ?? 0) > 0 || data.openNow;
     let ordered = query;
     if (data.sort === "newest") ordered = ordered.order("created_at", { ascending: false });
     else if (data.sort === "discount") ordered = ordered.order("app_discount_percent", { ascending: false, nullsFirst: false });
@@ -135,33 +148,79 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     const { data: businesses, error, count } = await (inMemory ? ordered.range(0, 999) : ordered.range(offset, offset + data.limit - 1));
     if (error) throw new Error(error.message);
 
-    let results = (businesses ?? []).map(({ business_reviews, ...b }) => {
+    let results = (businesses ?? []).map(({ business_reviews, latitude, longitude, ...b }) => {
       const reviews = business_reviews ?? [];
       const sum = reviews.reduce((total, r) => total + r.rating, 0);
       return {
         ...b,
         avgRating: reviews.length ? Number((sum / reviews.length).toFixed(1)) : 0,
         reviewCount: reviews.length,
+        // Only the distance leaves the server, never the coordinates themselves.
+        distanceKm: here && latitude != null && longitude != null ? Number(haversineKm(here.lat, here.lng, latitude, longitude).toFixed(1)) : null,
       };
     });
 
     let total = count ?? results.length;
     if (inMemory) {
       if ((data.minRating ?? 0) > 0) results = results.filter((b) => b.avgRating >= data.minRating!);
-      // Array.sort is stable: equal ratings keep the plan-priority order above.
+      if (data.openNow) {
+        const clock = wallClockDate("Asia/Kolkata");
+        results = results.filter((b) => isOpenNow(b.hours, clock) === true);
+      }
+      // Array.sort is stable: equal ratings / distances keep the plan-priority order above.
       if (data.sort === "rating") results = [...results].sort((a, b) => b.avgRating - a.avgRating);
+      // Nearest first; a business without a location goes last.
+      if (nearest) results = [...results].sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
       total = results.length;
       results = results.slice(offset, offset + data.limit);
     }
 
+    // Extras for the businesses on THIS page only: more photos (the card can swipe through them) and a few service names.
+    const extras = await loadListExtras(supabase, results.map((b) => b.id));
+    const items = results.map((b) => ({ ...b, photos: extras.photos.get(b.id) ?? [], serviceTags: extras.services.get(b.id) ?? [] }));
+
     return {
-      items: results,
+      items,
       /** How many businesses match in total (not just on this page). */
       total,
       page: data.page,
       hasMore: offset + results.length < total,
     };
   });
+
+const LIST_PHOTOS_PER_BUSINESS = 6;
+const LIST_SERVICES_PER_BUSINESS = 3;
+
+/**
+ * Extra photos and service names for the cards of one results page (one query each, for the ids on the page only).
+ * A business that switched "Show Services on my profile" OFF shows no service names; if that column does not exist yet
+ * (section-toggles SQL not applied) every business is treated as ON, exactly like the profile page. A failing query
+ * only means the card has no extras, never an error for the whole search.
+ */
+async function loadListExtras(supabase: ReturnType<typeof createServerSupabaseClient>, ids: string[]) {
+  const photos = new Map<string, string[]>();
+  const services = new Map<string, string[]>();
+  if (ids.length === 0) return { photos, services };
+  const [photoRes, serviceRes, toggleRes] = await Promise.all([
+    supabase.from("business_photos").select("business_id, url, display_order").in("business_id", ids).order("display_order", { ascending: true }).limit(ids.length * 10),
+    supabase.from("business_services").select("business_id, name, display_order").eq("active", true).in("business_id", ids).order("display_order", { ascending: true }).limit(ids.length * 10),
+    supabase.from("businesses").select("id, show_services").in("id", ids),
+  ]);
+  for (const r of photoRes.data ?? []) {
+    const list = photos.get(r.business_id) ?? [];
+    if (list.length < LIST_PHOTOS_PER_BUSINESS && r.url) list.push(r.url);
+    photos.set(r.business_id, list);
+  }
+  const hidden = new Set<string>();
+  if (!toggleRes.error) for (const r of toggleRes.data ?? []) if ((r as { show_services?: boolean }).show_services === false) hidden.add(r.id);
+  for (const r of serviceRes.data ?? []) {
+    if (hidden.has(r.business_id) || !r.name?.trim()) continue;
+    const list = services.get(r.business_id) ?? [];
+    if (list.length < LIST_SERVICES_PER_BUSINESS) list.push(r.name.trim());
+    services.set(r.business_id, list);
+  }
+  return { photos, services };
+}
 
 let profilesUnreadable = false;
 

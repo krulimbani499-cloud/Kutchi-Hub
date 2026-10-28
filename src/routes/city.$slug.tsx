@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useChildMatches } from "@tanstack/react-router";
 import { ListingPageSkeleton } from "@/components/layout/PageSkeleton";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getCityPageData } from "@/lib/businesses.functions";
-import { BusinessCard } from "@/components/business/BusinessCard";
+import { ResultsHeader } from "@/components/search/ResultsHeader";
+import { StaticResults } from "@/components/search/StaticResults";
 import { BASE_URL, breadcrumbLd, itemListLd, faqLd, ldScript } from "@/lib/seo";
 
 const cityPageOptions = (slug: string) =>
@@ -77,52 +78,49 @@ export const Route = createFileRoute("/city/$slug")({
   ),
 });
 
+/** /city/<city> is also the parent of /city/<city>/category/<category>: when that child page is open, it is shown instead. */
 function CityPage() {
+  const child = useChildMatches();
+  return child.length > 0 ? <Outlet /> : <CityIndex />;
+}
+
+function CityIndex() {
   const { slug } = Route.useParams();
   const { data } = useSuspenseQuery(cityPageOptions(slug));
   const { cityName, businesses, categories } = data;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">Home</Link>
-        <span>›</span>
-        <span className="text-foreground">{cityName}</span>
-      </div>
-
-      <div className="mb-8 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-primary/5 p-6">
-        <h1 className="text-3xl font-extrabold text-foreground">Businesses in {cityName}</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Explore {businesses.length}+ businesses across {categories.length} categories in {cityName}.
-        </p>
-        {categories.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {categories.slice(0, 12).map((c) => (
-              <Link
-                key={c.slug}
-                to="/city/$slug/category/$category"
-                params={{ slug, category: c.slug }}
-                className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
-              >
-                {c.name} <span className="text-muted-foreground">({c.count})</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {businesses.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
-          No listings in {cityName} yet.{" "}
-          <Link to="/business/new" className="text-primary underline">Be the first to list</Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {businesses.map((b) => (
-            <BusinessCard key={b.id} business={b} />
+    <div className="mx-auto max-w-7xl px-4 py-5 sm:py-6">
+      <ResultsHeader city={cityName} total={businesses.length} />
+      <p className="-mt-2 mb-4 max-w-3xl text-sm text-muted-foreground">
+        Explore {businesses.length}+ businesses across {categories.length} categories in {cityName}.
+      </p>
+      {categories.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {categories.slice(0, 12).map((c) => (
+            <Link
+              key={c.slug}
+              to="/city/$slug/category/$category"
+              params={{ slug, category: c.slug }}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
+            >
+              {c.name} <span className="text-muted-foreground">({c.count})</span>
+            </Link>
           ))}
         </div>
       )}
+
+      <StaticResults
+        businesses={businesses}
+        city={cityName}
+        filterSearch={{ city: cityName }}
+        empty={
+          <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
+            No listings in {cityName} yet.{" "}
+            <Link to="/business/new" className="text-primary underline">Be the first to list</Link>
+          </div>
+        }
+      />
     </div>
   );
 }

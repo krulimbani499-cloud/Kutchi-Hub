@@ -1,38 +1,62 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useInfiniteQuery, queryOptions, keepPreviousData } from "@tanstack/react-query";
-import { useSearch } from "@tanstack/react-router";
 import { getCategories, searchBusinesses } from "@/lib/businesses.functions";
-import { isOpenNow } from "@/lib/business-hours";
-import { CategoryGrid } from "@/components/business/CategoryGrid";
-import { BusinessCard } from "@/components/business/BusinessCard";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, SlidersHorizontal, BadgeCheck, Clock, Star, X, Tag, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useT } from "@/lib/i18n";
+import { Loader2, LocateFixed } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useCity } from "@/hooks/useCity";
-import { CategoryBanner } from "@/components/category/CategoryBanner";
+import { CategoryBanner, useCategoryBanners } from "@/components/category/CategoryBanner";
 import { sortCategoriesAZ } from "@/lib/category-sort";
 import { CityCoverageCard } from "@/components/home/CityCoverageCard";
-import { Skeleton } from "@/components/ui/skeleton";
-import { BusinessCardSkeletonGrid, ListingPageSkeleton } from "@/components/layout/PageSkeleton";
+import { ListingPageSkeleton } from "@/components/layout/PageSkeleton";
+import { FilterBar, type FilterDraft } from "@/components/search/FilterBar";
+import { LeadForm } from "@/components/search/LeadForm";
+import { ResultCard, ResultCardSkeleton } from "@/components/search/ResultCard";
+import { ResultsHeader } from "@/components/search/ResultsHeader";
+import { getCurrentLocation } from "@/lib/geolocation";
+import { CITY_ALL, effectiveCity, validateSearchParams, type SearchParams, type SortValue } from "@/lib/search-filters";
 
 // Businesses are loaded one page at a time; the server also returns the true total of matches.
 const PAGE_SIZE = 20;
+/** On a phone the "Get the list" form sits in the list after this many results (the end of an endless list is never reached). */
+const PHONE_FORM_AFTER = 5;
+const GEO_KEY = "kh:search-geo";
+const GEO_TTL_MS = 30 * 60_000;
 
-const searchInfiniteOptions = (q: string, category: string, city: string, sort: string, hasDiscount: boolean) => ({
-  // Every filter is in the key: changing any of them starts again from the first page.
-  queryKey: ["search", q, category, city, sort, hasDiscount] as const,
+type Position = { lat: number; lng: number };
+
+/** Every filter is in the key: changing any of them starts again from the first page. */
+const searchInfiniteOptions = (p: {
+  q: string;
+  category: string;
+  city: string;
+  sort: string;
+  rating: number | undefined;
+  open: boolean;
+  verified: boolean;
+  offer: boolean;
+  here: Position | null;
+}) => ({
+  queryKey: ["search", p] as const,
   initialPageParam: 1,
   queryFn: ({ pageParam }: { pageParam: number }) =>
-    searchBusinesses({ data: { q, category, city, sort, hasDiscount, page: pageParam, limit: PAGE_SIZE } }),
+    searchBusinesses({
+      data: {
+        q: p.q,
+        category: p.category,
+        city: p.city,
+        sort: p.sort as SortValue,
+        minRating: p.rating,
+        hasDiscount: p.offer,
+        verified: p.verified,
+        openNow: p.open,
+        lat: p.here?.lat,
+        lng: p.here?.lng,
+        page: pageParam,
+        limit: PAGE_SIZE,
+      },
+    }),
   getNextPageParam: (last: Awaited<ReturnType<typeof searchBusinesses>>) => (last.hasMore ? last.page + 1 : undefined),
 });
 
@@ -44,6 +68,13 @@ const categoriesQueryOptions = queryOptions({
 });
 
 export const Route = createFileRoute("/search")({
+  // The address carries the filters (?category=dentists&city=Bhuj&sort=rating&open=true ...), so a link opens the same list.
+  // Every known key is returned, as undefined when it is off or invalid: the router puts the unchecked address values under the
+  // checked ones, so a key that is simply left out would come through unchecked ("?rating=banana").
+  validateSearch: (raw: Record<string, unknown>): SearchParams => {
+    const v = validateSearchParams(raw);
+    return { q: v.q, category: v.category, city: v.city, sort: v.sort, rating: v.rating, open: v.open, verified: v.verified, offer: v.offer };
+  },
   head: () => ({
     meta: [
       { title: "Search Businesses — Kutchi Hub" },
@@ -63,89 +94,154 @@ export const Route = createFileRoute("/search")({
   component: SearchPage,
 });
 
+const roundPos = (p: Position): Position => ({ lat: Math.round(p.lat * 1000) / 1000, lng: Math.round(p.lng * 1000) / 1000 });
+
+function readStoredPosition(): Position | null {
+  try {
+    const raw = JSON.parse(window.sessionStorage.getItem(GEO_KEY) ?? "null") as { lat?: number; lng?: number; t?: number } | null;
+    if (raw && typeof raw.lat === "number" && typeof raw.lng === "number" && typeof raw.t === "number" && Date.now() - raw.t < GEO_TTL_MS) {
+      return { lat: raw.lat, lng: raw.lng };
+    }
+  } catch {
+    /* storage unavailable: just ask again */
+  }
+  return null;
+}
+
 function SearchPage() {
-  const { q, category, city, sort } = useSearch({ from: "/search" }) as {
-    q?: string;
-    category?: string;
-    city?: string;
-    sort?: string;
-  };
+  const params = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { data: categoriesData, isPending: categoriesPending } = useQuery(categoriesQueryOptions);
   const categories = useMemo(() => sortCategoriesAZ(categoriesData ?? []), [categoriesData]);
-  const { city: selectedCity, coords: selectedCoords, allLocations, loaded: cityLoaded, setCity } = useCity();
-  const t = useT();
-  const initialCity = city ?? selectedCity ?? "";
-  const [filters, setFilters] = useState({
-    q: q ?? "",
-    category: category ?? "",
-    city: initialCity,
-    sort: sort ?? "relevance",
-  });
-  const [applied, setApplied] = useState({ q: q ?? "", category: category ?? "", city: initialCity, sort: sort ?? "relevance" });
+  const { city: headerCity, coords: headerCoords, allLocations, loaded: cityLoaded, setCity } = useCity();
 
-  // The header choice: a city, "All locations" (no city filter) or nothing yet.
-  const headerChoice = selectedCity ?? (allLocations ? "__all__" : "");
+  // The city this list is for: the address wins (city=all means every city), otherwise the city chosen in the header.
+  const city = effectiveCity(params.city, headerCity);
+
+  /** Changes some filters in the address (the list follows). `undefined` removes a filter. */
+  const update = useCallback(
+    (patch: Partial<Record<keyof SearchParams, unknown>>) => {
+      void navigate({
+        search: (prev) => validateSearchParams({ ...prev, ...patch }),
+        replace: true,
+        resetScroll: false,
+      });
+    },
+    [navigate],
+  );
+
+  // The person changed the city in the header (a city, or All locations): the list follows it, so an explicit city in the address
+  // is dropped. The very first read of the stored choice is not a change.
+  const headerChoice = headerCity ?? (allLocations ? "__all__" : "");
   const lastHeaderChoice = useRef<string | null>(null);
   useEffect(() => {
-    if (!cityLoaded) return; // the stored choice has not been read yet
+    if (!cityLoaded) return;
     if (lastHeaderChoice.current === null) {
-      // First read: a city in the URL wins; otherwise start from the header city if the filter is still empty.
       lastHeaderChoice.current = headerChoice;
-      if (city || !selectedCity) return;
-      setFilters((f) => (f.city ? f : { ...f, city: selectedCity }));
-      setApplied((a) => (a.city ? a : { ...a, city: selectedCity }));
       return;
     }
     if (lastHeaderChoice.current === headerChoice) return;
-    // The person changed the header choice (a city, or All locations): the search follows it. All locations = no
-    // city filter at all (an empty city is omitted by the query, it never matches "nothing").
     lastHeaderChoice.current = headerChoice;
-    const next = selectedCity ?? "";
-    setFilters((f) => ({ ...f, city: next }));
-    setApplied((a) => ({ ...a, city: next }));
-    const params = new URLSearchParams(window.location.search);
-    if (next) params.set("city", next);
-    else params.delete("city");
-    const qs = params.toString();
-    window.history.replaceState({}, "", `/search${qs ? `?${qs}` : ""}`);
-  }, [cityLoaded, headerChoice, selectedCity, city]);
+    update({ city: undefined });
+  }, [cityLoaded, headerChoice, update]);
 
-  // Sync URL search params → filter state so clicking a category link
-  // (or any other in-page navigation that only changes search params)
-  // actually updates the applied query.
+  // ---- Where the visitor is: needed for "Nearest" and for the distance on each result. Asked only when "Nearest" is picked.
+  const [geo, setGeo] = useState<Position | null>(null);
+  const [locating, setLocating] = useState(false);
   useEffect(() => {
-    setFilters((f) => ({
-      ...f,
-      q: q ?? "",
-      category: category ?? "",
-      city: city ?? f.city,
-      sort: sort ?? "relevance",
-    }));
-    setApplied((a) => ({
-      ...a,
-      q: q ?? "",
-      category: category ?? "",
-      city: city ?? a.city,
-      sort: sort ?? "relevance",
-    }));
-  }, [q, category, city, sort]);
+    const stored = readStoredPosition();
+    if (stored) setGeo(stored);
+  }, []);
+  const askPosition = useCallback(async (): Promise<Position | null> => {
+    setLocating(true);
+    try {
+      const fix = await getCurrentLocation();
+      const pos = roundPos({ lat: fix.latitude, lng: fix.longitude });
+      setGeo(pos);
+      try {
+        window.sessionStorage.setItem(GEO_KEY, JSON.stringify({ ...pos, t: Date.now() }));
+      } catch {
+        /* private mode: the position just is not remembered */
+      }
+      return pos;
+    } catch {
+      return null;
+    } finally {
+      setLocating(false);
+    }
+  }, []);
 
-  const [chipDiscount, setChipDiscount] = useState(false);
-  // keepPreviousData: changing a filter keeps showing the old results (dimmed) until the new ones arrive.
+  // The position the distances are measured from: the visitor's own, else (only for "Nearest") the centre of the chosen city.
+  const sort = params.sort ?? "relevance";
+  const cityCentre = headerCoords && headerCity && headerCity === city ? roundPos(headerCoords) : null;
+  const here: Position | null = geo ?? (sort === "nearest" ? cityCentre : null);
+  const distanceFrom: "you" | "city" = geo ? "you" : "city";
+
+  /** Picks a sort order. "Nearest" first needs a position: the device's, else the chosen city's centre. */
+  const chooseSort = useCallback(
+    async (value: SortValue) => {
+      if (value !== "nearest" || geo || cityCentre) {
+        update({ sort: value === "relevance" ? undefined : value });
+        return;
+      }
+      const pos = await askPosition();
+      if (pos) update({ sort: "nearest" });
+      else toast.error("We could not find your location. Allow location access to sort by nearest.");
+    },
+    [geo, cityCentre, update, askPosition],
+  );
+
+  const toggle = (key: "rating" | "open" | "verified" | "offer") =>
+    update(key === "rating" ? { rating: params.rating ? undefined : 4 } : { [key]: params[key] ? undefined : true });
+
+  // "Clear" on the chip row switches the four chips off; "Clear all" (panel, empty list) also drops the text search and the category.
+  const clearChips = () => update({ rating: undefined, open: undefined, verified: undefined, offer: undefined });
+  const clearAll = () => update({ q: undefined, category: undefined, rating: undefined, open: undefined, verified: undefined, offer: undefined });
+
+  const applyDraft = (d: FilterDraft) => {
+    const base = headerCity ?? "";
+    const typed = d.city.trim();
+    update({
+      q: d.q.trim() || undefined,
+      category: d.category === "all" ? undefined : d.category,
+      city: typed.toLowerCase() === base.toLowerCase() ? undefined : typed || CITY_ALL,
+      rating: d.rating ? 4 : undefined,
+      open: d.open || undefined,
+      verified: d.verified || undefined,
+      offer: d.offer || undefined,
+    });
+    if (d.sort !== sort) void chooseSort(d.sort);
+  };
+
+  const searchEnabled = cityLoaded || params.city !== undefined;
   const {
     data: searchData,
     isPending: resultsPending,
+    isError,
     isPlaceholderData: resultsStale,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    ...searchInfiniteOptions(applied.q, applied.category, applied.city, applied.sort, chipDiscount),
+    ...searchInfiniteOptions({
+      q: params.q ?? "",
+      category: params.category ?? "",
+      city,
+      sort,
+      rating: params.rating,
+      open: !!params.open,
+      verified: !!params.verified,
+      offer: !!params.offer,
+      here,
+    }),
+    enabled: searchEnabled,
+    // keepPreviousData: changing a filter keeps showing the old results (dimmed) until the new ones arrive.
     placeholderData: keepPreviousData,
-    // A search that is no longer on screen is not kept: coming back to it (e.g. clearing the city again) starts from
-    // page 1 instead of restoring every page that was loaded last time.
+    // A search that is no longer on screen is not kept: coming back to it starts from page 1 instead of restoring every page.
     gcTime: 0,
   });
+
   // All loaded pages as one list (a business can never appear twice) and the true number of matches.
   const results = useMemo(() => {
     const seen = new Set<string>();
@@ -161,27 +257,11 @@ function SearchPage() {
     return list;
   }, [searchData]);
   const total = searchData?.pages[searchData.pages.length - 1]?.total ?? 0;
-
-  const [chipVerified, setChipVerified] = useState(false);
-  const [chipOpenNow, setChipOpenNow] = useState(false);
-  const [chipTopRated, setChipTopRated] = useState(false);
-
-  const filteredResults = useMemo(() => {
-    let list = results;
-    if (chipVerified) list = list.filter((b) => b.verified);
-    if (chipTopRated) list = list.filter((b) => (b.avgRating ?? 0) >= 4);
-    if (chipOpenNow) {
-      list = list.filter((b) => isOpenNow(b.hours) === true);
-    }
-    return list;
-  }, [results, chipVerified, chipOpenNow, chipTopRated]);
-  // Verified / Top rated / Open now are checked in the browser (opening hours need the local time), so while one of
-  // them is on, the remaining pages are loaded automatically so the filter covers every business, not just page 1.
-  const clientChip = chipVerified || chipOpenNow || chipTopRated;
-  const anyChip = clientChip || chipDiscount;
-  useEffect(() => {
-    if (clientChip && hasNextPage && !isFetchingNextPage && !resultsStale) void fetchNextPage();
-  }, [clientChip, hasNextPage, isFetchingNextPage, resultsStale, fetchNextPage]);
+  const activeCategory = useMemo(() => categories.find((c) => c.slug === params.category) ?? null, [categories, params.category]);
+  // The category banner sits above the list: the list stays behind its skeleton until the banner is known, so it never jumps down.
+  const { settled: bannerSettled } = useCategoryBanners(activeCategory?.id, city);
+  const bannerKnown = !params.category || (!categoriesPending && bannerSettled);
+  const loading = resultsPending || !searchEnabled || !bannerKnown;
 
   // Auto-load the next page when the end of the list comes near the screen. The "Load more" button is the fallback.
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -196,201 +276,104 @@ function SearchPage() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, resultsStale, fetchNextPage, results.length, clientChip]);
+  }, [hasNextPage, isFetchingNextPage, resultsStale, fetchNextPage, results.length]);
 
-  const activeCategory = useMemo(
-    () => categories.find((c) => c.slug === applied.category) ?? null,
-    [categories, applied.category],
+  const anyFilter = !!(params.q || params.category || params.rating || params.open || params.verified || params.offer);
+  const countText = loading || resultsStale ? "Loading..." : `${total} ${total === 1 ? "result" : "results"}`;
+
+  const leadForm = (className = "") => (
+    <LeadForm categoryId={activeCategory?.id ?? null} categoryName={activeCategory?.name ?? null} city={city} className={className} />
   );
 
-  const applyFilters = () => {
-    const normalized = {
-      q: filters.q,
-      category: filters.category === "all" ? "" : filters.category,
-      city: filters.city,
-      sort: filters.sort,
-    };
-    setApplied(normalized);
-    const params = new URLSearchParams();
-    if (normalized.q) params.set("q", normalized.q);
-    if (normalized.category) params.set("category", normalized.category);
-    if (normalized.city) params.set("city", normalized.city);
-    if (normalized.sort) params.set("sort", normalized.sort);
-    window.history.replaceState({}, "", `/search?${params.toString()}`);
-  };
+  const empty = (
+    <div className="rounded-2xl border border-border bg-card p-8 text-center">
+      <p className="text-muted-foreground">{anyFilter ? "No businesses match these filters. Try clearing some." : "No businesses found matching your search."}</p>
+      {anyFilter && (
+        <Button variant="outline" className="mt-4" onClick={clearAll}>
+          Clear filters
+        </Button>
+      )}
+    </div>
+  );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <h1 className="mb-4 text-2xl font-bold text-foreground">Find businesses</h1>
+    <div className="mx-auto max-w-7xl px-4 py-5 sm:py-6">
+      <ResultsHeader
+        q={params.q}
+        city={city}
+        category={activeCategory}
+        total={loading || resultsStale ? null : total}
+        right={<p className="shrink-0 pb-1 text-sm text-muted-foreground">{countText}</p>}
+      />
 
-      <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search name, service, or city"
-              className="pl-9"
-              value={filters.q}
-              onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-              onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-            />
-          </div>
-          <div className="relative">
-            <Input
-              placeholder={allLocations && !filters.city ? t("loc.all") : "City"}
-              value={filters.city}
-              onChange={(e) => setFilters((f) => ({ ...f, city: e.target.value }))}
-              onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-            />
-          </div>
-          <Button onClick={applyFilters} className="bg-primary text-primary-foreground">
-            <SlidersHorizontal className="mr-2 h-4 w-4" />
-            Search
-          </Button>
-        </div>
+      <FilterBar
+        params={params}
+        city={city}
+        categories={categories}
+        categoriesPending={categoriesPending}
+        locating={locating}
+        onSort={(v) => void chooseSort(v)}
+        onToggle={toggle}
+        onClearQuery={() => update({ q: undefined })}
+        onApply={applyDraft}
+        onClearChips={clearChips}
+        onClearAll={clearAll}
+      />
 
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          {categoriesPending ? (
-            <Skeleton className="h-10 w-full sm:w-48" />
-          ) : (
-            <Select value={filters.category} onValueChange={(value) => setFilters((f) => ({ ...f, category: value }))}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="All categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.slug}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0">
+          {/* Shown in the same moment as the list (never above a skeleton, which it would push down). */}
+          {activeCategory && !loading && <CategoryBanner categoryId={activeCategory.id} city={city} />}
+
+          {sort === "nearest" && !here && !locating && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card p-3 text-sm">
+              <span className="text-muted-foreground">Allow location access to sort by distance.</span>
+              <Button size="sm" variant="outline" onClick={() => void askPosition()}>
+                <LocateFixed className="mr-1.5 h-4 w-4" /> Use my location
+              </Button>
+            </div>
           )}
 
-          <Select value={filters.sort} onValueChange={(value) => setFilters((f) => ({ ...f, sort: value }))}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="relevance">Relevance</SelectItem>
-              <SelectItem value="rating">Top rated</SelectItem>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="discount">Top discount</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground">Quick filters:</span>
-        <FilterChip
-          active={chipVerified}
-          onClick={() => setChipVerified((v) => !v)}
-          icon={<BadgeCheck className="h-3.5 w-3.5" />}
-          label="Verified"
-        />
-        <FilterChip
-          active={chipDiscount}
-          onClick={() => setChipDiscount((v) => !v)}
-          icon={<Tag className="h-3.5 w-3.5" />}
-          label="Has discount"
-        />
-        <FilterChip
-          active={chipOpenNow}
-          onClick={() => setChipOpenNow((v) => !v)}
-          icon={<Clock className="h-3.5 w-3.5" />}
-          label="Open now"
-        />
-        <FilterChip
-          active={chipTopRated}
-          onClick={() => setChipTopRated((v) => !v)}
-          icon={<Star className="h-3.5 w-3.5" />}
-          label="4★ & above"
-        />
-        {anyChip && (
-          <button
-            type="button"
-            onClick={() => {
-              setChipVerified(false);
-              setChipOpenNow(false);
-              setChipTopRated(false);
-              setChipDiscount(false);
-            }}
-            className="inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3 w-3" />
-            Clear
-          </button>
-        )}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-4">
-        <aside className="hidden lg:block">
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <h3 className="mb-3 font-semibold text-foreground">Categories</h3>
-            {categoriesPending ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {Array.from({ length: 6 }, (_, i) => (
-                  <Skeleton key={i} className="h-24 rounded-2xl" />
-                ))}
-              </div>
-            ) : (
-              <CategoryGrid categories={categories} size="sm" />
-            )}
-          </div>
-        </aside>
-
-        <div className="lg:col-span-3">
-          {activeCategory && <CategoryBanner categoryId={activeCategory.id} city={applied.city} />}
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {resultsPending || resultsStale
-                ? "Loading..."
-                : clientChip
-                  ? `${filteredResults.length} ${filteredResults.length === 1 ? "result" : "results"} of ${total}`
-                  : `${total} ${total === 1 ? "result" : "results"}`}
-            </p>
-          </div>
-          {resultsPending ? (
-            <BusinessCardSkeletonGrid count={4} />
-          ) : filteredResults.length > 0 ? (
-            <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 transition-opacity ${resultsStale ? "opacity-60" : ""}`}>
-              {filteredResults.map((business, i) => (
-                <BusinessCard key={business.id} business={business} delayMs={(i % PAGE_SIZE) * 100} />
+          {loading ? (
+            <div key="skeleton" className="flex flex-col gap-4">
+              {Array.from({ length: 4 }, (_, i) => (
+                <ResultCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : isError && results.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-8 text-center">
+              <p className="text-muted-foreground">We could not load the results.</p>
+              <Button variant="outline" className="mt-4" onClick={() => void refetch()}>
+                Try again
+              </Button>
+            </div>
+          ) : results.length > 0 ? (
+            <div key="list" data-results-list className={`flex flex-col gap-4 transition-opacity ${resultsStale ? "opacity-60" : ""}`}>
+              {results.map((business, i) => (
+                <Fragment key={business.id}>
+                  <ResultCard business={business} distanceFrom={distanceFrom} priority={i < 2} />
+                  {i === Math.min(PHONE_FORM_AFTER, results.length) - 1 && <div className="lg:hidden">{leadForm()}</div>}
+                </Fragment>
               ))}
             </div>
           ) : (
-            (() => {
-              const empty = (
-                <div className="rounded-2xl border border-border bg-card p-8 text-center">
-                  <p className="text-muted-foreground">
-                    {anyChip ? "No businesses match these filters. Try clearing some." : "No businesses found matching your search."}
-                  </p>
-                </div>
-              );
-              // No result for a place that has no business at all: suggest the nearest cities that have some.
-              return applied.city ? (
+            <>
+              {/* No result for a place that has no business at all: suggest the nearest cities that have some. */}
+              {city ? (
                 <CityCoverageCard
-                  city={applied.city}
-                  coords={applied.city === selectedCity ? selectedCoords : null}
+                  city={city}
+                  coords={city === headerCity ? headerCoords : null}
                   fallback={empty}
                   onPick={(next) => {
                     setCity(next);
-                    setFilters((f) => ({ ...f, city: next }));
-                    setApplied((a) => ({ ...a, city: next }));
-                    const params = new URLSearchParams();
-                    if (applied.q) params.set("q", applied.q);
-                    if (applied.category) params.set("category", applied.category);
-                    params.set("city", next);
-                    if (applied.sort) params.set("sort", applied.sort);
-                    window.history.replaceState({}, "", `/search?${params.toString()}`);
+                    update({ city: next });
                   }}
                 />
               ) : (
                 empty
-              );
-            })()
+              )}
+              <div className="mt-4 lg:hidden">{leadForm()}</div>
+            </>
           )}
 
           {/* End of the list: the next page loads by itself when this comes near the screen; the button is the fallback. */}
@@ -409,34 +392,11 @@ function SearchPage() {
             </div>
           )}
         </div>
+
+        <aside className="hidden lg:block" aria-label="Get the list">
+          <div className="sticky top-24">{leadForm()}</div>
+        </aside>
       </div>
     </div>
-  );
-}
-
-function FilterChip({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-        active
-          ? "border-[#ff6a00] bg-[#ff6a00] text-white"
-          : "border-border bg-background text-foreground hover:border-[#ff6a00]/40 hover:text-[#ff6a00]"
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
