@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { SlidersHorizontal } from "lucide-react";
 import { LeadForm } from "./LeadForm";
+import { SHOW_SEARCH_LEAD_FORM } from "@/lib/features";
 import { ResultCard, type ResultBusiness } from "./ResultCard";
 import type { SearchParams } from "@/lib/search-filters";
 
@@ -34,13 +35,13 @@ export function StaticResults({
   const form = (className = "") => <LeadForm categoryId={category?.id ?? null} categoryName={category?.name ?? null} city={city} className={className} />;
   const formAt = Math.min(PHONE_FORM_AFTER, businesses.length) - 1;
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className={SHOW_SEARCH_LEAD_FORM ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]" : "grid gap-6"}>
       <div className="min-w-0">
         {banner}
         {businesses.length === 0 ? (
           <>
             {empty}
-            <div className="mt-4 lg:hidden">{form()}</div>
+            {SHOW_SEARCH_LEAD_FORM && <div className="mt-4 lg:hidden">{form()}</div>}
           </>
         ) : (
           <>
@@ -61,16 +62,18 @@ export function StaticResults({
               {businesses.map((b, i) => (
                 <Fragment key={b.id}>
                   <ResultCard business={b} priority={i < 2} />
-                  {i === formAt && <div className="lg:hidden">{form()}</div>}
+                  {SHOW_SEARCH_LEAD_FORM && i === formAt && <div className="lg:hidden">{form()}</div>}
                 </Fragment>
               ))}
             </div>
           </>
         )}
       </div>
-      <aside className="hidden lg:block" aria-label="Get the list">
-        <div className="sticky top-24">{form()}</div>
-      </aside>
+      {SHOW_SEARCH_LEAD_FORM && (
+        <aside className="hidden lg:block" aria-label="Get the list">
+          <div className="sticky top-24">{form()}</div>
+        </aside>
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { CityCoverageCard } from "@/components/home/CityCoverageCard";
 import { ListingPageSkeleton } from "@/components/layout/PageSkeleton";
 import { FilterBar, type FilterDraft } from "@/components/search/FilterBar";
 import { LeadForm } from "@/components/search/LeadForm";
+import { SHOW_SEARCH_LEAD_FORM } from "@/lib/features";
 import { ResultCard, ResultCardSkeleton } from "@/components/search/ResultCard";
 import { ResultsHeader } from "@/components/search/ResultsHeader";
 import { getCurrentLocation } from "@/lib/geolocation";
@@ -281,9 +282,10 @@ function SearchPage() {
   const anyFilter = !!(params.q || params.category || params.rating || params.open || params.verified || params.offer);
   const countText = loading || resultsStale ? "Loading..." : `${total} ${total === 1 ? "result" : "results"}`;
 
-  const leadForm = (className = "") => (
+  const leadForm = (className = "") =>
+    SHOW_SEARCH_LEAD_FORM && (
     <LeadForm categoryId={activeCategory?.id ?? null} categoryName={activeCategory?.name ?? null} city={city} className={className} />
-  );
+    );
 
   const empty = (
     <div className="rounded-2xl border border-border bg-card p-8 text-center">
@@ -320,7 +322,7 @@ function SearchPage() {
         onClearAll={clearAll}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className={SHOW_SEARCH_LEAD_FORM ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]" : "grid gap-6"}>
         <div className="min-w-0">
           {/* Shown in the same moment as the list (never above a skeleton, which it would push down). */}
           {activeCategory && !loading && <CategoryBanner categoryId={activeCategory.id} city={city} />}
@@ -352,7 +354,7 @@ function SearchPage() {
               {results.map((business, i) => (
                 <Fragment key={business.id}>
                   <ResultCard business={business} distanceFrom={distanceFrom} priority={i < 2} />
-                  {i === Math.min(PHONE_FORM_AFTER, results.length) - 1 && <div className="lg:hidden">{leadForm()}</div>}
+                  {SHOW_SEARCH_LEAD_FORM && i === Math.min(PHONE_FORM_AFTER, results.length) - 1 && <div className="lg:hidden">{leadForm()}</div>}
                 </Fragment>
               ))}
             </div>
@@ -372,7 +374,7 @@ function SearchPage() {
               ) : (
                 empty
               )}
-              <div className="mt-4 lg:hidden">{leadForm()}</div>
+              {SHOW_SEARCH_LEAD_FORM && <div className="mt-4 lg:hidden">{leadForm()}</div>}
             </>
           )}
 
@@ -393,9 +395,11 @@ function SearchPage() {
           )}
         </div>
 
-        <aside className="hidden lg:block" aria-label="Get the list">
-          <div className="sticky top-24">{leadForm()}</div>
-        </aside>
+        {SHOW_SEARCH_LEAD_FORM && (
+          <aside className="hidden lg:block" aria-label="Get the list">
+            <div className="sticky top-24">{leadForm()}</div>
+          </aside>
+        )}
       </div>
     </div>
   );
