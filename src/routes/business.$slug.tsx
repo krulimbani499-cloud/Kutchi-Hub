@@ -3,6 +3,7 @@ import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { getBusinessBySlug } from "@/lib/businesses.functions";
 import { BusinessDetail } from "@/components/business/BusinessDetail";
+import { plainPreview } from "@/lib/rich-text";
 import { BASE_URL, breadcrumbLd, ldScript } from "@/lib/seo";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -52,7 +53,7 @@ export const Route = createFileRoute("/business/$slug")({
     const reviewCount = ld?.reviewCount ?? 0;
     const title = city ? `${name} — ${cat || "Business"} in ${city} | Kutchi Hub` : `${name} — Kutchi Hub`;
     const desc = b?.description
-      ? String(b.description).slice(0, 155)
+      ? plainPreview(String(b.description)).slice(0, 155) || `${name} on Kutchi Hub`
       : `${name}${cat ? ` · ${cat}` : ""}${city ? ` in ${city}` : ""}. View reviews, hours, phone and directions on Kutchi Hub.`;
     const image = b?.featured_image_url || b?.featured_image || null;
     const url = `${BASE_URL}/business/${params.slug}`;

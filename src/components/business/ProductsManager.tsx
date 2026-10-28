@@ -13,6 +13,7 @@ import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RichText } from "@/components/RichText";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus, IndianRupee, Upload, X, Package, Pencil, ExternalLink } from "lucide-react";
 import { normalizeHttpsLink, isValidHttpsLink, safeHttpsHref, isGoogleDriveLink, DRIVE_HINT, LINK_ERROR } from "@/lib/url";
@@ -240,6 +241,7 @@ export function ProductsManager({ businessId, visibleOnProfile }: Props) {
           maxLength={1000}
           rows={2}
         />
+        <p className="text-xs text-muted-foreground">Tip: start lines with - for bullet points</p>
         <div className="grid grid-cols-2 gap-2">
           <Input
             type="number"
@@ -397,7 +399,7 @@ function ProductRow({ product: p, onEdit, onDelete }: { product: Product; onEdit
               <span className="text-xs text-muted-foreground">{p.stock} in stock</span>
             ) : null}
           </div>
-          {p.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{p.description}</p>}
+          {p.description && <RichText text={p.description} className="mt-1 text-sm text-muted-foreground" />}
           {safeHttpsHref(p.link_url) && (
             // Opens in a new tab; inside the Android / iOS app any address outside kutchihub.com opens in the phone's browser or the Drive app.
             <a

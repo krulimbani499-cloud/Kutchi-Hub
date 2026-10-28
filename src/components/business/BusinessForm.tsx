@@ -334,6 +334,7 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea id="description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={4} />
+        <p className="text-xs text-muted-foreground">Tip: start lines with - for bullet points</p>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">

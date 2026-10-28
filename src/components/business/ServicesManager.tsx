@@ -5,6 +5,7 @@ import { listBusinessServices, upsertBusinessService, deleteBusinessService } fr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RichText } from "@/components/RichText";
 import { Trash2, Plus, IndianRupee, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyEditError, readValidationError } from "@/lib/edit-lock";
@@ -148,7 +149,7 @@ export function ServicesManager({ businessId, visibleOnProfile }: Props) {
                     </span>
                   )}
                 </div>
-                {s.description && <p className="mt-1 text-sm text-muted-foreground">{s.description}</p>}
+                {s.description && <RichText text={s.description} className="mt-1 text-sm text-muted-foreground" />}
               </div>
               <div className="flex flex-shrink-0 gap-1">
                 <Button type="button" variant="ghost" size="icon" onClick={() => startEdit(s)} title="Edit">
@@ -186,6 +187,7 @@ export function ServicesManager({ businessId, visibleOnProfile }: Props) {
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleSubmit(); } }}
         />
         <Textarea placeholder="Short description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} rows={2} />
+        <p className="text-xs text-muted-foreground">Tip: start lines with - for bullet points</p>
         <div className="flex gap-2">
           <Input
             type="number" step="1" min="0" placeholder="Price (₹)" value={price} onChange={(e) => setPrice(e.target.value)} className="flex-1"
@@ -238,7 +240,7 @@ export function ServicesDisplay({ services }: { services: Awaited<ReturnType<typ
                 </span>
               )}
             </div>
-            {s.description && <p className="mt-1 text-sm text-muted-foreground">{s.description}</p>}
+            {s.description && <RichText text={s.description} className="mt-1 text-sm text-muted-foreground" />}
           </div>
         </div>
       ))}

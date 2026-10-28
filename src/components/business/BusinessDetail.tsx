@@ -18,6 +18,7 @@ import {
   Tag,
 } from "lucide-react";
 import { FileText, Link2 } from "lucide-react";
+import { RichText } from "@/components/RichText";
 import { safeHttpsHref } from "@/lib/url";
 import { supabase } from "@/integrations/supabase/client";
 import { BUSINESS_PHOTOS_BUCKET, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, getBusinessPhotoStorageKey } from "@/lib/business-photos";
@@ -442,13 +443,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
       </div>
 
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <div className="space-y-6 rounded-2xl border border-border bg-card p-5">
             {/* Empty sections are left out of the public page: no "No description / services / products / photos" placeholders. */}
             {business.description && (
               <section>
                 <h2 className="mb-2 text-lg font-semibold text-foreground">About</h2>
-                <p className="text-sm leading-relaxed text-muted-foreground">{business.description}</p>
+                <RichText text={business.description} className="text-sm leading-relaxed text-muted-foreground" />
               </section>
             )}
 

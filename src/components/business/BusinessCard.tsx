@@ -1,3 +1,4 @@
+import { plainPreview } from "@/lib/rich-text";
 import { Link } from "@tanstack/react-router";
 import { MapPin, Phone, Star, BadgeCheck, MessageCircle, Clock, Tag, Crown } from "lucide-react";
 import { StarRating } from "./StarRating";
@@ -127,7 +128,7 @@ export function BusinessCard({ business, delayMs }: BusinessCardProps) {
           {business.categories?.name ?? "Business"}
           {business.reviewCount ? ` · ${business.reviewCount} reviews` : null}
         </p>
-        <p className="mb-3 line-clamp-2 text-xs text-muted-foreground sm:text-sm">{business.description}</p>
+        <p className="mb-3 line-clamp-2 text-xs text-muted-foreground sm:text-sm">{plainPreview(business.description)}</p>
         <div className="mt-auto space-y-1.5 text-xs sm:text-sm">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 shrink-0" />
