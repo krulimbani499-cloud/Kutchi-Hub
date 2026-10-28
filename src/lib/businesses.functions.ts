@@ -938,7 +938,13 @@ const businessFormSchema = z.object({
   app_discount_percent: z.coerce.number().int().min(0).max(100).nullable().optional(),
   app_discount_label: z.string().max(80).optional().or(z.literal("")),
   app_discount_valid_until: z.string().max(20).optional().or(z.literal("")),
+  // "Show Services / Products on my profile". Sent by the edit form only when the owner changed them.
+  show_services: z.boolean().optional(),
+  show_products: z.boolean().optional(),
 });
+
+const SECTION_TOGGLES_NEED_MIGRATION =
+  "The Services / Products switches need a database update first (supabase/pending/section-toggles). Nothing was saved.";
 
 /**
  * Coordinates for the "Nearby Businesses" section, worked out on the server from the Google Maps link
@@ -1183,6 +1189,7 @@ export const updateBusiness = createServerFn({ method: "POST" })
       const { data: rows, error } = await supabase.from("businesses").update(patch(finalSlug)).eq("id", id).select("id");
       if (error) {
         if (slugChanged && isSlugConflict(error) && attempt < 2) continue;
+        if (isMissingColumnError(error) && /show_(services|products)/.test(error.message ?? "")) throw new Error(SECTION_TOGGLES_NEED_MIGRATION);
         throw new Error(friendlyEditError(error, error.message));
       }
       // The database silently skips an update the row-level-security policy refuses (owner of a published

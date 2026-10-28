@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { sectionTogglesKey } from "@/hooks/useSectionToggles";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +77,10 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
   const createFn = useServerFn(createBusiness);
   const updateFn = useServerFn(updateBusiness);
   const createCategoryFn = useServerFn(createCategory);
+  const queryClient = useQueryClient();
+  // "Show Services / Products on my profile". A missing value (the section-toggles SQL is not applied yet) counts as ON: that is how profiles behave today.
+  const [sections, setSections] = useState({ services: initial?.show_services ?? true, products: initial?.show_products ?? true });
+  const [savedSections, setSavedSections] = useState(sections);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
@@ -142,7 +149,14 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
         hours,
       });
       if (initial) {
-        const saved = await updateFn({ data: { ...payload, id: initial.id } });
+        // The two switches are sent only when they changed, so a save that does not touch them never needs the new columns.
+        const toggles = {
+          ...(sections.services !== savedSections.services ? { show_services: sections.services } : {}),
+          ...(sections.products !== savedSections.products ? { show_products: sections.products } : {}),
+        };
+        const saved = await updateFn({ data: { ...payload, ...toggles, id: initial.id } });
+        setSavedSections(sections);
+        void queryClient.invalidateQueries({ queryKey: sectionTogglesKey(initial.id) });
         if (saved.slug !== payload.slug) {
           // Another business already had that slug: the server saved the next free one. Show it in the form.
           setForm((f) => ({ ...f, slug: saved.slug }));
@@ -525,20 +539,34 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
       {initial && (
         <div className="rounded-lg border border-border bg-muted/50 p-4">
           <Label className="mb-2 block">Services</Label>
+          <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-border bg-background p-3">
+            <div className="min-w-0">
+              <Label htmlFor="show-services" className="text-sm font-medium">Show Services on my profile</Label>
+              <p className="mt-0.5 text-xs text-muted-foreground">Customers see this section only when it is on and you have added at least one service. Saved with "Update Business".</p>
+            </div>
+            <Switch id="show-services" checked={sections.services} onCheckedChange={(v) => setSections((s) => ({ ...s, services: v }))} aria-label="Show Services on my profile" />
+          </div>
           <p className="mb-3 text-xs text-muted-foreground">
             Add, edit or remove services you offer. Changes save instantly.
           </p>
-          <ServicesManager businessId={initial.id} />
+          <ServicesManager businessId={initial.id} visibleOnProfile={sections.services} />
         </div>
       )}
 
       {initial && (
         <div className="rounded-lg border border-border bg-muted/50 p-4">
           <Label className="mb-2 block">Products</Label>
+          <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-border bg-background p-3">
+            <div className="min-w-0">
+              <Label htmlFor="show-products" className="text-sm font-medium">Show Products on my profile</Label>
+              <p className="mt-0.5 text-xs text-muted-foreground">Customers see this section only when it is on and you have added at least one product. Saved with "Update Business".</p>
+            </div>
+            <Switch id="show-products" checked={sections.products} onCheckedChange={(v) => setSections((s) => ({ ...s, products: v }))} aria-label="Show Products on my profile" />
+          </div>
           <p className="mb-3 text-xs text-muted-foreground">
             Add products with photos, price and stock. Changes save instantly.
           </p>
-          <ProductsManager businessId={initial.id} />
+          <ProductsManager businessId={initial.id} visibleOnProfile={sections.products} />
         </div>
       )}
 

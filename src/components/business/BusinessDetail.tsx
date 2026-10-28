@@ -443,10 +443,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         <div className="flex-1">
           <div className="space-y-6 rounded-2xl border border-border bg-card p-5">
-            <section>
-              <h2 className="mb-2 text-lg font-semibold text-foreground">About</h2>
-              <p className="text-sm leading-relaxed text-muted-foreground">{business.description || "No description available."}</p>
-            </section>
+            {/* Empty sections are left out of the public page: no "No description / services / products / photos" placeholders. */}
+            {business.description && (
+              <section>
+                <h2 className="mb-2 text-lg font-semibold text-foreground">About</h2>
+                <p className="text-sm leading-relaxed text-muted-foreground">{business.description}</p>
+              </section>
+            )}
 
             {/* Catalog (PDF): only when there is one and the plan includes it. */}
             {business.catalog_url && business.catalog_allowed !== false && (
@@ -479,27 +482,29 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               </section>
             )}
 
-            <section>
-              <h2 className="mb-2 text-lg font-semibold text-foreground">Services</h2>
-              {isOwner ? (
-                <ServicesManager businessId={business.id} />
-              ) : services.length > 0 ? (
-                <ServicesDisplay services={services} />
-              ) : (
-                <p className="text-sm text-muted-foreground">No services listed.</p>
-              )}
-            </section>
+            {/* Services / Products: the public sees a section only when the owner switched it on AND it has at least one item.
+                A missing switch (the section-toggles SQL is not applied yet) counts as on, as before. The owner always gets the manager. */}
+            {(isOwner || (business.show_services !== false && services.length > 0)) && (
+              <section>
+                <h2 className="mb-2 text-lg font-semibold text-foreground">Services</h2>
+                {isOwner ? (
+                  <ServicesManager businessId={business.id} visibleOnProfile={business.show_services !== false} />
+                ) : (
+                  <ServicesDisplay services={services} />
+                )}
+              </section>
+            )}
 
-            <section>
-              <h2 className="mb-2 text-lg font-semibold text-foreground">Products</h2>
-              {isOwner ? (
-                <ProductsManager businessId={business.id} />
-              ) : products.length > 0 ? (
-                <ProductsDisplay products={products} />
-              ) : (
-                <p className="text-sm text-muted-foreground">No products listed.</p>
-              )}
-            </section>
+            {(isOwner || (business.show_products !== false && products.length > 0)) && (
+              <section>
+                <h2 className="mb-2 text-lg font-semibold text-foreground">Products</h2>
+                {isOwner ? (
+                  <ProductsManager businessId={business.id} visibleOnProfile={business.show_products !== false} />
+                ) : (
+                  <ProductsDisplay products={products} />
+                )}
+              </section>
+            )}
 
             <section>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Location & Hours</h2>
@@ -538,6 +543,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
           </div>
 
           {/* Photo gallery + upload (owner only) */}
+          {(isOwner || photos.length > 0) && (
           <div className="mt-6 rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground">Photos</h2>
@@ -549,7 +555,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                 featuredImage={business.featured_image}
                 initialPhotos={photos}
               />
-            ) : photos.length > 0 ? (
+            ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                 {photos.map((photo) => (
                   <div
@@ -568,13 +574,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No photos yet.</p>
             )}
           </div>
+          )}
 
           <div className="mt-6 rounded-2xl border border-border bg-card p-5">
-            <h2 className="mb-4 text-lg font-semibold text-foreground">Reviews</h2>
+            {/* No reviews yet: no "Reviews" heading and no "No reviews yet" text, just the write-a-review action. */}
+            <h2 className="mb-4 text-lg font-semibold text-foreground">{reviews.length > 0 ? "Reviews" : "Write a review"}</h2>
             {user && (!myReview || editingMyReview) ? (
               <form onSubmit={handleReview} className="mb-6 space-y-3">
                 <div className="flex items-center gap-2">
@@ -622,7 +628,6 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
             )}
 
             <div className="space-y-4">
-              {reviews.length === 0 && <p className="text-sm text-muted-foreground">No reviews yet. Be the first to review!</p>}
               {reviews.map((review) => (
                 <div key={review.id} className="border-b border-border pb-4 last:border-0 last:pb-0">
                   <div className="mb-1 flex items-center justify-between">
@@ -634,7 +639,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     </div>
                     <StarRating rating={review.rating} showValue={false} />
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{review.review || "No written review."}</p>
+                  {review.review && <p className="mt-1 text-sm text-muted-foreground">{review.review}</p>}
                   <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                     <ThumbsUp className="h-3 w-3" />
                     <span>{review.helpful_count} found helpful</span>

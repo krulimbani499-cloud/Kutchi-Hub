@@ -19,10 +19,14 @@ import { toast } from "sonner";
 import { friendlyEditError, isEditLockedError, readValidationError, withoutUpgradeWording } from "@/lib/edit-lock";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { PlanUpgradeCard } from "./PlanUpgradeCard";
+import { HiddenFromProfileNote } from "./HiddenFromProfileNote";
+import { useSectionToggles } from "@/hooks/useSectionToggles";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
   businessId: string;
+  /** The edit form passes its live switch. Without it the saved switch is read. false = this section is hidden from the public profile. */
+  visibleOnProfile?: boolean;
 }
 
 type Product = Awaited<ReturnType<typeof listBusinessProducts>>[number];
@@ -37,7 +41,9 @@ async function uploadProductImage(businessId: string, file: File): Promise<strin
   return key;
 }
 
-export function ProductsManager({ businessId }: Props) {
+export function ProductsManager({ businessId, visibleOnProfile }: Props) {
+  const toggles = useSectionToggles(businessId);
+  const hiddenFromProfile = (visibleOnProfile ?? toggles?.show_products) === false;
   const { data: products = [], refetch } = useQuery({
     queryKey: ["products", businessId],
     queryFn: () => listBusinessProducts({ data: { businessId } }),
@@ -175,6 +181,7 @@ export function ProductsManager({ businessId }: Props) {
 
   return (
     <div className="space-y-4">
+      {hiddenFromProfile && <HiddenFromProfileNote />}
       <div className="space-y-2">
         {products.length === 0 ? (
           <p className="text-sm text-muted-foreground">No products added yet.</p>

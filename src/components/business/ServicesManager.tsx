@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { friendlyEditError, readValidationError } from "@/lib/edit-lock";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { PlanUpgradeCard } from "./PlanUpgradeCard";
+import { HiddenFromProfileNote } from "./HiddenFromProfileNote";
+import { useSectionToggles } from "@/hooks/useSectionToggles";
 
 type PriceUnit = "fixed" | "starts_at" | "per_hour" | "per_day" | "per_visit" | "per_item";
 
@@ -22,9 +24,15 @@ const UNIT_LABEL: Record<PriceUnit, string> = {
   per_item: "/ item",
 };
 
-interface Props { businessId: string }
+interface Props {
+  businessId: string;
+  /** The edit form passes its live switch. Without it the saved switch is read. false = this section is hidden from the public profile. */
+  visibleOnProfile?: boolean;
+}
 
-export function ServicesManager({ businessId }: Props) {
+export function ServicesManager({ businessId, visibleOnProfile }: Props) {
+  const toggles = useSectionToggles(businessId);
+  const hiddenFromProfile = (visibleOnProfile ?? toggles?.show_services) === false;
   const { data: services = [], refetch } = useQuery({
     queryKey: ["services", businessId],
     queryFn: () => listBusinessServices({ data: { businessId } }),
@@ -119,6 +127,7 @@ export function ServicesManager({ businessId }: Props) {
 
   return (
     <div className="space-y-4">
+      {hiddenFromProfile && <HiddenFromProfileNote />}
       <div className="space-y-2">
         {services.length === 0 ? (
           <p className="text-sm text-muted-foreground">No services added yet.</p>

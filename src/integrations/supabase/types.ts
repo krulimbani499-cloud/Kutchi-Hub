@@ -609,6 +609,8 @@ export type Database = {
           plan_featured: boolean
           plan_tier_order: number
           plan_top_ranking: boolean
+          show_products: boolean
+          show_services: boolean
           slug: string
           state: string | null
           status: string
@@ -649,6 +651,8 @@ export type Database = {
           plan_featured?: boolean
           plan_tier_order?: number
           plan_top_ranking?: boolean
+          show_products?: boolean
+          show_services?: boolean
           slug: string
           state?: string | null
           status?: string
@@ -689,6 +693,8 @@ export type Database = {
           plan_featured?: boolean
           plan_tier_order?: number
           plan_top_ranking?: boolean
+          show_products?: boolean
+          show_services?: boolean
           slug?: string
           state?: string | null
           status?: string
