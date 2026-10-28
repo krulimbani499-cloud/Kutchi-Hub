@@ -103,8 +103,10 @@ export function ResultCard({
       {/* The whole card opens the business; the photo, the arrows and the buttons sit above this link. */}
       <Link to="/business/$slug" params={{ slug: business.slug }} aria-label={business.name} className="absolute inset-0 z-10" />
 
-      {/* Photo: a fixed 16:10 box on phones, a fixed-width column on wide screens. */}
-      <div className="relative z-20 aspect-[16/10] w-full shrink-0 overflow-hidden bg-muted sm:aspect-auto sm:min-h-[11rem] sm:w-60 md:w-64">
+      {/* Photo: ONE shape everywhere, 4:3 (like the home cards and the cover). Phones: full width on top. Wide screens: a fixed-width
+          4:3 picture at the top left with a little margin, so it never stretches with the text next to it. */}
+      <div className="relative z-20 w-full shrink-0 sm:w-[16.5rem] sm:self-start sm:p-3 md:w-[17.5rem]">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted sm:rounded-xl">
         <Link
           to="/business/$slug"
           params={{ slug: business.slug }}
@@ -194,8 +196,9 @@ export function ResultCard({
           </>
         )}
       </div>
+      </div>
 
-      <div className="flex min-w-0 flex-1 flex-col p-3.5 sm:p-4">
+      <div className="flex min-w-0 flex-1 flex-col p-3.5 sm:p-4 sm:pl-1">
         {/* Name + Verified + plan */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <h3 title={business.name} className="min-w-0 break-words text-base font-semibold leading-snug text-foreground sm:text-lg">
@@ -313,8 +316,10 @@ export function ResultCard({
 export function ResultCardSkeleton() {
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:flex-row">
-      <Skeleton className="aspect-[16/10] w-full shrink-0 rounded-none sm:aspect-auto sm:min-h-[11rem] sm:w-60 md:w-64" />
-      <div className="flex min-w-0 flex-1 flex-col p-3.5 sm:p-4">
+      <div className="w-full shrink-0 sm:w-[16.5rem] sm:self-start sm:p-3 md:w-[17.5rem]">
+        <Skeleton className="aspect-[4/3] w-full rounded-none sm:rounded-xl" />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col p-3.5 sm:p-4 sm:pl-1">
         <Skeleton className="h-6 w-2/3" />
         <Skeleton className="mt-2 h-4 w-1/3" />
         <Skeleton className="mt-2 h-4 w-1/2" />

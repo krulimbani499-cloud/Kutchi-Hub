@@ -21,6 +21,7 @@ import {
 import { createBusiness, updateBusiness, createCategory } from "@/lib/businesses.functions";
 import { CityAutocomplete } from "./CityAutocomplete";
 import { PhotoUploader } from "./PhotoUploader";
+import { PHOTO_SIZE_HINT } from "@/lib/business-photos";
 import { CatalogUploader } from "./CatalogUploader";
 import { CatalogUpgradeCard } from "./CatalogUpgradeCard";
 import { ServicesManager } from "./ServicesManager";
@@ -507,7 +508,7 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
             <p className="text-xs text-muted-foreground">
               JPG, PNG or WebP. Up to 10MB.
               <br />
-              Best size: 1200 × 900 (4:3 landscape)
+              {PHOTO_SIZE_HINT}
             </p>
           </div>
         </div>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Star, Upload } from "lucide-react";
-import { BUSINESS_PHOTOS_BUCKET, getBusinessPhotoStorageKey } from "@/lib/business-photos";
+import { BUSINESS_PHOTOS_BUCKET, PHOTO_SIZE_HINT, getBusinessPhotoStorageKey } from "@/lib/business-photos";
 import { BusinessPhotoImage } from "./BusinessPhotoImage";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
@@ -173,7 +173,7 @@ export function PhotoUploader({ businessId, featuredImage, initialPhotos, onFeat
         <p className="text-xs text-muted-foreground">
           JPG, PNG, WebP up to 10MB each · {photos.length}/{maxLabel} photos
           <br />
-          Best size: 1200 × 900 (4:3 landscape)
+          {PHOTO_SIZE_HINT}
         </p>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}

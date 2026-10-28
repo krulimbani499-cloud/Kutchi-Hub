@@ -1,4 +1,6 @@
 export const BUSINESS_PHOTOS_BUCKET = "business-photos";
+/** The one photo shape everywhere (cards, lists, cover) is 4:3; this is what owners are told when they upload. */
+export const PHOTO_SIZE_HINT = "Best size: 1200 × 900 (landscape 4:3). Keep the shop name/logo in the middle. Avoid portrait photos.";
 export const SIGNED_BUSINESS_PHOTO_TTL_SECONDS = 60 * 60 * 24;
 
 export function getBusinessPhotoStorageKey(value: string | null | undefined) {
