@@ -11,6 +11,11 @@ interface Props {
   intervalMs?: number;
   /** Banners the page already loaded (for this category and city), so nothing is fetched and nothing pops in later. */
   initialBanners?: CategoryBannerList;
+  /**
+   * The page knows the category has a banner somewhere, but not whether this visitor's city has one (that is only known in the
+   * browser). The banner's space is kept empty until it is known, so the list below does not jump down when the banner arrives.
+   */
+  reserveSpace?: boolean;
 }
 
 export type CategoryBannerList = Awaited<ReturnType<typeof getBannerAdsForCategory>>;
@@ -44,8 +49,8 @@ export function useCategoryBanners(categoryId: string | null | undefined, city?:
   return { banners: data ?? [], settled: !categoryId || (!isPending && (ready || pageCity !== null)) };
 }
 
-export function CategoryBanner({ categoryId, city, intervalMs = 4500, initialBanners }: Props) {
-  const { banners } = useCategoryBanners(categoryId, city, initialBanners);
+export function CategoryBanner({ categoryId, city, intervalMs = 4500, initialBanners, reserveSpace = false }: Props) {
+  const { banners, settled } = useCategoryBanners(categoryId, city, initialBanners);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -58,6 +63,16 @@ export function CategoryBanner({ categoryId, city, intervalMs = 4500, initialBan
     return () => clearInterval(t);
   }, [banners.length, intervalMs]);
 
+  if (!settled && reserveSpace) {
+    // Same frame and same box shape as the banner (2:1 on phones, 3:1 from md up), so the swap changes nothing around it.
+    return (
+      <section className="mb-8" aria-hidden>
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="aspect-[2/1] w-full bg-muted md:aspect-[3/1]" />
+        </div>
+      </section>
+    );
+  }
   if (banners.length === 0) return null;
   const current = banners[index]!;
   const carouselHasMobile = bannerCarouselHasMobileImage(banners);

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
+import { citySlug } from "@/lib/seo-landing";
 import { useQuery } from "@tanstack/react-query";
 import {
   MapPin,
@@ -202,23 +203,26 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
       <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
         <Link to="/" className="hover:text-foreground">Home</Link>
         <span>›</span>
-        {business.categories?.slug && (
+        {business.city && (
           <>
-            <Link to="/category/$slug" params={{ slug: business.categories.slug }} className="hover:text-foreground">
-              {business.categories.name}
+            <Link to="/city/$slug" params={{ slug: citySlug(business.city) }} className="hover:text-foreground">
+              {business.city}
             </Link>
             <span>›</span>
           </>
         )}
-        {business.city && (
+        {business.categories?.slug && (
           <>
-            <Link
-              to="/city/$slug"
-              params={{ slug: business.city.toLowerCase().replace(/[^a-z0-9]+/g, "-") }}
-              className="hover:text-foreground"
-            >
-              {business.city}
-            </Link>
+            {/* The page this business is listed on: its category inside its city. */}
+            {business.city ? (
+              <Link to="/city/$slug/category/$category" params={{ slug: citySlug(business.city), category: business.categories.slug }} className="hover:text-foreground">
+                {business.categories.name}
+              </Link>
+            ) : (
+              <Link to="/category/$slug" params={{ slug: business.categories.slug }} className="hover:text-foreground">
+                {business.categories.name}
+              </Link>
+            )}
             <span>›</span>
           </>
         )}
@@ -785,6 +789,17 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
           </div>
         </aside>
       </div>
+      {business.categories?.slug && business.city && (
+        <p data-back-to-listing className="mt-8 text-sm">
+          <Link
+            to="/city/$slug/category/$category"
+            params={{ slug: citySlug(business.city), category: business.categories.slug }}
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            See all {business.categories.name} in {business.city}
+          </Link>
+        </p>
+      )}
       <RelatedBusinesses
         businessId={business.id}
         categoryId={business.categories?.id ?? null}

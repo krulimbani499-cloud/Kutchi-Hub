@@ -4,7 +4,8 @@ import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getCityPageData } from "@/lib/businesses.functions";
 import { ResultsHeader } from "@/components/search/ResultsHeader";
 import { StaticResults } from "@/components/search/StaticResults";
-import { BASE_URL, breadcrumbLd, itemListLd, faqLd, ldScript } from "@/lib/seo";
+import { CategoryChip, LandingFaq, LandingIntro, LinkChips } from "@/components/search/LandingContent";
+import { cityCopy, landingFacts, landingHead } from "@/lib/seo-landing";
 
 const cityPageOptions = (slug: string) =>
   queryOptions({
@@ -12,54 +13,27 @@ const cityPageOptions = (slug: string) =>
     queryFn: () => getCityPageData({ data: { slug } }),
   });
 
+type CityData = Awaited<ReturnType<typeof getCityPageData>>;
+
+/** The wording of the page (title, description, intro, FAQ) from its data: the head and the page read the same text. */
+const copyFor = (d: CityData) => cityCopy({ city: d.cityName, facts: landingFacts(d.businesses, d.total, d.cityName), categories: d.categories });
+
 export const Route = createFileRoute("/city/$slug")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(cityPageOptions(params.slug)),
-  head: ({ params, loaderData }) => {
-    const name = loaderData?.cityName ?? params.slug.replace(/-/g, " ");
-    const businesses = loaderData?.businesses ?? [];
-    const count = businesses.length;
-    const title = `Top Businesses in ${name} — Reviews & Contacts | Kutchi Hub`;
-    const desc = `Discover ${count > 0 ? count + "+ " : ""}businesses in ${name} — restaurants, doctors, grocery, shops and services. Reviews, hours, phone numbers and directions.`;
-    const url = `${BASE_URL}/city/${params.slug}`;
-    return {
-      meta: [
-        { title },
-        { name: "description", content: desc },
-        { property: "og:title", content: title },
-        { property: "og:description", content: desc },
-        { property: "og:type", content: "website" },
-        { property: "og:url", content: url },
+  head: ({ params, loaderData, matches }) => {
+    // This route is also the parent of /city/<city>/category/<category>: that page writes its own head.
+    if (!loaderData || (matches as Array<{ routeId: string }>).some((m) => m.routeId === "/city/$slug/category/$category")) return {};
+    const path = `/city/${loaderData.citySlug || params.slug}`;
+    return landingHead({
+      copy: copyFor(loaderData),
+      path,
+      empty: loaderData.total === 0,
+      crumbs: [
+        { name: "Home", url: "/" },
+        { name: loaderData.cityName, url: path },
       ],
-      links: [{ rel: "canonical", href: url }],
-      scripts: [
-        ldScript(
-          breadcrumbLd([
-            { name: "Home", url: "/" },
-            { name, url: `/city/${params.slug}` },
-          ]),
-        ),
-        ldScript(
-          itemListLd(
-            businesses.slice(0, 20).map((b) => ({
-              name: b.name,
-              url: `/business/${b.slug}`,
-            })),
-          ),
-        ),
-        ldScript(
-          faqLd([
-            {
-              q: `How many businesses are listed in ${name} on Kutchi Hub?`,
-              a: `Kutchi Hub currently has ${count} verified business listings in ${name} across multiple categories.`,
-            },
-            {
-              q: `How do I add my business in ${name}?`,
-              a: `Visit the "List Your Business" page on Kutchi Hub to add your ${name} business. Listings include reviews, hours, contact info and directions.`,
-            },
-          ]),
-        ),
-      ],
-    };
+      items: loaderData.businesses.map((b) => ({ name: b.name, url: `/business/${b.slug}` })),
+    });
   },
   pendingComponent: ListingPageSkeleton,
   component: CityPage,
@@ -87,27 +61,19 @@ function CityPage() {
 function CityIndex() {
   const { slug } = Route.useParams();
   const { data } = useSuspenseQuery(cityPageOptions(slug));
-  const { cityName, businesses, categories } = data;
+  const { cityName, citySlug, businesses, categories, total } = data;
+  const copy = copyFor(data);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 sm:py-6">
-      <ResultsHeader city={cityName} total={businesses.length} />
-      <p className="-mt-2 mb-4 max-w-3xl text-sm text-muted-foreground">
-        Explore {businesses.length}+ businesses across {categories.length} categories in {cityName}.
-      </p>
+      <ResultsHeader city={cityName} total={total} landing={{ citySlug }} heading={`Top Businesses in ${cityName}`} />
+      {total > 0 && <LandingIntro paragraphs={copy.intro} />}
       {categories.length > 0 && (
-        <div className="mb-5 flex flex-wrap gap-2">
-          {categories.slice(0, 12).map((c) => (
-            <Link
-              key={c.slug}
-              to="/city/$slug/category/$category"
-              params={{ slug, category: c.slug }}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
-            >
-              {c.name} <span className="text-muted-foreground">({c.count})</span>
-            </Link>
+        <LinkChips title={`Browse ${cityName} by category`}>
+          {categories.map((c) => (
+            <CategoryChip key={c.slug} citySlug={citySlug} slug={c.slug} name={c.name} count={c.count} />
           ))}
-        </div>
+        </LinkChips>
       )}
 
       <StaticResults
@@ -121,6 +87,8 @@ function CityIndex() {
           </div>
         }
       />
+
+      {total > 0 && <LandingFaq faq={copy.faq} />}
     </div>
   );
 }

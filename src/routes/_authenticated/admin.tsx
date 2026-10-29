@@ -385,9 +385,12 @@ function CategoriesAdmin() {
     display_order: number;
     popular_image_url: string;
     popular_featured: boolean;
+    seo_keywords: string;
   }>(
-    { name: "", slug: "", icon: "", icon_url: "", color: "", display_order: 0, popular_image_url: "", popular_featured: false },
+    { name: "", slug: "", icon: "", icon_url: "", color: "", display_order: 0, popular_image_url: "", popular_featured: false, seo_keywords: "" },
   );
+
+  const savedKeywords = (c: Tables<"categories">) => (c as unknown as { seo_keywords?: string | null }).seo_keywords ?? "";
 
   const startEdit = (c: Tables<"categories">) => {
     setEditingId(c.id);
@@ -400,6 +403,7 @@ function CategoriesAdmin() {
       display_order: c.display_order,
       popular_image_url: (c as unknown as { popular_image_url?: string | null }).popular_image_url ?? "",
       popular_featured: Boolean((c as unknown as { popular_featured?: boolean | null }).popular_featured),
+      seo_keywords: savedKeywords(c),
     });
   };
 
@@ -417,6 +421,8 @@ function CategoriesAdmin() {
           display_order: Number(form.display_order) || 0,
           popular_image_url: form.popular_image_url || null,
           popular_featured: form.popular_featured,
+          // Only sent when it was changed, so saving a category never depends on the keywords column (database update pending).
+          seo_keywords: form.seo_keywords.trim() !== savedKeywords(categories.find((x) => x.id === id) ?? ({} as Tables<"categories">)).trim() ? form.seo_keywords : undefined,
         },
       });
       toast.success("Category updated");
@@ -645,6 +651,18 @@ function CategoriesAdmin() {
                           ) : null}
                         </div>
                       </div>
+                      <div className="space-y-1 sm:col-span-2 lg:col-span-5">
+                        <Label className="text-sm font-semibold">SEO keywords</Label>
+                        <Input
+                          placeholder="dealers, suppliers, wholesalers, near me"
+                          value={form.seo_keywords}
+                          maxLength={300}
+                          onChange={(e) => setForm((f) => ({ ...f, seo_keywords: e.target.value }))}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Other words people use for this category, separated by commas. The city and category pages use a few of them in their intro and FAQ text (up to 8 are kept). Add "near me" to get a "near me" question on those pages.
+                        </p>
+                      </div>
                       <div className="flex gap-2 sm:col-span-2 lg:col-span-5">
                         <Button size="sm" onClick={() => save(c.id)} disabled={busy === c.id}>
                           <Save className="mr-1.5 h-4 w-4" /> Save
@@ -674,6 +692,7 @@ function CategoriesAdmin() {
                             </span>
                           ) : null}
                           <span className="text-xs text-muted-foreground">order: {c.display_order}</span>
+                          {savedKeywords(c) ? <span className="text-xs text-muted-foreground">keywords: {savedKeywords(c)}</span> : null}
                           {(c as unknown as { popular_featured?: boolean | null }).popular_featured ? (
                             <Badge className="text-xs">Popular</Badge>
                           ) : null}

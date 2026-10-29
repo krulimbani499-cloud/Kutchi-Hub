@@ -4,7 +4,8 @@ import { queryOptions } from "@tanstack/react-query";
 import { getBusinessBySlug } from "@/lib/businesses.functions";
 import { BusinessDetail } from "@/components/business/BusinessDetail";
 import { plainPreview } from "@/lib/rich-text";
-import { BASE_URL, breadcrumbLd, ldScript } from "@/lib/seo";
+import { BASE_URL, SITE_NAME, breadcrumbLd, ldScript } from "@/lib/seo";
+import { businessTitle, citySlug, comboPath, openingHoursSpecs } from "@/lib/seo-landing";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
@@ -38,7 +39,7 @@ export const Route = createFileRoute("/business/$slug")({
             facebook_url?: string | null;
             youtube_url?: string | null;
             price_range?: string | null;
-            categories?: { name?: string } | null;
+            categories?: { name?: string; slug?: string } | null;
           };
           avgRating?: number;
           reviewCount?: number;
@@ -51,7 +52,7 @@ export const Route = createFileRoute("/business/$slug")({
     const cat = b?.categories?.name ?? "";
     const rating = ld?.avgRating ?? 0;
     const reviewCount = ld?.reviewCount ?? 0;
-    const title = city ? `${name} — ${cat || "Business"} in ${city} | Kutchi Hub` : `${name} — Kutchi Hub`;
+    const title = businessTitle(name, cat || "Business", city);
     const desc = b?.description
       ? plainPreview(String(b.description)).slice(0, 155) || `${name} on Kutchi Hub`
       : `${name}${cat ? ` · ${cat}` : ""}${city ? ` in ${city}` : ""}. View reviews, hours, phone and directions on Kutchi Hub.`;
@@ -64,7 +65,11 @@ export const Route = createFileRoute("/business/$slug")({
       { property: "og:description", content: desc },
       { property: "og:type", content: "article" },
       { property: "og:url", content: url },
+      { property: "og:site_name", content: SITE_NAME },
+      { property: "og:locale", content: "en_IN" },
       { name: "twitter:card", content: image ? "summary_large_image" : "summary" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: desc },
     ];
     if (image && image.startsWith("http")) {
       meta.push({ property: "og:image", content: image });
@@ -88,7 +93,8 @@ export const Route = createFileRoute("/business/$slug")({
         const t = [b?.phone, b?.phone_secondary].filter((n): n is string => !!n);
         return t.length === 0 ? undefined : t.length === 1 ? t[0] : t;
       })(),
-      image: image ?? undefined,
+      // Only a full address works in structured data (a stored photo key is not one).
+      image: image && image.startsWith("http") ? image : undefined,
     };
     if (typeof b?.latitude === "number" && typeof b?.longitude === "number") {
       jsonLd.geo = { "@type": "GeoCoordinates", latitude: b.latitude, longitude: b.longitude };
@@ -100,31 +106,15 @@ export const Route = createFileRoute("/business/$slug")({
       (u): u is string => typeof u === "string" && u.length > 0,
     );
     if (sameAs.length > 0) jsonLd.sameAs = sameAs;
-    if (b?.hours && typeof b.hours === "object") {
-      const dayMap: Record<string, string> = {
-        mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday",
-        fri: "Friday", sat: "Saturday", sun: "Sunday",
-      };
-      const specs: Array<Record<string, string>> = [];
-      for (const [key, val] of Object.entries(b.hours as Record<string, string>)) {
-        const day = dayMap[key.toLowerCase().slice(0, 3)];
-        if (!day || !val || /closed/i.test(val)) continue;
-        const m = String(val).match(/(\d{1,2}:?\d{0,2})\s*[-–—to]+\s*(\d{1,2}:?\d{0,2})/i);
-        if (m) {
-          specs.push({
-            "@type": "OpeningHoursSpecification",
-            dayOfWeek: day,
-            opens: m[1].includes(":") ? m[1] : `${m[1]}:00`,
-            closes: m[2].includes(":") ? m[2] : `${m[2]}:00`,
-          });
-        }
-      }
-      if (specs.length > 0) jsonLd.openingHoursSpecification = specs;
-    }
+    // "9:00 AM - 1:00 PM, 3:00 PM - 8:00 PM" -> two 24-hour entries; "Closed" -> none (see openingHoursSpecs).
+    const specs = openingHoursSpecs(b?.hours);
+    if (specs.length > 0) jsonLd.openingHoursSpecification = specs;
     if (reviewCount > 0) {
       jsonLd.aggregateRating = {
         "@type": "AggregateRating",
         ratingValue: rating,
+        bestRating: 5,
+        worstRating: 1,
         reviewCount,
       };
     }
@@ -146,8 +136,9 @@ export const Route = createFileRoute("/business/$slug")({
         ldScript(
           breadcrumbLd([
             { name: "Home", url: "/" },
-            ...(cat ? [{ name: cat, url: "/categories" }] : []),
-            ...(city ? [{ name: city, url: `/city/${city.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}` }] : []),
+            ...(city ? [{ name: city, url: `/city/${citySlug(city)}` }] : []),
+            // The category inside its city: the page this business is listed on.
+            ...(cat && city && b?.categories?.slug ? [{ name: cat, url: comboPath(city, b.categories.slug) }] : cat && b?.categories?.slug ? [{ name: cat, url: `/category/${b.categories.slug}` }] : []),
             { name, url: `/business/${params.slug}` },
           ]),
         ),

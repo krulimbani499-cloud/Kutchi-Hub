@@ -4,13 +4,25 @@ import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getBannerAdsForCategory, getCityCategoryPageData } from "@/lib/businesses.functions";
 import { ResultsHeader } from "@/components/search/ResultsHeader";
 import { StaticResults } from "@/components/search/StaticResults";
+import { CategoryChip, CityChip, LandingFaq, LandingIntro, LinkChips } from "@/components/search/LandingContent";
 import { CategoryBanner } from "@/components/category/CategoryBanner";
-import { BASE_URL, breadcrumbLd, itemListLd, faqLd, ldScript } from "@/lib/seo";
+import { comboCopy, landingFacts, landingHead, parseKeywords } from "@/lib/seo-landing";
 
 const comboPageOptions = (city: string, category: string) =>
   queryOptions({
     queryKey: ["city-category-page", city, category],
     queryFn: () => getCityCategoryPageData({ data: { city, category } }),
+  });
+
+type ComboData = Awaited<ReturnType<typeof getCityCategoryPageData>>;
+
+/** The wording of the page (title, description, intro, FAQ) from its data: the head and the page read the same text. */
+const copyFor = (d: ComboData) =>
+  comboCopy({
+    category: d.category.name,
+    city: d.cityName,
+    facts: landingFacts(d.businesses, d.total, d.cityName),
+    keywords: parseKeywords(d.keywords),
   });
 
 export const Route = createFileRoute("/city/$slug/category/$category")({
@@ -22,58 +34,20 @@ export const Route = createFileRoute("/city/$slug/category/$category")({
     return { ...data, banners };
   },
   head: ({ params, loaderData }) => {
-    const cityName =
-      loaderData?.cityName ??
-      params.slug
-        .split("-")
-        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-        .join(" ");
-    const catName = loaderData?.category?.name ?? params.category.replace(/-/g, " ");
-    const businesses = loaderData?.businesses ?? [];
-    const count = businesses.length;
-    const title = `Best ${catName} in ${cityName} — Reviews & Contacts | Kutchi Hub`;
-    const desc = `Browse ${count > 0 ? count + "+ " : ""}${catName.toLowerCase()} in ${cityName}. Verified reviews, ratings, hours, phone numbers and directions on Kutchi Hub.`;
-    const url = `${BASE_URL}/city/${params.slug}/category/${params.category}`;
-    return {
-      meta: [
-        { title },
-        { name: "description", content: desc },
-        { property: "og:title", content: title },
-        { property: "og:description", content: desc },
-        { property: "og:type", content: "website" },
-        { property: "og:url", content: url },
+    if (!loaderData) return {};
+    const cityPath = `/city/${loaderData.citySlug || params.slug}`;
+    const path = `${cityPath}/category/${loaderData.category.slug || params.category}`;
+    return landingHead({
+      copy: copyFor(loaderData),
+      path,
+      empty: loaderData.total === 0,
+      crumbs: [
+        { name: "Home", url: "/" },
+        { name: loaderData.cityName, url: cityPath },
+        { name: loaderData.category.name, url: path },
       ],
-      links: [{ rel: "canonical", href: url }],
-      scripts: [
-        ldScript(
-          breadcrumbLd([
-            { name: "Home", url: "/" },
-            { name: cityName, url: `/city/${params.slug}` },
-            { name: catName, url: `/city/${params.slug}/category/${params.category}` },
-          ]),
-        ),
-        ldScript(
-          itemListLd(
-            businesses.slice(0, 20).map((b) => ({
-              name: b.name,
-              url: `/business/${b.slug}`,
-            })),
-          ),
-        ),
-        ldScript(
-          faqLd([
-            {
-              q: `How many ${catName.toLowerCase()} are listed in ${cityName}?`,
-              a: `Kutchi Hub currently lists ${count} ${catName.toLowerCase()} in ${cityName} with reviews, hours and contact details.`,
-            },
-            {
-              q: `How do I find the best ${catName.toLowerCase()} near me in ${cityName}?`,
-              a: `Browse the verified ${catName.toLowerCase()} listings in ${cityName} on Kutchi Hub — sort by rating, check reviews, hours and call directly.`,
-            },
-          ]),
-        ),
-      ],
-    };
+      items: loaderData.businesses.map((b) => ({ name: b.name, url: `/business/${b.slug}` })),
+    });
   },
   pendingComponent: ListingPageSkeleton,
   component: CityCategoryPage,
@@ -100,30 +74,30 @@ function CityCategoryPage() {
   const { slug, category } = Route.useParams();
   const { data } = useSuspenseQuery(comboPageOptions(slug, category));
   const { banners } = Route.useLoaderData();
-  const { cityName, category: cat, businesses } = data;
+  const { cityName, citySlug, category: cat, businesses, total, otherCategories, otherCities } = data;
+  const copy = copyFor(data);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 sm:py-6">
-      <ResultsHeader city={cityName} category={cat} total={businesses.length} />
-      <p className="-mt-2 mb-4 max-w-3xl text-sm text-muted-foreground">
-        Explore {businesses.length}+ verified {cat.name.toLowerCase()} in {cityName} — reviews, ratings, hours, phone numbers and directions.
-      </p>
+      <ResultsHeader city={cityName} category={cat} total={total} landing={{ citySlug }} />
+      {total > 0 && <LandingIntro paragraphs={copy.intro} />}
       <div className="mb-5 flex flex-wrap gap-2">
-        <Link
-          to="/city/$slug"
-          params={{ slug }}
-          className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
-        >
-          All in {cityName}
-        </Link>
+        <CityChip slug={citySlug} name={`All businesses in ${cityName}`} />
         <Link
           to="/category/$slug"
-          params={{ slug: category }}
+          params={{ slug: cat.slug }}
           className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
         >
           {cat.name} in all cities
         </Link>
       </div>
+      {otherCategories.length > 0 && (
+        <LinkChips title={`More in ${cityName}`}>
+          {otherCategories.map((c) => (
+            <CategoryChip key={c.slug} citySlug={citySlug} slug={c.slug} name={c.name} count={c.count} />
+          ))}
+        </LinkChips>
+      )}
 
       <StaticResults
         businesses={businesses}
@@ -140,6 +114,18 @@ function CityCategoryPage() {
           </div>
         }
       />
+
+      {otherCities.length > 0 && (
+        <div className="mt-8">
+          <LinkChips title={`${cat.name} in other cities`}>
+            {otherCities.map((c) => (
+              <CityChip key={c.slug} slug={c.slug} category={cat.slug} name={c.name} count={c.count} />
+            ))}
+          </LinkChips>
+        </div>
+      )}
+
+      {total > 0 && <LandingFaq faq={copy.faq} />}
     </div>
   );
 }

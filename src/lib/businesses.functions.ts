@@ -5,9 +5,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { activeEnterpriseBusinessIds, authEmailsByIds, createServerSupabaseClient, findAuthUserByEmail, uniqueBusinessSlug } from "./businesses.server";
 import { BANNER_PLACEMENTS, composeHomeBanners, showsInAllLocations, type BannerPlacement } from "./banner-rules";
 import { completionChecklist, publishGaps } from "./listing-completeness";
-import { cachedFor } from "./server-cache";
+import { cachedFor, clearCached } from "./server-cache";
 import { findPhoneDuplicate } from "./quick-add";
-import type { TablesInsert } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { httpsLink, optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
@@ -17,6 +17,8 @@ import { canonicalCityName } from "./geolocation";
 import { resolveCoords } from "./coords.server";
 import { cityKey, haversineKm } from "./places";
 import { isOpenNow, wallClockDate } from "./business-hours";
+import { buildDirectory, type Directory, type DirectoryCategory, type DirectoryRow } from "./directory";
+import { citySlug, parseKeywords, prettySlug, type CategoryLink } from "./seo-landing";
 import { NEARBY_WIDE_RADIUS_KM, rankNearby } from "./nearby";
 import cityCentres from "@/data/city-coords.json";
 
@@ -378,7 +380,12 @@ const updateCategorySchema = z.object({
   display_order: z.coerce.number().int().min(0).max(9999).optional(),
   popular_image_url: z.string().trim().max(600000).nullable().optional(),
   popular_featured: z.boolean().optional(),
+  /** Comma-separated synonyms for the landing page text ("dealers, suppliers, near me"). Needs supabase/pending/category-seo-keywords. */
+  seo_keywords: z.string().trim().max(300).nullable().optional(),
 });
+
+const SEO_KEYWORDS_NEEDS_MIGRATION =
+  "Keywords need a database update first (supabase/pending/category-seo-keywords). Nothing was saved.";
 
 async function assertAdmin(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string) {
   const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -400,6 +407,7 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
       display_order?: number;
       popular_image_url?: string | null;
       popular_featured?: boolean;
+      seo_keywords?: string | null;
     } = {
       name: data.name.trim(),
       slug: data.slug.trim(),
@@ -410,14 +418,23 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
     if (data.display_order !== undefined) patch.display_order = data.display_order;
     if (data.popular_image_url !== undefined) patch.popular_image_url = data.popular_image_url?.trim() || null;
     if (data.popular_featured !== undefined) patch.popular_featured = data.popular_featured;
+    // Cleaned the same way the pages read them: lower case, no duplicates, at most 8. Empty = no keywords.
+    if (data.seo_keywords !== undefined) patch.seo_keywords = parseKeywords(data.seo_keywords).join(", ") || null;
 
     const { data: updated, error } = await context.supabase
       .from("categories")
-      .update(patch)
+      .update(patch as never)
       .eq("id", data.id)
       .select("*")
       .single();
-    if (error) throw new Error(friendlyBannerError(error));
+    if (error) {
+      // The column does not exist yet (SQL not applied): say so, and only when keywords were being saved.
+      if (data.seo_keywords !== undefined && (error.code === "42703" || error.code === "PGRST204" || /seo_keywords/i.test(error.message))) {
+        throw new Error(SEO_KEYWORDS_NEEDS_MIGRATION);
+      }
+      throw new Error(friendlyBannerError(error));
+    }
+    clearCached("directory"); // the landing pages read keywords from the directory cache
     return updated;
   });
 
@@ -1983,19 +2000,52 @@ export const getBusinessForEdit = createServerFn({ method: "GET" })
 
 // -------- Category / City landing page data --------
 
+const DIRECTORY_TTL_MS = 60_000;
+
+/** Every published business (only what the directory map needs), in pages of 1000: the database caps one answer at 1000 rows. */
+async function fetchPublishedRows(): Promise<DirectoryRow[]> {
+  const supabase = createServerSupabaseClient();
+  const out: DirectoryRow[] = [];
+  for (let from = 0; from < 50_000; from += 1000) {
+    const { data, error } = await supabase
+      .from("businesses")
+      .select("slug, city, category_id, updated_at")
+      .eq("status", "published")
+      .order("id", { ascending: true })
+      .range(from, from + 999);
+    if (error) throw new Error(error.message);
+    out.push(...((data ?? []) as DirectoryRow[]));
+    if ((data?.length ?? 0) < 1000) break;
+  }
+  return out;
+}
+
+/**
+ * The map of the directory (which cities / categories have businesses, how many): one cached answer (a minute) for the landing
+ * pages and their links. `categories` are the full category rows, also those that have no business yet.
+ */
+async function loadDirectory(): Promise<{ dir: Directory; categories: Array<DirectoryCategory & Record<string, unknown>> }> {
+  return cachedFor("directory", DIRECTORY_TTL_MS, async () => {
+    const supabase = createServerSupabaseClient();
+    const [rows, catRes] = await Promise.all([fetchPublishedRows(), supabase.from("categories").select("*")]);
+    if (catRes.error) throw new Error(catRes.error.message);
+    const categories = (catRes.data ?? []) as unknown as Array<DirectoryCategory & Record<string, unknown>>;
+    return { dir: buildDirectory(rows, categories), categories };
+  });
+}
+
+const BUSINESS_LIST_COLUMNS =
+  "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id!inner(id, name, slug, color), business_reviews(rating)";
+
 export const getCategoryPageData = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
-    // The category row and its businesses are independent (the businesses are matched through the category slug), and the
-    // ratings come back embedded: one round of queries instead of three in a row.
-    const [{ data: category, error: catErr }, { data: businesses, error }] = await Promise.all([
-      supabase.from("categories").select("*").eq("slug", data.slug).maybeSingle(),
+    const [{ dir, categories }, { data: businesses, error }] = await Promise.all([
+      loadDirectory(),
       supabase
         .from("businesses")
-        .select(
-          "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id!inner(id, name, slug, color), business_reviews(rating)",
-        )
+        .select(BUSINESS_LIST_COLUMNS)
         .eq("status", "published")
         .eq("categories.slug", data.slug)
         .order("plan_tier_order", { ascending: false })
@@ -2004,24 +2054,33 @@ export const getCategoryPageData = createServerFn({ method: "GET" })
         .order("name", { ascending: true })
         .limit(60),
     ]);
-    if (catErr) throw new Error(catErr.message);
+    const category = categories.find((c) => c.slug === data.slug);
     if (!category) throw new Error("Category not found");
     if (error) throw new Error(error.message);
 
     const listings = withRatingSummary(businesses);
-    const cities = Array.from(new Set(listings.map((b) => b.city).filter(Boolean))) as string[];
-    return { category, businesses: listings, cities };
+    const entry = dir.categories.get(data.slug);
+    return {
+      // The row as it always was (the page and the admin read the same columns).
+      category: category as unknown as Tables<"categories">,
+      businesses: listings,
+      /** Its cities with the number of businesses in each (every city that has one), most first. */
+      cityLinks: entry?.cities ?? [],
+      /** Exact number of published businesses in this category (the list holds at most 60). */
+      total: Math.max(entry?.count ?? 0, listings.length),
+      keywords: (category.seo_keywords as string | null | undefined) ?? null,
+    };
   });
 
 export const getCityPageData = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
-    // Slug -> pretty city name: match case-insensitive by comparing slug of stored city
-    const cityName = data.slug
-      .split("-")
-      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-      .join(" ");
+    const slug = citySlug(data.slug);
+    const { dir } = await loadDirectory();
+    const entry = dir.cities.get(slug);
+    // A city that no published business uses: an empty page (noindex), named from its address part.
+    if (!entry) return { cityName: prettySlug(slug), citySlug: slug, businesses: [], total: 0, categories: [] as CategoryLink[] };
 
     const { data: businesses, error } = await supabase
       .from("businesses")
@@ -2029,29 +2088,21 @@ export const getCityPageData = createServerFn({ method: "GET" })
         "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id(id, name, slug, color), business_reviews(rating)",
       )
       .eq("status", "published")
-      .ilike("city", `%${cityName}%`)
+      .in("city", entry.variants)
       .order("plan_tier_order", { ascending: false })
       .order("plan_featured", { ascending: false })
       .order("verified", { ascending: false })
       .order("name", { ascending: true })
       .limit(80);
     if (error) throw new Error(error.message);
-
     const listings = withRatingSummary(businesses);
-
-    // Group by category for the "browse by category" section
-    const byCategory = new Map<string, { name: string; slug: string; count: number }>();
-    for (const b of listings) {
-      const c = b.categories;
-      if (!c) continue;
-      const cur = byCategory.get(c.slug) ?? { name: c.name, slug: c.slug, count: 0 };
-      cur.count += 1;
-      byCategory.set(c.slug, cur);
-    }
     return {
-      cityName,
+      cityName: entry.name,
+      citySlug: slug,
       businesses: listings,
-      categories: Array.from(byCategory.values()).sort((a, b) => b.count - a.count),
+      total: Math.max(entry.count, listings.length),
+      /** ALL its categories with their number of businesses (not only the ones among the 80 listed). */
+      categories: entry.categories,
     };
   });
 
@@ -2090,72 +2141,47 @@ export const getCityCategoryPageData = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
-    const cityName = data.city
-      .split("-")
-      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-      .join(" ");
-
-    const [{ data: category, error: catErr }, { data: businesses, error }] = await Promise.all([
-      supabase.from("categories").select("*").eq("slug", data.category).maybeSingle(),
-      supabase
-        .from("businesses")
-        .select(
-          "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id!inner(id, name, slug, color), business_reviews(rating)",
-        )
-        .eq("status", "published")
-        .eq("categories.slug", data.category)
-        .ilike("city", `%${cityName}%`)
-        .order("plan_tier_order", { ascending: false })
-        .order("plan_featured", { ascending: false })
-        .order("verified", { ascending: false })
-        .order("name", { ascending: true })
-        .limit(80),
-    ]);
-    if (catErr) throw new Error(catErr.message);
+    const slug = citySlug(data.city);
+    const { dir, categories } = await loadDirectory();
+    const category = categories.find((c) => c.slug === data.category);
     if (!category) throw new Error("Category not found");
-    if (error) throw new Error(error.message);
+    const entry = dir.cities.get(slug);
+    const cityName = entry?.name ?? prettySlug(slug);
+    const keywords = (category.seo_keywords as string | null | undefined) ?? null;
+    const categoryRow = category as unknown as Tables<"categories">;
+    // A pair with no business (or a city nobody uses): an empty page (noindex), and not a database query.
+    const pair = entry?.categories.find((c) => c.slug === data.category);
+    // Links to neighbouring landing pages (every one of them has at least one business).
+    const otherCategories = (entry?.categories ?? []).filter((c) => c.slug !== data.category).slice(0, 10);
+    const otherCities = (dir.categories.get(data.category)?.cities ?? []).filter((c) => c.slug !== slug).slice(0, 10);
+    if (!entry || !pair) return { cityName, citySlug: slug, category: categoryRow, businesses: [], total: 0, keywords, otherCategories, otherCities };
 
-    return { cityName, category, businesses: withRatingSummary(businesses) };
+    const { data: businesses, error } = await supabase
+      .from("businesses")
+      .select(BUSINESS_LIST_COLUMNS)
+      .eq("status", "published")
+      .eq("categories.slug", data.category)
+      .in("city", entry.variants)
+      .order("plan_tier_order", { ascending: false })
+      .order("plan_featured", { ascending: false })
+      .order("verified", { ascending: false })
+      .order("name", { ascending: true })
+      .limit(80);
+    if (error) throw new Error(error.message);
+    const listings = withRatingSummary(businesses);
+    return { cityName, citySlug: slug, category: categoryRow, businesses: listings, total: Math.max(pair.count, listings.length), keywords, otherCategories, otherCities };
   });
 
+/** For /sitemap.xml: only pages that have at least one published business, each with the date its content last changed. */
 export const getSitemapData = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = createServerSupabaseClient();
-  const [{ data: businesses }, { data: categories }] = await Promise.all([
-    supabase
-      .from("businesses")
-      .select("slug, city, updated_at, category_id")
-      .eq("status", "published")
-      .limit(5000),
-    supabase.from("categories").select("slug"),
-  ]);
-  const cities = Array.from(
-    new Set((businesses ?? []).map((b) => b.city).filter(Boolean)),
-  ) as string[];
-  const catById = new Map<string, string>();
-  for (const c of categories ?? []) {
-    // categories query only selected slug; refetch id+slug
-  }
-  const { data: catRows } = await supabase.from("categories").select("id, slug");
-  for (const c of catRows ?? []) catById.set(c.id, c.slug);
-  const combos = new Set<string>();
-  for (const b of businesses ?? []) {
-    if (!b.city || !b.category_id) continue;
-    const catSlug = catById.get(b.category_id);
-    if (!catSlug) continue;
-    const citySlug = String(b.city)
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    if (citySlug) combos.add(`${citySlug}|${catSlug}`);
-  }
+  const [rows, { data: categoryRows }] = await Promise.all([fetchPublishedRows(), supabase.from("categories").select("id, name, slug")]);
+  const dir = buildDirectory(rows, (categoryRows ?? []) as DirectoryCategory[]);
   return {
-    businesses: businesses ?? [],
-    categories: categories ?? [],
-    cities,
-    combos: Array.from(combos).map((s) => {
-      const [city, category] = s.split("|");
-      return { city, category };
-    }),
+    businesses: rows.map((r) => ({ slug: r.slug, updated_at: r.updated_at })),
+    categories: [...dir.categories.values()].map((c) => ({ slug: c.slug, lastmod: c.lastmod })),
+    cities: [...dir.cities.values()].map((c) => ({ slug: c.slug, lastmod: c.lastmod })),
+    combos: dir.combos.map((c) => ({ city: c.city, category: c.category, lastmod: c.lastmod })),
   };
 });
 
