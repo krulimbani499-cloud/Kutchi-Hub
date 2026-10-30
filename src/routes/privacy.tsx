@@ -95,7 +95,10 @@ function PrivacyPage() {
             <Link to="/delete-account" className="text-primary underline">
               /delete-account
             </Link>
-            . We delete your account and personal data within 30 days, except where the law requires us to keep it.
+            . In the app or on the website the deletion happens straight away; if you cannot sign in, tell us and we do it within 7 days.
+            Business listings owned by the account are archived (hidden, not deleted), subscription and payment records are kept for up to
+            8 years because accounting and tax law requires it, and minimal technical logs are kept for up to 30 days. The page lists exactly
+            what is deleted and what is kept.
           </p>
         </section>
 
