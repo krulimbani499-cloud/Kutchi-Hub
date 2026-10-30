@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { applyReferralCode } from "@/lib/referrals.functions";
 import { rememberRedirect, safeRedirectPath } from "@/lib/redirect";
+import { SHOW_REFERRAL_ON_SIGNUP } from "@/lib/features";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -281,20 +282,23 @@ export function AuthForms({ initialMode, redirectTo: requestedRedirect }: { init
                 </button>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="referral" className="flex items-center gap-1">
-                <Gift className="h-3.5 w-3.5 text-[#ff6a00]" />
-                Referral code <span className="text-xs text-muted-foreground">(optional)</span>
-              </Label>
-              <Input
-                id="referral"
-                value={referral}
-                onChange={(e) => setReferral(e.target.value.toUpperCase())}
-                placeholder="Get +50 bonus points"
-                maxLength={12}
-                className="font-mono uppercase tracking-widest"
-              />
-            </div>
+            {/* Hidden while SHOW_REFERRAL_ON_SIGNUP is false; a ?ref=CODE link is still read and applied above. */}
+            {SHOW_REFERRAL_ON_SIGNUP && (
+              <div className="space-y-2">
+                <Label htmlFor="referral" className="flex items-center gap-1">
+                  <Gift className="h-3.5 w-3.5 text-[#ff6a00]" />
+                  Referral code <span className="text-xs text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="referral"
+                  value={referral}
+                  onChange={(e) => setReferral(e.target.value.toUpperCase())}
+                  placeholder="Get +50 bonus points"
+                  maxLength={12}
+                  className="font-mono uppercase tracking-widest"
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full bg-primary text-primary-foreground" disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Create account

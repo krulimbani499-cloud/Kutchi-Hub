@@ -21,6 +21,13 @@ export const SHOW_SEARCH_LEAD_FORM = false;
 export const SHOW_SAVED = false;
 
 /**
+ * The "Referral code (optional)" field on the sign-up form (website, Android and iOS app). false = the field, its label and helper
+ * text are not shown, and the form closes up with no gap. A sign-up link with ?ref=CODE is still read and applied silently after
+ * sign-up, so old shared links keep working. The referral backend, tables, dashboard and rewards code are untouched.
+ */
+export const SHOW_REFERRAL_ON_SIGNUP = false;
+
+/**
  * DIWALI THEME: ON automatically from DIWALI_START to DIWALI_END (IST), OFF before and after: nothing to switch by hand.
  * Next year: change these two dates (keep the +05:30). The year in DIWALI_START also names the "already dismissed / fireworks
  * played" flags, so they start fresh every year. Preview before the dates: add ?diwali=1 to any address (memory only, not stored).
