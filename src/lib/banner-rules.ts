@@ -1,11 +1,14 @@
 // Which homepage banners a visitor sees, and in what order. Pure functions (no database), so the rules are easy to test.
 //
 //   Top slot    : banners of the visitor's own city whose placement is "home_top".
-//   Middle slot : banners of the visitor's own city whose placement is "home_middle", THEN the "show in all cities"
+//   Middle slot : banners of the visitor's own city whose placement is "home_middle", AND the "show in all cities"
 //                 banners of other cities (Enterprise businesses with an active plan), whatever placement they were
-//                 given in their own city. Local ones first; inside each group best priority first.
+//                 given in their own city: one pool.
 //   All locations: ONLY banners whose business has an ACTIVE Enterprise plan (the same check as "Show in all cities", whatever
-//                 that box says), each in its own placement, best priority first, no cap. None qualify = the slot is hidden.
+//                 that box says), each in its own placement, no cap. None qualify = the slot is hidden.
+//
+//   ORDER (every slot, category banners too): fair rotation. Higher priority first; banners with the SAME priority (nearly all of them)
+//   in random order, a new one each time. The date a banner was created never decides anything (see shuffleByPriority).
 
 export type BannerPlacement = "home_top" | "home_middle";
 
@@ -16,18 +19,49 @@ export const BANNER_PLACEMENT_LABEL: Record<BannerPlacement, string> = {
   home_middle: "Middle",
 };
 
-export type OrderableBanner = { priority: number; created_at?: string | null };
+export type OrderableBanner = { priority: number; id?: string };
 
-/** Highest priority first; among equals the newest first. Does not change the array it is given. */
-export function sortBanners<T extends OrderableBanner>(banners: readonly T[]): T[] {
-  return [...banners].sort(
-    (a, b) => b.priority - a.priority || (b.created_at ?? "").localeCompare(a.created_at ?? ""),
-  );
+/** A small seeded random generator (mulberry32): the same seed always gives the same sequence of numbers in [0, 1). */
+export function seededRandom(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-/** Own-city banners first, then the all-city ones from other cities; `limit` caps the total (omit = no cap). */
+/**
+ * Fair rotation order: the highest priority first, and banners with the SAME priority in random order (Fisher-Yates). The date a
+ * banner was created is never looked at. Does not change the array it is given.
+ * `rand` defaults to Math.random (a new order every call). With a seeded generator the result depends only on WHICH banners there
+ * are and the seed, not on the order they arrive in (each group is put in id order before it is shuffled), so a page can keep one
+ * order for the whole page view even if the same banners are fetched again in another order.
+ */
+export function shuffleByPriority<T extends OrderableBanner>(banners: readonly T[], rand: () => number = Math.random): T[] {
+  const groups = new Map<number, T[]>();
+  for (const b of banners) {
+    const group = groups.get(b.priority);
+    if (group) group.push(b);
+    else groups.set(b.priority, [b]);
+  }
+  const out: T[] = [];
+  for (const priority of [...groups.keys()].sort((a, b) => b - a)) {
+    const group = groups.get(priority)!.sort((a, b) => (a.id ?? "").localeCompare(b.id ?? ""));
+    for (let i = group.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [group[i], group[j]] = [group[j], group[i]];
+    }
+    out.push(...group);
+  }
+  return out;
+}
+
+/** The own-city banners and the "show in all cities" ones of other cities as ONE pool in fair rotation order; `limit` caps the total after the shuffle (omit = no cap). */
 export function composeHomeBanners<T extends OrderableBanner>(local: readonly T[], allCities: readonly T[], limit?: number): T[] {
-  const merged = [...sortBanners(local), ...sortBanners(allCities)];
+  const merged = shuffleByPriority([...local, ...allCities]);
   return limit === undefined ? merged : merged.slice(0, limit);
 }
 

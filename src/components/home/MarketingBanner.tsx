@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getBannerAdsForCity } from "@/lib/businesses.functions";
 import { useCity } from "@/hooks/useCity";
 import { BannerImage, bannerCarouselHasMobileImage } from "@/components/BannerImage";
+import { useShuffledBanners } from "@/hooks/useShuffledBanners";
 import type { BannerPlacement } from "@/lib/banner-rules";
 
 interface Props {
@@ -15,12 +16,14 @@ interface Props {
 
 export function MarketingBanner({ intervalMs = 4500, placement = "home_top" }: Props) {
   const { city, allLocations } = useCity();
-  const { data: banners = [] } = useQuery({
+  const { data: fetched = [] } = useQuery({
     // "All locations" is its own key: every active banner. No choice at all (null) still shows nothing, as before.
     queryKey: ["banner-ads", placement, city ?? (allLocations ? "__all__" : "none")],
     queryFn: () => getBannerAdsForCity({ data: { city: city ?? undefined, all: allLocations || undefined, placement } }),
     staleTime: 5 * 60_000,
   });
+  // Fair rotation: higher priority first, the same priority in random order, decided once per page view (never by date).
+  const banners = useShuffledBanners(fetched);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {

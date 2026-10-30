@@ -3,7 +3,7 @@ import { notFound } from "@tanstack/react-router";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { activeEnterpriseBusinessIds, authEmailsByIds, createServerSupabaseClient, findAuthUserByEmail, uniqueBusinessSlug } from "./businesses.server";
-import { BANNER_PLACEMENTS, composeHomeBanners, showsInAllLocations, type BannerPlacement } from "./banner-rules";
+import { BANNER_PLACEMENTS, composeHomeBanners, shuffleByPriority, showsInAllLocations, type BannerPlacement } from "./banner-rules";
 import { completionChecklist, publishGaps } from "./listing-completeness";
 import { cachedFor, clearCached } from "./server-cache";
 import { findPhoneDuplicate } from "./quick-add";
@@ -538,9 +538,10 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
     // 1) The visitor's own city (or, with "All locations", every city) in this slot.
     let own = live(BANNER_SELECT_NEW)
       .eq("placement", placement)
+      // Priority only: the date a banner was created never decides (the order inside a priority is random, see composeHomeBanners).
+      // Enough candidates are fetched so the cap of 10 below cuts a random few, not the oldest ones.
       .order("priority", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(allLocationsOnly ? 500 : data.all ? 200 : 10);
+      .limit(allLocationsOnly ? 500 : 200);
     // All locations: a banner without a business can never be Enterprise, so it is left out before the plan check.
     if (allLocationsOnly) own = own.not("business_id", "is", null);
     if (data.city) own = own.ilike("city", exactIlike(data.city));
@@ -548,12 +549,13 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
     if (isMissingBannerColumns(ownRes.error)) {
       // Database not updated yet: every banner is a top banner, exactly as before. The middle slot stays empty.
       if (placement === "home_middle") return [];
-      let legacy = live(BANNER_SELECT).limit(10).order("priority", { ascending: false }).order("created_at", { ascending: false });
+      let legacy = live(BANNER_SELECT).limit(200).order("priority", { ascending: false });
       if (data.city) legacy = legacy.ilike("city", exactIlike(data.city));
       const legacyRes = await legacy;
       if (legacyRes.error) throw new Error(legacyRes.error.message);
       rows = (legacyRes.data ?? []) as unknown as Row[];
       if (allLocationsOnly) rows = await onlyActiveEnterprise(rows);
+      rows = composeHomeBanners(rows, [], allLocationsOnly ? undefined : 10);
     } else {
       if (ownRes.error) throw new Error(ownRes.error.message);
       rows = (ownRes.data ?? []) as unknown as Row[];
@@ -565,7 +567,6 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
           .not("business_id", "is", null)
           .not("city", "ilike", exactIlike(data.city))
           .order("priority", { ascending: false })
-          .order("created_at", { ascending: false })
           .limit(100);
         if (othersError) throw new Error(othersError.message);
         const candidates = (others ?? []) as unknown as Row[];
@@ -612,12 +613,10 @@ export const getBannerAdsForCategory = createServerFn({ method: "GET" })
       .or(`end_at.is.null,end_at.gte.${now}`);
     // No city given => banners from all cities (unchanged behaviour).
     if (data.city) query = query.ilike("city", exactIlike(data.city));
-    const { data: banners, error } = await query
-      .order("priority", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(10);
+    // Priority first, then a random order inside each priority (never by date); the cap of 10 cuts a random few.
+    const { data: banners, error } = await query.order("priority", { ascending: false }).limit(200);
     if (error) throw new Error(error.message);
-    return (banners ?? []).map((banner) => ({
+    return shuffleByPriority(banners ?? []).slice(0, 10).map((banner) => ({
       ...banner,
       image_url: normalizeBannerImageUrl(banner.image_url),
       mobile_image_url: banner.mobile_image_url ? normalizeBannerImageUrl(banner.mobile_image_url) : null,

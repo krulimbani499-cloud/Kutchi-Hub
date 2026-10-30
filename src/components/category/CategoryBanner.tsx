@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getBannerAdsForCategory } from "@/lib/businesses.functions";
 import { useCity } from "@/hooks/useCity";
 import { BannerImage, bannerCarouselHasMobileImage } from "@/components/BannerImage";
+import { useShuffledBanners } from "@/hooks/useShuffledBanners";
 
 interface Props {
   categoryId: string;
@@ -50,7 +51,10 @@ export function useCategoryBanners(categoryId: string | null | undefined, city?:
 }
 
 export function CategoryBanner({ categoryId, city, intervalMs = 4500, initialBanners, reserveSpace = false }: Props) {
-  const { banners, settled } = useCategoryBanners(categoryId, city, initialBanners);
+  const { banners: fetched, settled } = useCategoryBanners(categoryId, city, initialBanners);
+  // Fair rotation, once per page view. Banners handed over by the page were already put in random order on the server (they are in
+  // the server-rendered page): those stay as they are, so the first banner does not change after the page appears.
+  const banners = useShuffledBanners(fetched, initialBanners !== undefined);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
