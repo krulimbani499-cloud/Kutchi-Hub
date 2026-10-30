@@ -15,17 +15,13 @@ import { LeadForm } from "@/components/search/LeadForm";
 import { SHOW_SEARCH_LEAD_FORM } from "@/lib/features";
 import { ResultCard, ResultCardSkeleton } from "@/components/search/ResultCard";
 import { ResultsHeader } from "@/components/search/ResultsHeader";
-import { getCurrentLocation } from "@/lib/geolocation";
+import { roundPos, useVisitorPosition, type Position } from "@/hooks/useVisitorPosition";
 import { CITY_ALL, effectiveCity, validateSearchParams, type SearchParams, type SortValue } from "@/lib/search-filters";
 
 // Businesses are loaded one page at a time; the server also returns the true total of matches.
 const PAGE_SIZE = 20;
 /** On a phone the "Get the list" form sits in the list after this many results (the end of an endless list is never reached). */
 const PHONE_FORM_AFTER = 5;
-const GEO_KEY = "kh:search-geo";
-const GEO_TTL_MS = 30 * 60_000;
-
-type Position = { lat: number; lng: number };
 
 /** Every filter is in the key: changing any of them starts again from the first page. */
 const searchInfiniteOptions = (p: {
@@ -95,20 +91,6 @@ export const Route = createFileRoute("/search")({
   component: SearchPage,
 });
 
-const roundPos = (p: Position): Position => ({ lat: Math.round(p.lat * 1000) / 1000, lng: Math.round(p.lng * 1000) / 1000 });
-
-function readStoredPosition(): Position | null {
-  try {
-    const raw = JSON.parse(window.sessionStorage.getItem(GEO_KEY) ?? "null") as { lat?: number; lng?: number; t?: number } | null;
-    if (raw && typeof raw.lat === "number" && typeof raw.lng === "number" && typeof raw.t === "number" && Date.now() - raw.t < GEO_TTL_MS) {
-      return { lat: raw.lat, lng: raw.lng };
-    }
-  } catch {
-    /* storage unavailable: just ask again */
-  }
-  return null;
-}
-
 function SearchPage() {
   const params = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -146,31 +128,8 @@ function SearchPage() {
     update({ city: undefined });
   }, [cityLoaded, headerChoice, update]);
 
-  // ---- Where the visitor is: needed for "Nearest" and for the distance on each result. Asked only when "Nearest" is picked.
-  const [geo, setGeo] = useState<Position | null>(null);
-  const [locating, setLocating] = useState(false);
-  useEffect(() => {
-    const stored = readStoredPosition();
-    if (stored) setGeo(stored);
-  }, []);
-  const askPosition = useCallback(async (): Promise<Position | null> => {
-    setLocating(true);
-    try {
-      const fix = await getCurrentLocation();
-      const pos = roundPos({ lat: fix.latitude, lng: fix.longitude });
-      setGeo(pos);
-      try {
-        window.sessionStorage.setItem(GEO_KEY, JSON.stringify({ ...pos, t: Date.now() }));
-      } catch {
-        /* private mode: the position just is not remembered */
-      }
-      return pos;
-    } catch {
-      return null;
-    } finally {
-      setLocating(false);
-    }
-  }, []);
+  // ---- Where the visitor is (only asked when "Nearest" is picked): see useVisitorPosition.
+  const { geo, locating, askPosition } = useVisitorPosition();
 
   // The position the distances are measured from: the visitor's own, else (only for "Nearest") the centre of the chosen city.
   const sort = params.sort ?? "relevance";

@@ -7,7 +7,7 @@ import { BANNER_PLACEMENTS, composeHomeBanners, shuffleByPriority, showsInAllLoc
 import { completionChecklist, publishGaps } from "./listing-completeness";
 import { cachedFor, clearCached } from "./server-cache";
 import { findPhoneDuplicate } from "./quick-add";
-import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { Json, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { slugify, ensureSlug } from "./slug";
 import { isValidIndianMobile, PHONE_ERROR } from "./phone";
 import { httpsLink, optionalUrl, requiredUrl, WEBSITE_ERROR, SOCIAL_ERROR, MAPS_ERROR } from "./url";
@@ -18,7 +18,8 @@ import { resolveCoords } from "./coords.server";
 import { cityKey, haversineKm } from "./places";
 import { isOpenNow, wallClockDate } from "./business-hours";
 import { buildDirectory, type Directory, type DirectoryCategory, type DirectoryRow } from "./directory";
-import { citySlug, parseKeywords, prettySlug, type CategoryLink } from "./seo-landing";
+import { citySlug, parseKeywords, pickCityName, prettySlug, type CategoryLink } from "./seo-landing";
+import { cleanSearchTerm, compareTop, matchedIn, pickHasNames, visibleMatches, type ShowSwitches } from "./all-business";
 import { NEARBY_WIDE_RADIUS_KM, rankNearby } from "./nearby";
 import cityCentres from "@/data/city-coords.json";
 
@@ -223,6 +224,175 @@ async function loadListExtras(supabase: ReturnType<typeof createServerSupabaseCl
   }
   return { photos, services };
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// ALL BUSINESS: every published business of every city (the "All Business" tab). The selected city is ignored.
+// ---------------------------------------------------------------------------------------------------------------------------
+
+const allBusinessSchema = z.object({
+  /** Search text: business name, category, description, and the product / service names the owner shows publicly. */
+  q: z.string().max(200).optional(),
+  category: z.string().max(100).optional(),
+  /** One city, as its address part (see citySlug): "himatnagar". */
+  city: z.string().max(100).optional(),
+  sort: z.enum(["relevance", "rating", "nearest", "newest", "discount"]).optional().default("relevance"),
+  minRating: z.number().min(0).max(5).optional(),
+  hasDiscount: z.boolean().optional().default(false),
+  verified: z.boolean().optional().default(false),
+  openNow: z.boolean().optional().default(false),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  page: z.number().int().min(1).optional().default(1),
+  limit: z.number().int().min(1).max(50).optional().default(20),
+});
+
+const ALL_BUSINESS_COLUMNS =
+  "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, plan_featured, featured_image, hours, latitude, longitude, created_at, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)";
+
+type AllBusinessRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  phone: string | null;
+  verified: boolean;
+  plan_tier_order: number | null;
+  plan_featured: boolean | null;
+  featured_image: string | null;
+  hours: Json | null;
+  latitude: number | null;
+  longitude: number | null;
+  created_at: string;
+  app_discount_percent: number | null;
+  app_discount_label: string | null;
+  app_discount_valid_until: string | null;
+  categories: { id: string; name: string; slug: string; color: string | null } | null;
+  business_reviews: Array<{ rating: number }> | null;
+};
+
+/** The product / service names that match, and which businesses they belong to. Only names the owner shows publicly count. */
+async function matchProductsAndServices(supabase: ReturnType<typeof createServerSupabaseClient>, like: string) {
+  const [prodRes, svcRes] = await Promise.all([
+    // Trigram-indexable pattern on the name (perf-indexes SQL); only products that are switched on.
+    supabase.from("business_products").select("business_id, name").eq("active", true).ilike("name", like).limit(500),
+    supabase.from("business_services").select("business_id, name").eq("active", true).ilike("name", like).limit(500),
+  ]);
+  const ids = new Set<string>();
+  for (const r of prodRes.data ?? []) ids.add(r.business_id);
+  for (const r of svcRes.data ?? []) ids.add(r.business_id);
+  if (ids.size === 0) return { has: new Map<string, string[]>(), ids: [] as string[] };
+
+  // The owner's "Show Products / Services on my profile" switches (see visibleMatches). A failing query = the columns do not exist yet.
+  const toggles = await supabase.from("businesses").select("id, show_products, show_services").in("id", [...ids]);
+  return visibleMatches(prodRes.data ?? [], svcRes.data ?? [], toggles.error ? null : ((toggles.data ?? []) as ShowSwitches[]));
+}
+
+export const searchAllBusinesses = createServerFn({ method: "GET" })
+  .inputValidator((input) => allBusinessSchema.parse(input))
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    const term = cleanSearchTerm(data.q);
+
+    // ---- which businesses match the text: name / description / category in the query itself, products and services beside it
+    let orFilter: string | null = null;
+    let hasByBusiness = new Map<string, string[]>();
+    if (term) {
+      const like = `%${term}%`;
+      const [catRes, items] = await Promise.all([
+        supabase.from("categories").select("id").or(`name.ilike.${like},slug.ilike.${like}`),
+        matchProductsAndServices(supabase, like),
+      ]);
+      hasByBusiness = items.has;
+      // Business name, city, description (and below: the category, and the products / services the owner shows).
+      const parts = [`name.ilike.${like}`, `city.ilike.${like}`, `description.ilike.${like}`];
+      const catIds = (catRes.data ?? []).map((c) => c.id);
+      if (catIds.length > 0) parts.push(`category_id.in.(${catIds.join(",")})`);
+      if (items.ids.length > 0) parts.push(`id.in.(${items.ids.join(",")})`);
+      orFilter = parts.join(",");
+    }
+
+    // ---- the matches, a thousand rows at a time (the database caps one answer at 1000)
+    const rows: AllBusinessRow[] = [];
+    for (let from = 0; from < 10_000; from += 1000) {
+      let q = supabase.from("businesses").select(ALL_BUSINESS_COLUMNS).eq("status", "published").order("id", { ascending: true }).range(from, from + 999);
+      if (orFilter) q = q.or(orFilter);
+      const { data: chunk, error } = await q;
+      if (error) throw new Error(error.message);
+      rows.push(...((chunk ?? []) as unknown as AllBusinessRow[]));
+      if ((chunk?.length ?? 0) < 1000) break;
+    }
+
+    const here = data.lat !== undefined && data.lng !== undefined ? { lat: data.lat, lng: data.lng } : null;
+    const today = new Date().toISOString().slice(0, 10);
+    const clock = data.openNow ? wallClockDate("Asia/Kolkata") : null;
+    const rated = rows.map(({ business_reviews, latitude, longitude, ...b }) => {
+      const reviews = business_reviews ?? [];
+      const sum = reviews.reduce((total, r) => total + r.rating, 0);
+      return {
+        ...b,
+        avgRating: reviews.length ? Number((sum / reviews.length).toFixed(1)) : 0,
+        reviewCount: reviews.length,
+        // Only the distance leaves the server, never the coordinates.
+        distanceKm: here && latitude != null && longitude != null ? Number(haversineKm(here.lat, here.lng, latitude, longitude).toFixed(1)) : null,
+        matchedHas: pickHasNames(hasByBusiness.get(b.id) ?? []),
+        // What the text matched besides the name: the city and / or the category ("In: Dahegam").
+        matchedIn: matchedIn(term, b.city, b.categories),
+      };
+    });
+
+    // ---- the chips (everything except the city), then the cities with their counts, then the chosen city
+    let list = rated.filter((b) => {
+      if (data.category && b.categories?.slug !== data.category) return false;
+      if (data.verified && !b.verified) return false;
+      if (data.hasDiscount && !((b.app_discount_percent ?? 0) > 0 && (!b.app_discount_valid_until || b.app_discount_valid_until >= today))) return false;
+      if ((data.minRating ?? 0) > 0 && b.avgRating < data.minRating!) return false;
+      if (clock && isOpenNow(b.hours, clock) !== true) return false;
+      return true;
+    });
+    const spellings = new Map<string, Map<string, number>>();
+    for (const b of list) {
+      if (!b.city) continue;
+      const slug = citySlug(b.city);
+      if (!slug) continue;
+      const m = spellings.get(slug) ?? new Map<string, number>();
+      m.set(b.city, (m.get(b.city) ?? 0) + 1);
+      spellings.set(slug, m);
+    }
+    const cities = [...spellings.entries()]
+      .map(([slug, m]) => ({ slug, name: pickCityName([...m].map(([name, count]) => ({ name, count }))), count: [...m.values()].reduce((a, b) => a + b, 0) }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    const allTotal = list.length;
+    const wantedCity = data.city ? citySlug(data.city) : "";
+    if (wantedCity) list = list.filter((b) => !!b.city && citySlug(b.city) === wantedCity);
+
+    // ---- the order: package tier, then rating, then newest (see compareTop); the other sorts fall back to it for ties
+    const sort = data.sort === "nearest" && !here ? "relevance" : data.sort;
+    list = [...list].sort((a, b) => {
+      if (sort === "rating") return b.avgRating - a.avgRating || compareTop(a, b);
+      if (sort === "newest") return b.created_at.localeCompare(a.created_at) || compareTop(a, b);
+      if (sort === "discount") return (b.app_discount_percent ?? 0) - (a.app_discount_percent ?? 0) || compareTop(a, b);
+      if (sort === "nearest") return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity) || compareTop(a, b);
+      return compareTop(a, b);
+    });
+
+    const offset = (data.page - 1) * data.limit;
+    const pageRows = list.slice(offset, offset + data.limit);
+    const extras = await loadListExtras(supabase, pageRows.map((b) => b.id));
+    const items = pageRows.map((b) => ({ ...b, photos: extras.photos.get(b.id) ?? [], serviceTags: extras.services.get(b.id) ?? [] }));
+    return {
+      items,
+      /** Matches after every filter (including the chosen city). */
+      total: list.length,
+      /** Matches before the city filter: what the city chips add up to. */
+      allTotal,
+      cities,
+      page: data.page,
+      hasMore: offset + pageRows.length < list.length,
+    };
+  });
 
 let profilesUnreadable = false;
 

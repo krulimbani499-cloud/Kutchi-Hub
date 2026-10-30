@@ -36,6 +36,10 @@ export interface ResultBusiness {
   serviceTags?: string[];
   /** Kilometres from the visitor (or from the chosen city), when a position is known. */
   distanceKm?: number | null;
+  /** Product / service names that matched the search text ("Plywood 18mm"); only ever names the owner shows publicly. */
+  matchedHas?: string[];
+  /** The city and / or category that matched the search text ("Dahegam"). */
+  matchedIn?: string[];
 }
 
 /** Platinum and above are shown first as before; the list marks them with a small "Ad" label. */
@@ -216,6 +220,17 @@ export function ResultCard({
             </span>
           )}
         </div>
+
+        {(business.matchedHas?.length ?? 0) > 0 && (
+          <p data-matched-has className="mt-1 line-clamp-2 text-sm text-foreground/80">
+            <span className="font-semibold text-primary">Has:</span> {business.matchedHas!.join(", ")}
+          </p>
+        )}
+        {(business.matchedIn?.length ?? 0) > 0 && (
+          <p data-matched-in className="mt-1 line-clamp-1 text-sm text-foreground/80">
+            <span className="font-semibold text-primary">In:</span> {business.matchedIn!.join(", ")}
+          </p>
+        )}
 
         {/* Rating, open / closed, distance */}
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">

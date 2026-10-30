@@ -23,7 +23,8 @@ export const HIDE_HEADER_SEARCH_ON_HOME = true;
 
 export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const hideHeaderSearch = hideSearch ?? (HIDE_HEADER_SEARCH_ON_HOME && pathname === "/");
+  // The All Business page has its own (sticky) search box: no second one in the header.
+  const hideHeaderSearch = hideSearch ?? ((HIDE_HEADER_SEARCH_ON_HOME && pathname === "/") || pathname === "/all-business");
   const { user, isLoading } = useAuth();
   const t = useT();
   const diwali = useDiwali().active; // the festival strip, on the Diwali days only (features.ts)
@@ -120,6 +121,12 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
           <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild title={t("nav.about")}>
             <Link to="/about" aria-label={t("nav.about")}>
               <Info className="h-5 w-5" />
+            </Link>
+          </Button>
+          {/* Saved businesses on phones (the bottom bar has "All Business" instead). Signed out, the page asks to sign in. */}
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild title={t("nav.favorites")}>
+            <Link to="/favorites" aria-label={t("nav.favorites")} data-header-saved>
+              <Heart className="h-5 w-5" />
             </Link>
           </Button>
 

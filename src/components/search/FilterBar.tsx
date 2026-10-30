@@ -51,7 +51,10 @@ export function FilterBar({
   onApply,
   onClearChips,
   onClearAll,
+  hideCityAndText = false,
 }: {
+  /** The All Business page: no city and no text-search fields in the All Filters panel (it has its own search box, all cities). */
+  hideCityAndText?: boolean;
   params: SearchParams;
   /** The city the list is for ("" = every city). */
   city: string;
@@ -86,6 +89,7 @@ export function FilterBar({
           categoriesPending={categoriesPending}
           onApply={onApply}
           onClearAll={onClearAll}
+          hideCityAndText={hideCityAndText}
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -141,6 +145,7 @@ export function FilterBar({
 
 function AllFilters({
   className = "",
+  hideCityAndText = false,
   params,
   city,
   count,
@@ -149,6 +154,7 @@ function AllFilters({
   onApply,
   onClearAll,
 }: {
+  hideCityAndText?: boolean;
   className?: string;
   params: SearchParams;
   city: string;
@@ -171,6 +177,7 @@ function AllFilters({
   );
   const panel = (
     <FiltersPanel
+      hideCityAndText={hideCityAndText}
       params={params}
       city={city}
       categories={categories}
@@ -226,7 +233,9 @@ function FiltersPanel({
   categoriesPending,
   onApply,
   onClearAll,
+  hideCityAndText = false,
 }: {
+  hideCityAndText?: boolean;
   params: SearchParams;
   city: string;
   categories: CategoryOption[];
@@ -259,10 +268,12 @@ function FiltersPanel({
         onApply(draft);
       }}
     >
-      <Field label="Search" htmlFor="flt-q">
-        <Input id="flt-q" value={draft.q} onChange={(e) => set("q", e.target.value)} placeholder="Name, service or product" maxLength={100} />
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
+      {!hideCityAndText && (
+        <Field label="Search" htmlFor="flt-q">
+          <Input id="flt-q" value={draft.q} onChange={(e) => set("q", e.target.value)} placeholder="Name, service or product" maxLength={100} />
+        </Field>
+      )}
+      <div className={hideCityAndText ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
         <Field label="Category" htmlFor="flt-category">
           {categoriesPending ? (
             <Skeleton className="h-10 w-full" />
@@ -282,9 +293,11 @@ function FiltersPanel({
             </Select>
           )}
         </Field>
-        <Field label="City" htmlFor="flt-city">
-          <Input id="flt-city" value={draft.city} onChange={(e) => set("city", e.target.value)} placeholder="All locations" maxLength={80} />
-        </Field>
+        {!hideCityAndText && (
+          <Field label="City" htmlFor="flt-city">
+            <Input id="flt-city" value={draft.city} onChange={(e) => set("city", e.target.value)} placeholder="All locations" maxLength={80} />
+          </Field>
+        )}
       </div>
       <Field label="Sort by" htmlFor="flt-sort">
         <Select value={draft.sort} onValueChange={(v) => set("sort", v as SortValue)}>

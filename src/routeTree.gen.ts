@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AllBusinessRouteImport } from './routes/all-business'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as DeleteAccountRouteImport } from './routes/delete-account'
@@ -47,6 +48,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AllBusinessRoute = AllBusinessRouteImport.update({
+  id: '/all-business',
+  path: '/all-business',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -167,6 +173,7 @@ const CitySlugCategoryCategoryRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/all-business': typeof AllBusinessRoute
   '/auth': typeof AuthRoute
   '/categories': typeof CategoriesRoute
   '/delete-account': typeof DeleteAccountRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/all-business': typeof AllBusinessRoute
   '/auth': typeof AuthRoute
   '/categories': typeof CategoriesRoute
   '/delete-account': typeof DeleteAccountRoute
@@ -221,6 +229,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/all-business': typeof AllBusinessRoute
   '/auth': typeof AuthRoute
   '/categories': typeof CategoriesRoute
   '/delete-account': typeof DeleteAccountRoute
@@ -249,6 +258,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/all-business'
     | '/auth'
     | '/categories'
     | '/delete-account'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/all-business'
     | '/auth'
     | '/categories'
     | '/delete-account'
@@ -302,6 +313,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/about'
+    | '/all-business'
     | '/auth'
     | '/categories'
     | '/delete-account'
@@ -330,6 +342,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
+  AllBusinessRoute: typeof AllBusinessRoute
   AuthRoute: typeof AuthRoute
   CategoriesRoute: typeof CategoriesRoute
   DeleteAccountRoute: typeof DeleteAccountRoute
@@ -367,6 +380,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/all-business': {
+      id: '/all-business'
+      path: '/all-business'
+      fullPath: '/all-business'
+      preLoaderRoute: typeof AllBusinessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -565,6 +585,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AboutRoute: AboutRoute,
+  AllBusinessRoute: AllBusinessRoute,
   AuthRoute: AuthRoute,
   CategoriesRoute: CategoriesRoute,
   DeleteAccountRoute: DeleteAccountRoute,

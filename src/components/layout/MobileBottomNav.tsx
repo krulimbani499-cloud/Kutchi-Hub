@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Search, Heart, User, LayoutGrid } from "lucide-react";
+import { Home, Search, User, LayoutGrid, LayoutList } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 
@@ -12,12 +12,8 @@ export function MobileBottomNav() {
     { to: "/", label: t("nav.home"), icon: Home, match: (p: string) => p === "/" },
     { to: "/categories", label: t("nav.categories"), icon: LayoutGrid, match: (p: string) => p.startsWith("/categor") },
     { to: "/search", label: t("nav.searchShort"), icon: Search, match: (p: string) => p.startsWith("/search") },
-    {
-      to: user ? "/favorites" : "/auth",
-      label: t("nav.saved"),
-      icon: Heart,
-      match: (p: string) => p.startsWith("/favorites"),
-    },
+    // Saved businesses moved to the heart icon in the header and to the Account page (Dashboard).
+    { to: "/all-business", label: t("nav.allBusiness"), icon: LayoutList, match: (p: string) => p.startsWith("/all-business") },
     {
       to: user ? "/dashboard" : "/auth",
       label: user ? t("nav.account") : t("nav.signIn"),

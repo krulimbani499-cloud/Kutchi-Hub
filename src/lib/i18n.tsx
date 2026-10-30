@@ -36,6 +36,7 @@ const en: Dict = {
   "nav.signOut": "Sign out",
   "nav.home": "Home",
   "nav.saved": "Saved",
+  "nav.allBusiness": "All Business",
   "nav.account": "Account",
   "nav.language": "Language",
   // home
@@ -162,6 +163,7 @@ const gu: Dict = {
   "nav.signOut": "સાઇન આઉટ",
   "nav.home": "હોમ",
   "nav.saved": "સેવ્ડ",
+  "nav.allBusiness": "બધા વેપાર",
   "nav.account": "એકાઉન્ટ",
   "nav.language": "ભાષા",
   "home.searchTagline": "તમારી નજીકના કચ્છ કડવા પાટીદાર સમાજના વ્યવસાયો શોધો",
@@ -286,6 +288,7 @@ const hi: Dict = {
   "nav.signOut": "साइन आउट",
   "nav.home": "होम",
   "nav.saved": "सेव्ड",
+  "nav.allBusiness": "सभी व्यापार",
   "nav.account": "अकाउंट",
   "nav.language": "भाषा",
   "home.searchTagline": "अपने आस-पास कच्छ कडवा पाटीदार समाज के व्यवसाय खोजें",
