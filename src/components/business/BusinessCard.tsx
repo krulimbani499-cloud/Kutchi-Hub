@@ -5,6 +5,7 @@ import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
 import { BlurFillImage } from "./BlurFillImage";
 import { FavoriteButton } from "./FavoriteButton";
+import { SHOW_SAVED } from "@/lib/features";
 import { isOpenNow, hasAnyHours } from "@/lib/business-hours";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
@@ -104,9 +105,11 @@ export function BusinessCard({ business, delayMs }: BusinessCardProps) {
             </div>
           </div>
         )}
-        <div className="absolute left-2 top-2 z-20">
-          <FavoriteButton businessId={business.id} size="sm" />
-        </div>
+        {SHOW_SAVED && (
+          <div className="absolute left-2 top-2 z-20">
+            <FavoriteButton businessId={business.id} size="sm" />
+          </div>
+        )}
         {hasHours && mounted && openState !== null && (
           <div
             className={`absolute bottom-2 left-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold shadow-sm ${

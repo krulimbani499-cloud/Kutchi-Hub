@@ -10,6 +10,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SHOW_SAVED } from "@/lib/features";
 import { Heart, Building2, MapPin, Star, Archive, Flag, Edit, Lock, MessageSquare, Phone, Mail, Inbox, LogOut, Package, Wrench, ChevronDown, ChevronUp, Gift, LayoutDashboard, ShieldCheck } from "lucide-react";
 import { EditLockedCard } from "@/components/business/EditLockedCard";
 import { WaitingActivationCard } from "@/components/business/WaitingActivationCard";
@@ -105,12 +106,14 @@ It will disappear from the website. Its subscription and payment history are kep
           <Button className="bg-primary text-primary-foreground" asChild>
             <Link to="/business/new">Add New Business</Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link to="/favorites" data-saved-link>
-              <Heart className="mr-1 h-4 w-4" />
-              Saved businesses
-            </Link>
-          </Button>
+          {SHOW_SAVED && (
+            <Button variant="outline" asChild>
+              <Link to="/favorites" data-saved-link>
+                <Heart className="mr-1 h-4 w-4" />
+                Saved businesses
+              </Link>
+            </Button>
+          )}
           <Button variant="outline" asChild>
             <Link to="/settings">Settings</Link>
           </Button>

@@ -14,6 +14,13 @@ export const SHOW_PUBLIC_PRICING = false;
 export const SHOW_SEARCH_LEAD_FORM = false;
 
 /**
+ * Saved / favourite businesses: the heart icon in the header, the heart (save) buttons on business cards, result cards and the
+ * business page, the "Saved businesses" button on the Dashboard, and the /favorites page. false = none of them is shown and
+ * /favorites goes to /all-business. The code, the business_favorites table and the data stay in place: set true to bring it all back.
+ */
+export const SHOW_SAVED = false;
+
+/**
  * DIWALI THEME: ON automatically from DIWALI_START to DIWALI_END (IST), OFF before and after: nothing to switch by hand.
  * Next year: change these two dates (keep the +05:30). The year in DIWALI_START also names the "already dismissed / fireworks
  * played" flags, so they start fresh every year. Preview before the dates: add ?diwali=1 to any address (memory only, not stored).

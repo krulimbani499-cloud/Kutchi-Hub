@@ -12,6 +12,7 @@ import { LanguageSelector } from "@/components/layout/LanguageSelector";
 import { useT } from "@/lib/i18n";
 import { usePricingVisible } from "@/hooks/usePricingVisible";
 import { useDiwali } from "@/hooks/useDiwali";
+import { SHOW_SAVED } from "@/lib/features";
 import { DiwaliToran } from "@/components/diwali/DiwaliToran";
 
 /**
@@ -124,11 +125,13 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
             </Link>
           </Button>
           {/* Saved businesses on phones (the bottom bar has "All Business" instead). Signed out, the page asks to sign in. */}
-          <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild title={t("nav.favorites")}>
-            <Link to="/favorites" aria-label={t("nav.favorites")} data-header-saved>
-              <Heart className="h-5 w-5" />
-            </Link>
-          </Button>
+          {SHOW_SAVED && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:hidden" asChild title={t("nav.favorites")}>
+              <Link to="/favorites" aria-label={t("nav.favorites")} data-header-saved>
+                <Heart className="h-5 w-5" />
+              </Link>
+            </Button>
+          )}
 
           {!isLoading && (
             <>
@@ -147,11 +150,13 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
                       </Button>
                     </>
                   )}
-                  <Button variant="ghost" size="icon" className="hidden sm:inline-flex" asChild title={t("nav.favorites")}>
-                    <Link to="/favorites" aria-label={t("nav.favorites")}>
-                      <Heart className="h-5 w-5" />
-                    </Link>
-                  </Button>
+                  {SHOW_SAVED && (
+                    <Button variant="ghost" size="icon" className="hidden sm:inline-flex" asChild title={t("nav.favorites")}>
+                      <Link to="/favorites" aria-label={t("nav.favorites")}>
+                        <Heart className="h-5 w-5" />
+                      </Link>
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
                     {isAdmin ? (
                       <Link to="/dashboard">

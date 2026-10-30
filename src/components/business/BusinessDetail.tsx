@@ -41,6 +41,7 @@ import { PhotoUploader } from "./PhotoUploader";
 import { BlurFillImage } from "./BlurFillImage";
 import { PhotoLightbox, type LightboxPhoto } from "./PhotoLightbox";
 import { FavoriteButton } from "./FavoriteButton";
+import { SHOW_SAVED } from "@/lib/features";
 import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
 import { ProductsManager, ProductsDisplay } from "./ProductsManager";
@@ -307,7 +308,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <FavoriteButton businessId={business.id} />
+                  {SHOW_SAVED && <FavoriteButton businessId={business.id} />}
                   {reviewCount === 0 ? (
                     // No reviews yet: a "New" pill instead of "★ 0.0 / 0 Ratings".
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary sm:py-1 sm:text-sm">

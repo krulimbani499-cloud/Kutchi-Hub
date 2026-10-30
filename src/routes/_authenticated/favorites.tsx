@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { SHOW_SAVED } from "@/lib/features";
 import { useQuery } from "@tanstack/react-query";
 import { Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +8,10 @@ import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/favorites")({
+  // Switched off (features.ts SHOW_SAVED): go to the All Business page. (The parent route already does this before it asks to sign in.)
+  beforeLoad: () => {
+    if (!SHOW_SAVED) throw redirect({ to: "/all-business" });
+  },
   head: () => ({
     meta: [
       { title: "My Favorites — Kutchi Hub" },

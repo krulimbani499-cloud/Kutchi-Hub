@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { BadgeCheck, ChevronLeft, ChevronRight, Clock, Crown, MapPin, MessageCircle, Navigation, Phone, Star, Tag } from "lucide-react";
 import { BlurFillImage } from "@/components/business/BlurFillImage";
 import { FavoriteButton } from "@/components/business/FavoriteButton";
+import { SHOW_SAVED } from "@/lib/features";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getBusinessPhotoStorageKey } from "@/lib/business-photos";
 import { hasAnyHours, isOpenNow } from "@/lib/business-hours";
@@ -155,9 +156,11 @@ export function ResultCard({
             }
           />
         </Link>
-        <div className="absolute left-2 top-2 z-30">
-          <FavoriteButton businessId={business.id} size="sm" />
-        </div>
+        {SHOW_SAVED && (
+          <div className="absolute left-2 top-2 z-30">
+            <FavoriteButton businessId={business.id} size="sm" />
+          </div>
+        )}
         {tier >= AD_TIER && (
           <span
             data-ad-label
