@@ -34,6 +34,8 @@ const searchInfiniteOptions = (p: {
   verified: boolean;
   offer: boolean;
   here: Position | null;
+  /** A locality was picked inside the city: the default order is nearest to it first. */
+  areaFirst: boolean;
 }) => ({
   queryKey: ["search", p] as const,
   initialPageParam: 1,
@@ -50,6 +52,7 @@ const searchInfiniteOptions = (p: {
         openNow: p.open,
         lat: p.here?.lat,
         lng: p.here?.lng,
+        areaFirst: p.areaFirst || undefined,
         page: pageParam,
         limit: PAGE_SIZE,
       },
@@ -96,7 +99,7 @@ function SearchPage() {
   const navigate = Route.useNavigate();
   const { data: categoriesData, isPending: categoriesPending } = useQuery(categoriesQueryOptions);
   const categories = useMemo(() => sortCategoriesAZ(categoriesData ?? []), [categoriesData]);
-  const { city: headerCity, coords: headerCoords, allLocations, loaded: cityLoaded, setCity } = useCity();
+  const { city: headerCity, coords: headerCoords, area, allLocations, loaded: cityLoaded, setCity } = useCity();
 
   // The city this list is for: the address wins (city=all means every city), otherwise the city chosen in the header.
   const city = effectiveCity(params.city, headerCity);
@@ -134,8 +137,11 @@ function SearchPage() {
   // The position the distances are measured from: the visitor's own, else (only for "Nearest") the centre of the chosen city.
   const sort = params.sort ?? "relevance";
   const cityCentre = headerCoords && headerCity && headerCity === city ? roundPos(headerCoords) : null;
-  const here: Position | null = geo ?? (sort === "nearest" ? cityCentre : null);
-  const distanceFrom: "you" | "city" = geo ? "you" : "city";
+  // A locality picked inside this city ("Naroda" in Ahmedabad): the list is nearest to it first and the distances are from it.
+  const areaPos: Position | null = area && headerCity && headerCity === city ? roundPos({ lat: area.lat, lng: area.lng }) : null;
+  const here: Position | null = sort === "nearest" ? (geo ?? areaPos ?? cityCentre) : (areaPos ?? geo);
+  const fromArea = !!areaPos && !!here && here.lat === areaPos.lat && here.lng === areaPos.lng && !(sort === "nearest" && geo);
+  const distanceFrom: "you" | "city" | "area" = fromArea ? "area" : geo ? "you" : "city";
 
   /** Picks a sort order. "Nearest" first needs a position: the device's, else the chosen city's centre. */
   const chooseSort = useCallback(
@@ -194,6 +200,7 @@ function SearchPage() {
       verified: !!params.verified,
       offer: !!params.offer,
       here,
+      areaFirst: !!areaPos && sort === "relevance",
     }),
     enabled: searchEnabled,
     // keepPreviousData: changing a filter keeps showing the old results (dimmed) until the new ones arrive.
@@ -312,7 +319,7 @@ function SearchPage() {
             <div key="list" data-results-list className={`flex flex-col gap-4 transition-opacity ${resultsStale ? "opacity-60" : ""}`}>
               {results.map((business, i) => (
                 <Fragment key={business.id}>
-                  <ResultCard business={business} distanceFrom={distanceFrom} priority={i < 2} />
+                  <ResultCard business={business} distanceFrom={distanceFrom} areaName={areaPos ? area?.name : null} priority={i < 2} />
                   {SHOW_SEARCH_LEAD_FORM && i === Math.min(PHONE_FORM_AFTER, results.length) - 1 && <div className="lg:hidden">{leadForm()}</div>}
                 </Fragment>
               ))}

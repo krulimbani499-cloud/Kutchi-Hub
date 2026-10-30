@@ -8,11 +8,15 @@ import { getCurrentLocation, type LocationError } from "@/lib/geolocation";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { HorizontalCardRow } from "@/components/home/HorizontalCardRow";
+import { useCity } from "@/hooks/useCity";
 
 export function NearbyBusinesses() {
   const sectionRef = useScrollAnimation<HTMLElement>();
   const fetchNearby = useServerFn(getNearbyBusinesses);
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  // A locality picked in the city selector ("Naroda"): the row is the businesses near that place, no location permission needed.
+  const { area } = useCity();
+  const [deviceCoords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const coords = area ? { lat: Math.round(area.lat * 1000) / 1000, lng: Math.round(area.lng * 1000) / 1000 } : deviceCoords;
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Location refused: the whole section is hidden (no message, nothing to nag about).
@@ -64,7 +68,7 @@ export function NearbyBusinesses() {
     staleTime: 60_000,
   });
 
-  if (denied) return null;
+  if (denied && !area) return null;
 
   const businesses = data?.businesses ?? [];
 
@@ -76,7 +80,7 @@ export function NearbyBusinesses() {
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
               <MapPin className="h-4 w-4" />
             </span>
-            Nearby Businesses
+            {area ? `Near ${area.name}` : "Nearby Businesses"}
           </h2>
           {!coords && (
             <Button size="sm" variant="outline" onClick={detect} disabled={locating}>

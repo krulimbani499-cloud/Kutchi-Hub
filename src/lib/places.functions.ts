@@ -14,6 +14,7 @@ import {
   haversineKm,
   parseAutocomplete,
   parseDetails,
+  parseGeocodeDetails,
   type PlaceDetails,
   type PlaceSuggestion,
 } from "./places";
@@ -108,6 +109,37 @@ export const getPlaceDetails = createServerFn({ method: "POST" })
       if (!details || !isInIndia(details.lat, details.lng)) return { ok: false, details: null };
       detailsCache.set(data.placeId, details);
       return { ok: true, details };
+    } catch {
+      return { ok: false, details: null };
+    }
+  });
+
+/**
+ * Where an entry of the typed city list ("Bopal", "Naroda") is and which city it is in: one Geocoding lookup by name (and state),
+ * remembered for a day. Only used when nothing has businesses under that name, to find the parent city (see resolvePick).
+ */
+const localityCache = new TtlCache<PlaceDetails | null>(24 * 60 * 60_000, 500);
+export const resolveLocality = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    z.object({ name: z.string().trim().min(2).max(80), state: z.string().trim().max(60).nullable().optional() }).parse(input),
+  )
+  .handler(async ({ data }): Promise<{ ok: boolean; details: PlaceDetails | null }> => {
+    const key = process.env.GOOGLE_MAPS_API_KEY;
+    if (!key) return { ok: false, details: null };
+    const cacheKey = `${cityKey(data.name)}|${cityKey(data.state ?? "")}`;
+    const cached = localityCache.get(cacheKey);
+    if (cached !== undefined) return { ok: !!cached, details: cached };
+    if (!geocodeLimiter.take(clientIp())) return { ok: false, details: null };
+    try {
+      const url =
+        "https://maps.googleapis.com/maps/api/geocode/json?" +
+        new URLSearchParams({ address: geocodeQueryForCity(data.name, data.state), region: "in", components: "country:IN", key });
+      const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) return { ok: false, details: null };
+      const details = parseGeocodeDetails(await res.json());
+      const found = details && isInIndia(details.lat, details.lng) ? details : null;
+      localityCache.set(cacheKey, found);
+      return { ok: !!found, details: found };
     } catch {
       return { ok: false, details: null };
     }

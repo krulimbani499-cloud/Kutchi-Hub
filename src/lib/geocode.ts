@@ -12,6 +12,8 @@ export type GeocodeCandidates = {
   localNames: string[];
   /** The locality (town or village) itself, when Google returns one. */
   locality: string | null;
+  /** The well-known suburb (Google's sublocality_level_1: "Naroda", "Satellite"), when it returns one. */
+  suburb: string | null;
 };
 
 type GoogleComponent = { long_name: string; types: string[] };
@@ -37,7 +39,7 @@ const NAME_TYPES = [
 // The subset of NAME_TYPES that names a place a person lives in (suburb, village, town), not an administrative area.
 const LOCAL_TYPES = new Set(NAME_TYPES.slice(0, 6));
 
-const EMPTY: GeocodeCandidates = { names: [], district: null, fallback: null, localNames: [], locality: null };
+const EMPTY: GeocodeCandidates = { names: [], district: null, fallback: null, localNames: [], locality: null, suburb: null };
 
 function component(result: { address_components?: GoogleComponent[] }, type: string): string | undefined {
   return result.address_components?.find((c) => c.types.includes(type))?.long_name;
@@ -61,6 +63,7 @@ export function extractGoogleCandidates(body: GoogleGeocodeResponse): GeocodeCan
     names,
     localNames,
     locality: component(best, "locality") ?? null,
+    suburb: component(best, "sublocality_level_1") ?? component(best, "sublocality") ?? null,
     district: component(best, "administrative_area_level_3") ?? component(best, "administrative_area_level_2") ?? null,
     fallback: component(best, "locality") ?? component(best, "administrative_area_level_4") ?? null,
   };

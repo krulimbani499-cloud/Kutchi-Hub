@@ -37,6 +37,8 @@ const searchSchema = z.object({
   /** Where the visitor is: needed for the "nearest" order and for the distance on each result. */
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
+  /** A locality was picked inside the city (lat / lng is its place): the default order puts the nearest businesses first. */
+  areaFirst: z.boolean().optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(50).optional().default(20),
 });
@@ -136,7 +138,9 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     // "open now" needs the opening hours of every match, so those modes load all matches (the database caps a response at
     // 1000 rows) and filter / sort / page them here. The total is still the exact number of matches.
     const here = data.lat !== undefined && data.lng !== undefined ? { lat: data.lat, lng: data.lng } : null;
-    const nearest = data.sort === "nearest" && here !== null; // "nearest" without a position falls back to the normal order
+    // "nearest" without a position falls back to the normal order. With a picked area the DEFAULT order is the nearest first too.
+    const sortMode = data.sort === "relevance" && data.areaFirst && here !== null ? "nearest" : data.sort;
+    const nearest = sortMode === "nearest" && here !== null;
     const inMemory = data.sort === "rating" || nearest || (data.minRating ?? 0) > 0 || data.openNow;
     let ordered = query;
     if (data.sort === "newest") ordered = ordered.order("created_at", { ascending: false });
@@ -1040,16 +1044,25 @@ function withRatingSummary<T extends { business_reviews?: Array<{ rating: number
   });
 }
 
+/** Drops the coordinates from home rows; with a position, puts the nearest first (a business without coordinates after them, in its old order). */
+function orderByDistance<T extends { latitude?: number | null; longitude?: number | null }>(rows: T[], at: { lat: number; lng: number } | null) {
+  const withDistance = rows.map(({ latitude, longitude, ...rest }) => ({
+    ...rest,
+    distanceKm: at && latitude != null && longitude != null ? Number(haversineKm(at.lat, at.lng, latitude, longitude).toFixed(1)) : null,
+  }));
+  return at ? [...withDistance].sort((x, y) => (x.distanceKm ?? Infinity) - (y.distanceKm ?? Infinity)) : withDistance;
+}
+
 export const getHomeData = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
-    z.object({ city: z.string().optional() }).optional().parse(input) ?? {},
+    z.object({ city: z.string().optional(), lat: z.number().min(-90).max(90).optional(), lng: z.number().min(-180).max(180).optional() }).optional().parse(input) ?? {},
   )
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
     const city = data?.city?.trim();
     let featuredQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)")
+      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, latitude, longitude, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)")
       .eq("status", "published")
       .order("plan_tier_order", { ascending: false })
       .order("plan_featured", { ascending: false })
@@ -1060,7 +1073,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     // Platinum spotlight: Platinum (4) & Enterprise (5) only — the auto-showcase perk
     let spotlightQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)")
+      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, latitude, longitude, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)")
       .eq("status", "published")
       .gte("plan_tier_order", 4)
       .order("plan_tier_order", { ascending: false })
@@ -1071,7 +1084,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     const today = new Date().toISOString().slice(0, 10);
     let offersQuery = supabase
       .from("businesses")
-      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)")
+      .select("id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, latitude, longitude, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id(id, name, slug, color), business_reviews(rating)")
       .eq("status", "published")
       .gt("app_discount_percent", 0)
       .or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`)
@@ -1104,9 +1117,11 @@ export const getHomeData = createServerFn({ method: "GET" })
     ]);
     const categories = rankPopularCategories(allCategories ?? [], cityCounts, overallCounts, HOME_CATEGORY_TILES);
 
-    const listings = withRatingSummary(featured);
-    const topOffers = withRatingSummary(offers);
-    const platinumSpotlight = withRatingSummary(spotlight);
+    // A locality picked inside the city (lat / lng): each section lists its businesses nearest to it first (without a position last).
+    const at = data?.lat !== undefined && data?.lng !== undefined ? { lat: data.lat, lng: data.lng } : null;
+    const listings = orderByDistance(withRatingSummary(featured), at);
+    const topOffers = orderByDistance(withRatingSummary(offers), at);
+    const platinumSpotlight = orderByDistance(withRatingSummary(spotlight), at);
 
     return { categories, featured: listings, topOffers, platinumSpotlight };
   });

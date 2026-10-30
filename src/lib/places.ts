@@ -15,6 +15,11 @@ export type PlaceDetails = {
   /** District (administrative_area_level_3 in India), used for the "Vadagam (Aravalli)" rule. */
   district: string | null;
   state: string | null;
+  /**
+   * The `locality` component: the town or city the place is in ("Ahmedabad" for Naroda, Bopal, Kathwada ...). A locality inside a
+   * city is a sublocality, so this is its parent city (see resolvePick in area.ts).
+   */
+  locality: string | null;
 };
 
 type AutocompleteBody = {
@@ -62,6 +67,29 @@ export function parseDetails(body: DetailsBody): PlaceDetails | null {
     lng,
     district: comp("administrative_area_level_3") ?? comp("administrative_area_level_2"),
     state: comp("administrative_area_level_1"),
+    locality: comp("locality"),
+  };
+}
+
+type GeocodeBody = {
+  status?: string;
+  results?: Array<{ geometry?: { location?: { lat?: number; lng?: number } }; address_components?: Array<{ long_name?: string; types?: string[] }> }>;
+};
+
+/** The same details from a Geocoding API answer (used for an entry of the typed city list, which has no Places answer yet). */
+export function parseGeocodeDetails(body: GeocodeBody): PlaceDetails | null {
+  if (body.status !== "OK") return null;
+  const r = body.results?.[0];
+  const lat = r?.geometry?.location?.lat;
+  const lng = r?.geometry?.location?.lng;
+  if (!r || typeof lat !== "number" || typeof lng !== "number") return null;
+  const comp = (type: string) => r.address_components?.find((c) => c.types?.includes(type))?.long_name ?? null;
+  return {
+    lat,
+    lng,
+    district: comp("administrative_area_level_3") ?? comp("administrative_area_level_2"),
+    state: comp("administrative_area_level_1"),
+    locality: comp("locality"),
   };
 }
 

@@ -8,7 +8,7 @@ import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2, Mic, ArrowRight, Smartphone, Tag, Calendar, Crown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
@@ -42,10 +42,11 @@ import { DiwaliHome } from "@/components/diwali/DiwaliHome";
 import { BASE_URL, ldScript, breadcrumbLd } from "@/lib/seo";
 import { useT } from "@/lib/i18n";
 
-const homeQueryOptions = (city?: string) =>
+// `at` = a locality picked inside the city: each row lists the city's businesses nearest to it first.
+const homeQueryOptions = (city?: string, at?: { lat: number; lng: number } | null) =>
   queryOptions({
-    queryKey: ["home", city ?? null],
-    queryFn: () => getHomeData({ data: { city } }),
+    queryKey: ["home", city ?? null, at ? [at.lat, at.lng] : null],
+    queryFn: () => getHomeData({ data: { city, lat: at?.lat, lng: at?.lng } }),
   });
 
 export const Route = createFileRoute("/")({
@@ -74,9 +75,10 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const { city, coords: cityCoords } = useCity();
+  const { city, coords: cityCoords, area } = useCity();
   const t = useT();
-  const { data: home } = useQuery(homeQueryOptions(city ?? undefined));
+  const areaAt = useMemo(() => (area ? { lat: Math.round(area.lat * 1000) / 1000, lng: Math.round(area.lng * 1000) / 1000 } : null), [area]);
+  const { data: home } = useQuery(homeQueryOptions(city ?? undefined, areaAt));
   const [search, setSearch] = useState("");
   const [isNativeApp, setIsNativeApp] = useState(false);
   useEffect(() => {
@@ -239,7 +241,7 @@ function HomePage() {
         {home && home.featured.length > 0 ? (
           <HorizontalCardRow>
             {home.featured.map((business) => (
-              <BusinessCard key={business.id} business={business} />
+              <BusinessCard key={business.id} business={business} areaName={area?.name} />
             ))}
           </HorizontalCardRow>
         ) : !home ? (
@@ -325,7 +327,7 @@ function HomePage() {
             {/* No per-card scroll-reveal (delayMs): cards off-screen to the right would stay invisible until swiped to. */}
             <HorizontalCardRow>
               {home
-                ? home.platinumSpotlight.map((business) => <BusinessCard key={business.id} business={business} />)
+                ? home.platinumSpotlight.map((business) => <BusinessCard key={business.id} business={business} areaName={area?.name} />)
                 : Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-64 animate-pulse rounded-xl bg-muted" />)}
             </HorizontalCardRow>
           </div>

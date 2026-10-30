@@ -1,10 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { getCurrentLocation, resolveDetectedCity } from "@/lib/geolocation";
+import { getCurrentLocation } from "@/lib/geolocation";
 import { reverseGeocodeCity } from "@/lib/maps.functions";
+import { getBusinessCities } from "@/lib/places.functions";
+import { resolveDetectedPlace } from "@/lib/area";
 import { INDIAN_CITIES } from "@/lib/cities";
 
 const KEY = "kutchi-hub:city";
 const COORDS_KEY = "kutchi-hub:city-coords";
+const AREA_KEY = "kutchi-hub:city-area";
 const EVT = "kutchi-hub:city-changed";
 const AUTO_TRIED_KEY = "kutchi-hub:city-auto-tried";
 
@@ -17,6 +20,12 @@ export const ALL_LOCATIONS = "__all__";
 
 /** Where the chosen place is (from the autocomplete details or the device), used to find nearby cities. */
 export type CityCoords = { lat: number; lng: number };
+
+/**
+ * A locality inside the chosen city ("Naroda" inside "Ahmedabad"): the businesses shown are the city's, nearest to this place
+ * first. `lat` / `lng` is where the locality is (the same numbers as `coords`).
+ */
+export type CityArea = { name: string; lat: number; lng: number };
 
 function read(): string | null {
   if (typeof window === "undefined") return null;
@@ -39,11 +48,28 @@ function readCoords(city: string | null): CityCoords | null {
   return null;
 }
 
-function store(next: string | null, coords?: CityCoords | null) {
+// The area only counts for the city it was saved with, and needs the coordinates of the place.
+function readArea(city: string | null, coords: CityCoords | null): CityArea | null {
+  if (typeof window === "undefined" || !city || !coords) return null;
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(AREA_KEY) ?? "null") as { city?: string; name?: string } | null;
+    if (raw && raw.city === city && typeof raw.name === "string" && raw.name.trim()) {
+      return { name: raw.name.trim(), lat: coords.lat, lng: coords.lng };
+    }
+  } catch {
+    /* ignore corrupt value */
+  }
+  return null;
+}
+
+function store(next: string | null, coords?: CityCoords | null, area?: string | null) {
   if (next) window.localStorage.setItem(KEY, next);
   else window.localStorage.removeItem(KEY);
   if (next && coords) window.localStorage.setItem(COORDS_KEY, JSON.stringify({ city: next, ...coords }));
   else window.localStorage.removeItem(COORDS_KEY);
+  // The locality is remembered with the city (picking another city, or All locations, forgets it).
+  if (next && coords && area) window.localStorage.setItem(AREA_KEY, JSON.stringify({ city: next, name: area }));
+  else window.localStorage.removeItem(AREA_KEY);
 }
 
 export function useCity() {
@@ -51,32 +77,36 @@ export function useCity() {
   const [stored, setStored] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [coords, setCoords] = useState<CityCoords | null>(null);
+  const [area, setArea] = useState<CityArea | null>(null);
 
   useEffect(() => {
-    const first = read();
-    setStored(first);
-    setCoords(readCoords(first === ALL_LOCATIONS ? null : first));
-    setLoaded(true);
-    const onChange = () => {
+    const apply = () => {
       const now = read();
+      const city = now === ALL_LOCATIONS ? null : now;
+      const c = readCoords(city);
       setStored(now);
-      setCoords(readCoords(now === ALL_LOCATIONS ? null : now));
+      setCoords(c);
+      setArea(readArea(city, c));
     };
-    window.addEventListener(EVT, onChange);
-    window.addEventListener("storage", onChange);
+    apply();
+    setLoaded(true);
+    window.addEventListener(EVT, apply);
+    window.addEventListener("storage", apply);
 
     // Auto-detect once per browser if no choice is stored yet ("All locations" counts as a choice).
-    if (!first && !window.localStorage.getItem(AUTO_TRIED_KEY)) {
+    if (!read() && !window.localStorage.getItem(AUTO_TRIED_KEY)) {
       window.localStorage.setItem(AUTO_TRIED_KEY, "1");
       (async () => {
         try {
           const loc = await getCurrentLocation();
           const place = await reverseGeocodeCity({ data: { lat: loc.latitude, lng: loc.longitude } });
-          const next = resolveDetectedCity(place, INDIAN_CITIES);
-          if (!next) return;
+          // The cities that have businesses decide whether a locality (Naroda) is shown as its parent city (Ahmedabad).
+          const businessCities = await getBusinessCities().catch(() => []);
+          const resolved = resolveDetectedPlace(place, INDIAN_CITIES, businessCities.map((c) => c.city));
+          if (!resolved) return;
           // The person may have picked something (e.g. All locations) while the location was being found.
           if (read()) return;
-          store(next, { lat: loc.latitude, lng: loc.longitude });
+          store(resolved.city, { lat: loc.latitude, lng: loc.longitude }, resolved.area);
           window.dispatchEvent(new Event(EVT));
         } catch {
           // silently ignore — user can pick manually
@@ -85,8 +115,8 @@ export function useCity() {
     }
 
     return () => {
-      window.removeEventListener(EVT, onChange);
-      window.removeEventListener("storage", onChange);
+      window.removeEventListener(EVT, apply);
+      window.removeEventListener("storage", apply);
     };
   }, []);
 
@@ -94,12 +124,13 @@ export function useCity() {
   // A real city, or null for "All locations" and "nothing chosen": every consumer treats both as "no city filter".
   const city = allLocations ? null : stored;
 
-  const setCity = useCallback((next: string | null, at?: CityCoords | null) => {
+  const setCity = useCallback((next: string | null, at?: CityCoords | null, areaName?: string | null) => {
     if (typeof window === "undefined") return;
-    store(next, at);
+    store(next, at, areaName);
     window.dispatchEvent(new Event(EVT));
     setStored(next);
     setCoords(next && at ? at : null);
+    setArea(next && at && areaName ? { name: areaName, lat: at.lat, lng: at.lng } : null);
   }, []);
 
   /** The explicit choice "All locations": no city filter anywhere, remembered across reloads. */
@@ -109,7 +140,8 @@ export function useCity() {
     window.dispatchEvent(new Event(EVT));
     setStored(ALL_LOCATIONS);
     setCoords(null);
+    setArea(null);
   }, []);
 
-  return { city, coords, allLocations, loaded, setCity, setAllLocations };
+  return { city, coords, area, allLocations, loaded, setCity, setAllLocations };
 }

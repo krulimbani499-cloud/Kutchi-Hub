@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getBusinessCities, getPlaceDetails, searchPlaces } from "@/lib/places.functions";
+import { getBusinessCities, getPlaceDetails, resolveLocality, searchPlaces } from "@/lib/places.functions";
 import type { PlaceSuggestion } from "@/lib/places";
 import { CITIES_BY_STATE, INDIAN_CITIES } from "@/lib/cities";
 import { cityAliasTargets, cityFromPickedPlace, cleanPlaceName } from "@/lib/geolocation";
@@ -57,11 +57,17 @@ export function usePlaceSearch(query: string, enabled = true) {
   return { places, loading, sessionToken: () => token.current, resetSession };
 }
 
-/** Turns a picked suggestion into the city name to store (aliases + district rule applied) and its coordinates. */
+/**
+ * Turns a picked suggestion into the city name to store (aliases + district rule applied), its coordinates, and what Google says
+ * about where it is (the district and the `locality`, the parent city of a locality: see resolvePick in area.ts).
+ */
 export function usePickPlace() {
   const details = useServerFn(getPlaceDetails);
   return useCallback(
-    async (place: PlaceSuggestion, sessionToken: string): Promise<{ city: string; coords: CityCoords | null }> => {
+    async (
+      place: PlaceSuggestion,
+      sessionToken: string,
+    ): Promise<{ city: string; coords: CityCoords | null; district: string | null; locality: string | null }> => {
       let res: Awaited<ReturnType<typeof details>> | null = null;
       try {
         res = await details({ data: { placeId: place.placeId, sessionToken } });
@@ -72,9 +78,27 @@ export function usePickPlace() {
       return {
         city: cityFromPickedPlace(place.name, d?.district ?? null, INDIAN_CITIES),
         coords: d ? { lat: d.lat, lng: d.lng } : null,
+        district: d?.district ?? null,
+        locality: d?.locality ?? null,
       };
     },
     [details],
+  );
+}
+
+/** Where an entry of the typed city list is and which city it lies in (one lookup by name). null when it cannot be found. */
+export function useLocalityLookup() {
+  const lookup = useServerFn(resolveLocality);
+  return useCallback(
+    async (name: string, state: string | null) => {
+      try {
+        const res = await lookup({ data: { name, state } });
+        return res.details;
+      } catch {
+        return null;
+      }
+    },
+    [lookup],
   );
 }
 

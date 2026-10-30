@@ -10,6 +10,7 @@ import { hasAnyHours, isOpenNow } from "@/lib/business-hours";
 import { plainPreview } from "@/lib/rich-text";
 import { telHref, whatsappHref } from "@/lib/phone";
 import { formatDistance } from "@/lib/search-filters";
+import { mentionsArea } from "@/lib/area";
 import { useDiwali } from "@/hooks/useDiwali";
 import { useT } from "@/lib/i18n";
 
@@ -54,11 +55,14 @@ const MIN_SWIPE_PX = 40;
 export function ResultCard({
   business,
   distanceFrom = "you",
+  areaName = null,
   priority = false,
 }: {
   business: ResultBusiness;
   /** What the distance is measured from: the visitor's own position, or the centre of the chosen city. */
-  distanceFrom?: "you" | "city";
+  distanceFrom?: "you" | "city" | "area";
+  /** The locality picked inside the city ("Naroda"): businesses whose address mentions it get an "In Naroda" tag. */
+  areaName?: string | null;
   /** The first cards of the page load their photo at once instead of lazily. */
   priority?: boolean;
 }) {
@@ -257,7 +261,7 @@ export function ResultCard({
           {distance && (
             <span className="inline-flex items-center gap-1 text-muted-foreground" data-distance>
               <Navigation className="h-3.5 w-3.5" />
-              {distanceFrom === "you" ? `${distance} away` : `${distance} from city centre`}
+              {distanceFrom === "you" ? `${distance} away` : distanceFrom === "area" && areaName ? `${distance} from ${areaName}` : `${distance} from city centre`}
             </span>
           )}
         </div>
@@ -271,6 +275,14 @@ export function ResultCard({
           </p>
         )}
         {preview && <p className="mt-1.5 hidden line-clamp-2 text-sm text-muted-foreground sm:block">{preview}</p>}
+
+        {mentionsArea(business.address, areaName) && (
+          <p data-in-area className="mt-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+              <MapPin className="h-3 w-3" /> In {areaName}
+            </span>
+          </p>
+        )}
 
         {/* Tags: offer + a few services */}
         {(discountActive || (business.serviceTags?.length ?? 0) > 0) && (

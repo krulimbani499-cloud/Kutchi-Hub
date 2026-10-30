@@ -11,6 +11,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useDiwali } from "@/hooks/useDiwali";
 import { useT } from "@/lib/i18n";
+import { mentionsArea } from "@/lib/area";
 
 interface BusinessCardProps {
   business: {
@@ -33,9 +34,11 @@ interface BusinessCardProps {
     categories: { id: string; name: string; slug: string; color: string | null } | null;
   };
   delayMs?: number;
+  /** The locality picked inside the city ("Naroda"): a business whose address mentions it gets an "In Naroda" tag. */
+  areaName?: string | null;
 }
 
-export function BusinessCard({ business, delayMs }: BusinessCardProps) {
+export function BusinessCard({ business, delayMs, areaName = null }: BusinessCardProps) {
   const animateOnScroll = delayMs !== undefined;
   const diwali = useDiwali().active;
   const t = useT();
@@ -143,6 +146,13 @@ export function BusinessCard({ business, delayMs }: BusinessCardProps) {
           {business.categories?.name ?? "Business"}
           {business.reviewCount ? ` · ${business.reviewCount} reviews` : null}
         </p>
+        {mentionsArea(business.address, areaName) && (
+          <p data-in-area className="-mt-1 mb-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+              <MapPin className="h-3 w-3" /> In {areaName}
+            </span>
+          </p>
+        )}
         <p className="mb-3 line-clamp-2 text-xs text-muted-foreground sm:text-sm">{plainPreview(business.description)}</p>
         <div className="mt-auto space-y-1.5 text-xs sm:text-sm">
           <div className="flex items-center gap-1.5 text-muted-foreground">
