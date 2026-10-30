@@ -6,12 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import { CategoryTile, CategoriesViewAllTile } from "@/components/business/CategoryGrid";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Building2, Mic, ArrowRight, Smartphone, Tag, Calendar, Crown } from "lucide-react";
+import { Search, MapPin, Building2, Mic, ArrowRight, Tag, Calendar, Crown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
-import { PWAInstallButton } from "@/components/PWAInstallButton";
+import { DownloadAppButton } from "@/components/DownloadAppButton";
 
 // Lazy-load below-the-fold sections to speed up initial paint
 const MarketingBanner = lazy(() =>
@@ -80,17 +80,6 @@ function HomePage() {
   const areaAt = useMemo(() => (area ? { lat: Math.round(area.lat * 1000) / 1000, lng: Math.round(area.lng * 1000) / 1000 } : null), [area]);
   const { data: home } = useQuery(homeQueryOptions(city ?? undefined, areaAt));
   const [search, setSearch] = useState("");
-  const [isNativeApp, setIsNativeApp] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const cap = (window as any).Capacitor;
-    const ua = navigator.userAgent.toLowerCase();
-    setIsNativeApp(
-      cap?.isNativePlatform?.() === true ||
-      ua.includes("capacitor") ||
-      (ua.includes("android") && ua.includes("; wv"))
-    );
-  }, []);
 
   const submitSearch = (q?: string) => {
     const params = new URLSearchParams();
@@ -119,27 +108,8 @@ function HomePage() {
             <h1 className="text-xl font-extrabold text-foreground sm:text-2xl">
               <span className="animate-text-shine font-extrabold">{t("home.searchTagline")}</span>
             </h1>
-            <div className="flex shrink-0 items-center gap-2">
-              {!isNativeApp && (
-                <>
-                  <PWAInstallButton />
-                  <button
-              type="button"
-              onClick={() =>
-                alert("Download app coming soon! The application link will be added once the app is ready.")
-              }
-              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-border bg-background py-1.5 pl-5 pr-2 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#ff6a00]/40 hover:shadow-md"
-              aria-label={t("home.downloadApp")}
-            >
-              <span className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-[#ff6a00]/15 to-transparent animate-shimmer-slide" />
-              <span className="relative text-sm font-semibold text-foreground">{t("home.downloadApp")}</span>
-              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6a00] to-[#e65a00] text-white shadow-sm animate-phone-wiggle transition-transform group-hover:scale-110">
-                <Smartphone className="h-4 w-4" strokeWidth={2.5} />
-              </span>
-                  </button>
-                </>
-              )}
-            </div>
+            {/* The one Download App button (Play Store). Draws nothing in our apps and on iPhone / iPad. */}
+            <DownloadAppButton className="shrink-0" />
           </div>
 
           <form

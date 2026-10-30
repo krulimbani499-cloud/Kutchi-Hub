@@ -7,6 +7,9 @@ export const CONTACT_PHONE = "+91 93270 97185"; // as shown; tel: links strip th
 export const INSTAGRAM_URL = "https://www.instagram.com/kutchihub?vrfl=MWxnd2l5Y3N3ZzNzNg==";
 export const INSTAGRAM_HANDLE = "@kutchihub";
 
+// The Android app on Google Play. The one address behind every "Download App" button (change it here, and only here).
+export const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.kutchihub.mobile";
+
 // Other networks: null = hidden in the footer (icon only; there is no "Coming soon" tag any more). Add the address to turn one on.
 export const FACEBOOK_URL: string | null = null; // e.g. "https://facebook.com/kutchihub"
 export const X_URL: string | null = null; // e.g. "https://x.com/kutchihub"
