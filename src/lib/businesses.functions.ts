@@ -60,55 +60,24 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       )
       .eq("status", "published");
 
-    // If the search term matches any category name/slug, resolve those
-    // category IDs so we can also match businesses tagged with them.
-    let matchingCategoryIds: string[] = [];
-    let matchingProductBusinessIds: string[] = [];
-    if (data.q) {
-      const term = data.q.trim();
-      if (term) {
-        // Match categories and businesses selling a matching product/service, all at once.
-        const likeTerm = `%${term.replace(/[,()]/g, " ")}%`;
-        const [{ data: cats }, { data: prodRows }, { data: svcRows }] = await Promise.all([
-          supabase
-            .from("categories")
-            .select("id")
-            .or(`name.ilike.%${term}%,slug.ilike.%${term}%`),
-          supabase
-            .from("business_products")
-            .select("business_id")
-            .eq("active", true)
-            .or(`name.ilike.${likeTerm},description.ilike.${likeTerm},category.ilike.${likeTerm}`),
-          supabase
-            .from("business_services")
-            .select("business_id")
-            .or(`name.ilike.${likeTerm},description.ilike.${likeTerm}`),
-        ]);
-        matchingCategoryIds = (cats ?? []).map((c) => c.id);
-        const ids = new Set<string>();
-        for (const r of prodRows ?? []) ids.add(r.business_id);
-        for (const r of svcRows ?? []) ids.add(r.business_id);
-        matchingProductBusinessIds = [...ids];
-      }
-    }
-
-    if (data.q) {
-      const term = data.q.trim();
-      if (term) {
-        const like = term.replace(/[,()]/g, " ");
-        const parts = [
-          `name.ilike.%${like}%`,
-          `description.ilike.%${like}%`,
-          `city.ilike.%${like}%`,
-        ];
-        if (matchingCategoryIds.length > 0) {
-          parts.push(`category_id.in.(${matchingCategoryIds.join(",")})`);
-        }
-        if (matchingProductBusinessIds.length > 0) {
-          parts.push(`id.in.(${matchingProductBusinessIds.join(",")})`);
-        }
-        query = query.or(parts.join(","));
-      }
+    // The words searched for. The same rule as the All Business page: the text must START a word of the business name, city,
+    // description or category name, or of a product / service the owner shows on the profile ("cement" is not found in "replacement").
+    // The database pattern below is the wide first cut (the text anywhere); the exact word-start check is done on the rows (inMemory).
+    const term = cleanSearchTerm(data.q, 1);
+    let hasByBusiness = new Map<string, string[]>();
+    if (term) {
+      const like = `%${term}%`;
+      const [catRes, items] = await Promise.all([
+        // The category NAME only: its seo_keywords and slug never put a business in the list.
+        supabase.from("categories").select("id, name").ilike("name", like),
+        matchProductsAndServices(supabase, like, term),
+      ]);
+      hasByBusiness = items.has;
+      const parts = [`name.ilike.${like}`, `description.ilike.${like}`, `city.ilike.${like}`];
+      const catIds = (catRes.data ?? []).filter((c) => matchesTerm(c.name, term)).map((c) => c.id);
+      if (catIds.length > 0) parts.push(`category_id.in.(${catIds.join(",")})`);
+      if (items.ids.length > 0) parts.push(`id.in.(${items.ids.join(",")})`);
+      query = query.or(parts.join(","));
     }
 
     if (data.category && data.category !== "all") {
@@ -141,7 +110,8 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     // "nearest" without a position falls back to the normal order. With a picked area the DEFAULT order is the nearest first too.
     const sortMode = data.sort === "relevance" && data.areaFirst && here !== null ? "nearest" : data.sort;
     const nearest = sortMode === "nearest" && here !== null;
-    const inMemory = data.sort === "rating" || nearest || (data.minRating ?? 0) > 0 || data.openNow;
+    // A search text is checked word by word on the rows, so (like the other in-memory modes) all matches are loaded and paged here.
+    const inMemory = data.sort === "rating" || nearest || (data.minRating ?? 0) > 0 || data.openNow || !!term;
     let ordered = query;
     if (data.sort === "newest") ordered = ordered.order("created_at", { ascending: false });
     else if (data.sort === "discount") ordered = ordered.order("app_discount_percent", { ascending: false, nullsFirst: false });
@@ -155,7 +125,18 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     const { data: businesses, error, count } = await (inMemory ? ordered.range(0, 999) : ordered.range(offset, offset + data.limit - 1));
     if (error) throw new Error(error.message);
 
-    let results = (businesses ?? []).map(({ business_reviews, latitude, longitude, ...b }) => {
+    const matching = term
+      ? (businesses ?? []).filter(
+          (b) =>
+            matchesTerm(b.name, term) ||
+            matchesTerm(b.city, term) ||
+            matchesTerm(b.description, term) ||
+            matchesTerm(b.categories?.name, term) ||
+            hasByBusiness.has(b.id),
+        )
+      : (businesses ?? []);
+
+    let results = matching.map(({ business_reviews, latitude, longitude, ...b }) => {
       const reviews = business_reviews ?? [];
       const sum = reviews.reduce((total, r) => total + r.rating, 0);
       return {

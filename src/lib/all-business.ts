@@ -7,16 +7,17 @@ const MAX_TERM_LENGTH = 60;
 
 /**
  * The search text made safe for a database pattern: characters that act as wildcards or as separators inside a filter string
- * (% _ * \ , ( ) ") become spaces, white space is collapsed, the length is limited. "" = nothing to search for.
+ * (% _ * \ , ( ) ") become spaces, white space is collapsed, the length is limited. "" = nothing to search for (shorter than
+ * `minLength`, 2 by default).
  */
-export function cleanSearchTerm(q: string | null | undefined): string {
+export function cleanSearchTerm(q: string | null | undefined, minLength: number = MIN_TERM_LENGTH): string {
   const t = String(q ?? "")
     .replace(/[%_*\\,()"]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, MAX_TERM_LENGTH)
     .trim();
-  return t.length >= MIN_TERM_LENGTH ? t : "";
+  return t.length >= minLength ? t : "";
 }
 
 export type TopOrderable = {
