@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
-import { nativePluginAvailable } from "@/lib/native";
+import { isIosApp, nativePluginAvailable } from "@/lib/native";
 import { registerDeviceToken } from "@/lib/devices.functions";
 
 /**
@@ -16,7 +16,9 @@ export function NativePush() {
   const userId = user?.id ?? null;
 
   useEffect(() => {
-    if (!userId || !nativePluginAvailable("PushNotifications")) return;
+    // iOS app only. The Android app has no google-services.json, so a push call there (register / requestPermissions) would crash it:
+    // the explicit platform check comes first, so on Android (and on the website) the plugin is not even loaded.
+    if (!userId || !isIosApp() || !nativePluginAvailable("PushNotifications")) return;
     let cancelled = false;
     const handles: Array<{ remove: () => Promise<void> }> = [];
 
