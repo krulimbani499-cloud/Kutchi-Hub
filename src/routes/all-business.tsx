@@ -9,7 +9,7 @@ import { ResultCard, ResultCardSkeleton } from "@/components/search/ResultCard";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { roundPos, useVisitorPosition } from "@/hooks/useVisitorPosition";
 import { getCategories, searchAllBusinesses } from "@/lib/businesses.functions";
-import { resultSummary, tierGroup, tierLabel } from "@/lib/all-business";
+import { cleanSearchTerm, resultSummary, tierGroup, tierLabel } from "@/lib/all-business";
 import { sortCategoriesAZ } from "@/lib/category-sort";
 import { BASE_URL, breadcrumbLd, itemListLd, ldScript } from "@/lib/seo";
 import { pageMeta, prettySlug } from "@/lib/seo-landing";
@@ -224,6 +224,8 @@ function AllBusinessPage() {
   const loading = isPending;
   // The package dividers only make sense in the package order (the default); another sort mixes the packages.
   const byTier = sort === "relevance";
+  // The words searched for (nothing when the box holds less than two characters: then the whole list is shown).
+  const searchedTerm = cleanSearchTerm(params.q);
   const anyFilter = !!(params.q || params.category || params.rating || params.open || params.verified || params.offer || params.city);
 
   return (
@@ -338,7 +340,13 @@ function AllBusinessPage() {
         </div>
       ) : (
         <div className="rounded-2xl border border-border bg-card p-8 text-center">
-          <p className="text-muted-foreground">{anyFilter ? "No businesses match your search. Try other words or clear the filters." : "No businesses to show yet."}</p>
+          {searchedTerm ? (
+            <p data-empty-search className="text-muted-foreground">
+              &lsquo;{searchedTerm}&rsquo; ke liye koi business nahi mila
+            </p>
+          ) : (
+            <p className="text-muted-foreground">{anyFilter ? "No businesses match your search. Try other words or clear the filters." : "No businesses to show yet."}</p>
+          )}
           {anyFilter && (
             <Button
               variant="outline"
@@ -349,7 +357,7 @@ function AllBusinessPage() {
                 update({ q: undefined, city: undefined, category: undefined, rating: undefined, open: undefined, verified: undefined, offer: undefined });
               }}
             >
-              Clear search and filters
+              {searchedTerm ? "Saare business dekhein" : "Clear search and filters"}
             </Button>
           )}
         </div>

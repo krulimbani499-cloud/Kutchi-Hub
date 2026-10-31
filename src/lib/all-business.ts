@@ -54,13 +54,26 @@ export function compareTop(a: TopOrderable, b: TopOrderable): number {
   );
 }
 
+/**
+ * Does `text` contain the search text at the START of a word? Case-insensitive, and the search text may be only the beginning of the
+ * word ("ceme" finds "Cement", "Cements"), but it is never found in the middle of one: "cement" does not find "replacement",
+ * "enhancements" or "reinforcement". Letters from any script count (Gujarati, Hindi); a word ends at a space or a mark like , . - /.
+ */
+export function matchesTerm(text: string | null | undefined, term: string): boolean {
+  const t = term.replace(/\s+/g, " ").trim();
+  if (!text || !t) return false;
+  const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
+  const re = new RegExp(`(^|[^\\p{L}\\p{N}\\p{M}])${escaped}`, "iu");
+  return re.test(text);
+}
+
 /** "Dahegam" / "Building Materials": what a search text matched besides the name (shown as "In: ..." under the name). */
 export function matchedIn(term: string, city: string | null | undefined, category: { name: string; slug: string } | null | undefined): string[] {
-  const t = term.trim().toLowerCase();
+  const t = term.trim();
   if (!t) return [];
   const out: string[] = [];
-  if (city && city.toLowerCase().includes(t)) out.push(city.replace(/\s+/g, " ").trim());
-  if (category && (category.name.toLowerCase().includes(t) || category.slug.toLowerCase().includes(t))) out.push(category.name);
+  if (city && matchesTerm(city, t)) out.push(city.replace(/\s+/g, " ").trim());
+  if (category && matchesTerm(category.name, t)) out.push(category.name);
   return out;
 }
 

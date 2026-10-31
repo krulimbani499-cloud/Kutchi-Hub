@@ -19,7 +19,7 @@ import { cityKey, haversineKm } from "./places";
 import { isOpenNow, wallClockDate } from "./business-hours";
 import { buildDirectory, type Directory, type DirectoryCategory, type DirectoryRow } from "./directory";
 import { citySlug, parseKeywords, pickCityName, prettySlug, type CategoryLink } from "./seo-landing";
-import { cleanSearchTerm, compareTop, matchedIn, pickHasNames, visibleMatches, type ShowSwitches } from "./all-business";
+import { cleanSearchTerm, compareTop, matchedIn, matchesTerm, pickHasNames, visibleMatches, type ShowSwitches } from "./all-business";
 import { NEARBY_WIDE_RADIUS_KM, rankNearby } from "./nearby";
 import cityCentres from "@/data/city-coords.json";
 
@@ -277,21 +277,24 @@ type AllBusinessRow = {
   business_reviews: Array<{ rating: number }> | null;
 };
 
-/** The product / service names that match, and which businesses they belong to. Only names the owner shows publicly count. */
-async function matchProductsAndServices(supabase: ReturnType<typeof createServerSupabaseClient>, like: string) {
+/** The product / service names that match (the search text at the start of a word), and which businesses they belong to. Only names the owner shows publicly count. */
+async function matchProductsAndServices(supabase: ReturnType<typeof createServerSupabaseClient>, like: string, term: string) {
   const [prodRes, svcRes] = await Promise.all([
     // Trigram-indexable pattern on the name (perf-indexes SQL); only products that are switched on.
     supabase.from("business_products").select("business_id, name").eq("active", true).ilike("name", like).limit(500),
     supabase.from("business_services").select("business_id, name").eq("active", true).ilike("name", like).limit(500),
   ]);
+  // The database pattern finds the text anywhere in a name ("replacement"); only a match at the start of a word counts.
+  const prodRows = (prodRes.data ?? []).filter((r) => matchesTerm(r.name, term));
+  const svcRows = (svcRes.data ?? []).filter((r) => matchesTerm(r.name, term));
   const ids = new Set<string>();
-  for (const r of prodRes.data ?? []) ids.add(r.business_id);
-  for (const r of svcRes.data ?? []) ids.add(r.business_id);
+  for (const r of prodRows) ids.add(r.business_id);
+  for (const r of svcRows) ids.add(r.business_id);
   if (ids.size === 0) return { has: new Map<string, string[]>(), ids: [] as string[] };
 
   // The owner's "Show Products / Services on my profile" switches (see visibleMatches). A failing query = the columns do not exist yet.
   const toggles = await supabase.from("businesses").select("id, show_products, show_services").in("id", [...ids]);
-  return visibleMatches(prodRes.data ?? [], svcRes.data ?? [], toggles.error ? null : ((toggles.data ?? []) as ShowSwitches[]));
+  return visibleMatches(prodRows, svcRows, toggles.error ? null : ((toggles.data ?? []) as ShowSwitches[]));
 }
 
 export const searchAllBusinesses = createServerFn({ method: "GET" })
@@ -306,13 +309,14 @@ export const searchAllBusinesses = createServerFn({ method: "GET" })
     if (term) {
       const like = `%${term}%`;
       const [catRes, items] = await Promise.all([
-        supabase.from("categories").select("id").or(`name.ilike.${like},slug.ilike.${like}`),
-        matchProductsAndServices(supabase, like),
+        // The category NAME only: its seo_keywords and slug never put a business in the list.
+        supabase.from("categories").select("id, name").ilike("name", like),
+        matchProductsAndServices(supabase, like, term),
       ]);
       hasByBusiness = items.has;
       // Business name, city, description (and below: the category, and the products / services the owner shows).
       const parts = [`name.ilike.${like}`, `city.ilike.${like}`, `description.ilike.${like}`];
-      const catIds = (catRes.data ?? []).map((c) => c.id);
+      const catIds = (catRes.data ?? []).filter((c) => matchesTerm(c.name, term)).map((c) => c.id);
       if (catIds.length > 0) parts.push(`category_id.in.(${catIds.join(",")})`);
       if (items.ids.length > 0) parts.push(`id.in.(${items.ids.join(",")})`);
       orFilter = parts.join(",");
@@ -329,10 +333,24 @@ export const searchAllBusinesses = createServerFn({ method: "GET" })
       if ((chunk?.length ?? 0) < 1000) break;
     }
 
+    // The database filter above is wide (the text anywhere inside a word: "cement" is in "replacement" and "reinforcement"). The
+    // list keeps only the businesses where the text starts a word of the name, city, description or category name, or matched one of
+    // the products / services the owner shows. The old order is untouched.
+    const matching = term
+      ? rows.filter(
+          (b) =>
+            matchesTerm(b.name, term) ||
+            matchesTerm(b.city, term) ||
+            matchesTerm(b.description, term) ||
+            matchesTerm(b.categories?.name, term) ||
+            hasByBusiness.has(b.id),
+        )
+      : rows;
+
     const here = data.lat !== undefined && data.lng !== undefined ? { lat: data.lat, lng: data.lng } : null;
     const today = new Date().toISOString().slice(0, 10);
     const clock = data.openNow ? wallClockDate("Asia/Kolkata") : null;
-    const rated = rows.map(({ business_reviews, latitude, longitude, ...b }) => {
+    const rated = matching.map(({ business_reviews, latitude, longitude, ...b }) => {
       const reviews = business_reviews ?? [];
       const sum = reviews.reduce((total, r) => total + r.rating, 0);
       return {
