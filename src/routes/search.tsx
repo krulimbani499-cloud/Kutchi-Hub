@@ -239,7 +239,10 @@ function SearchPage() {
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) void fetchNextPage();
       },
-      { rootMargin: "400px 0px" },
+      // 400px of head start BELOW the screen only. With the margin on top as well, a phone sitting on the (tall) footer still counted
+      // the end of the list as "near" (it is ~400px above), and the browser keeps the footer in place when a page is added, so the
+      // next page loaded again and again until all 107 were in.
+      { rootMargin: "0px 0px 400px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();

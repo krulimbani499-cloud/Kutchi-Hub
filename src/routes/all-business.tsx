@@ -215,7 +215,9 @@ function AllBusinessPage() {
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) void fetchNextPage();
       },
-      { rootMargin: "400px 0px" },
+      // 400px of head start BELOW the screen only (not above): on a phone the tall footer kept the end of the list "near" and the
+      // next page loaded again and again (same fix as the search page).
+      { rootMargin: "0px 0px 400px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
