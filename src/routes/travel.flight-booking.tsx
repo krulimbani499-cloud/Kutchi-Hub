@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { SHOW_TRAVEL_BOOKINGS } from "@/lib/features";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Plane, MapPin, Calendar, Minus, Plus, ShieldCheck, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/travel/flight-booking")({
+  // Switched off (features.ts SHOW_TRAVEL_BOOKINGS): go to the home page.
+  beforeLoad: () => {
+    if (!SHOW_TRAVEL_BOOKINGS) throw redirect({ to: "/" });
+  },
   head: () => ({
     meta: [
       { title: "Book Flight Tickets Online — Kutchi Hub Travel" },

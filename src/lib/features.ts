@@ -28,6 +28,13 @@ export const SHOW_SAVED = false;
 export const SHOW_REFERRAL_ON_SIGNUP = false;
 
 /**
+ * The "Travel Bookings" block on the home page (Flight, Bus, Train, Hotel, Car Rentals, "Explore More") and the /travel/flight-booking
+ * page behind it. false = the block is not drawn (no gap is left) and /travel/flight-booking goes to the home page. Nothing else
+ * links to them (no menu, footer, bottom bar or sitemap entry). The components stay in place: set true to bring them back.
+ */
+export const SHOW_TRAVEL_BOOKINGS = false;
+
+/**
  * DIWALI THEME: ON automatically from DIWALI_START to DIWALI_END (IST), OFF before and after: nothing to switch by hand.
  * Next year: change these two dates (keep the +05:30). The year in DIWALI_START also names the "already dismissed / fireworks
  * played" flags, so they start fresh every year. Preview before the dates: add ?diwali=1 to any address (memory only, not stored).

@@ -41,6 +41,7 @@ import { HelpSection } from "@/components/home/HelpSection";
 import { DiwaliHome } from "@/components/diwali/DiwaliHome";
 import { BASE_URL, ldScript, breadcrumbLd } from "@/lib/seo";
 import { useT } from "@/lib/i18n";
+import { SHOW_TRAVEL_BOOKINGS } from "@/lib/features";
 
 // `at` = a locality picked inside the city: each row lists the city's businesses nearest to it first.
 const homeQueryOptions = (city?: string, at?: { lat: number; lng: number } | null) =>
@@ -334,8 +335,10 @@ function HomePage() {
       {/* Curated collections */}
       <UpcomingEventsSection />
 
-      {/* Travel bookings */}
-      <Suspense fallback={null}><ScrollReveal><TravelBookingsSection /></ScrollReveal></Suspense>
+      {/* Travel bookings (switched off in features.ts: SHOW_TRAVEL_BOOKINGS) */}
+      {SHOW_TRAVEL_BOOKINGS && (
+        <Suspense fallback={null}><ScrollReveal><TravelBookingsSection /></ScrollReveal></Suspense>
+      )}
 
       {/* Top Contributors leaderboard - temporarily hidden */}
       {/* <LeaderboardSection /> */}
