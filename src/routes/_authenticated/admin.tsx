@@ -28,7 +28,8 @@ import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
 import { PlansRevenueOverview } from "@/components/admin/PlansRevenueOverview";
 import { BusinessesAdmin } from "@/components/admin/BusinessesAdmin";
 import { SearchLeadsManager } from "@/components/admin/SearchLeadsManager";
-import { SHOW_SEARCH_LEAD_FORM } from "@/lib/features";
+import { SHOW_CITY_PUSH, SHOW_SEARCH_LEAD_FORM } from "@/lib/features";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BannerBusinessPicker } from "@/components/admin/BannerBusinessPicker";
 import { BANNER_PLACEMENT_LABEL, BANNER_SLOT_WARNING_ABOVE, countLiveBannersBySlot, type BannerPlacement } from "@/lib/banner-rules";
 import { Button } from "@/components/ui/button";
@@ -128,6 +129,8 @@ function AdminPage() {
   const { data: pending, refetch } = useSuspenseQuery(pendingQueryOptions);
   const reviewFn = useServerFn(reviewBusinessSubmission);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // "Notify users of this city" is ON for every pending business; the ids listed here had it switched off before approving.
+  const [notifyOff, setNotifyOff] = useState<Set<string>>(() => new Set());
   const [tab, setTab] = useState("overview");
   const [subsPlanFilter, setSubsPlanFilter] = useState<{ planId: string; planName: string } | null>(null);
   // Search for the pending list (name, city, category, slug, phone, business email).
@@ -143,12 +146,13 @@ function AdminPage() {
   const handleAction = async (id: string, action: "approve" | "reject") => {
     setBusyId(id);
     try {
-      let result = await reviewFn({ data: { id, action } });
+      const notifyCity = action === "approve" && SHOW_CITY_PUSH && notifyOff.has(id) ? false : undefined;
+      let result = await reviewFn({ data: { id, action, notifyCity } });
       if (result.needsConfirm) {
         // Missing category / address / photo: publish only after a deliberate second confirmation.
         const missing = result.gaps.map((g: PublishGap) => PUBLISH_GAP_LABEL[g]).join(", ");
         if (!confirm(`This business is missing: ${missing}.\n\nPublish it anyway?`)) return;
-        result = await reviewFn({ data: { id, action, force: true } });
+        result = await reviewFn({ data: { id, action, force: true, notifyCity } });
       }
       toast.success(action === "approve" ? "Business approved" : "Business rejected");
       await refetch();
@@ -307,6 +311,25 @@ function AdminPage() {
                     </div>
                   ) : null}
                 </div>
+                {SHOW_CITY_PUSH && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <Checkbox
+                      id={`notify-${b.id}`}
+                      checked={!notifyOff.has(b.id)}
+                      onCheckedChange={(on) =>
+                        setNotifyOff((prev) => {
+                          const next = new Set(prev);
+                          if (on === true) next.delete(b.id);
+                          else next.add(b.id);
+                          return next;
+                        })
+                      }
+                    />
+                    <Label htmlFor={`notify-${b.id}`} className="text-sm font-normal text-foreground">
+                      Notify users of this city{b.city ? ` (${b.city})` : ""}
+                    </Label>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Button
                     size="sm"

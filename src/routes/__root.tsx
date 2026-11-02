@@ -23,6 +23,7 @@ import { NativeBackButton } from "@/components/NativeBackButton";
 import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
 import { PostAuthRedirect } from "@/components/auth/PostAuthRedirect";
 import { NativePush } from "@/components/NativePush";
+import { CityPushSync } from "@/components/CityPushSync";
 import { OfflineScreen } from "@/components/OfflineScreen";
 import { Toaster } from "@/components/ui/sonner";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
@@ -205,6 +206,7 @@ function RootComponent() {
           <PostAuthRedirect />
           <NativeBackButton />
           <NativePush />
+          <CityPushSync />
           <OfflineScreen />
           <Toaster position="top-center" />
           <WelcomeScreen />

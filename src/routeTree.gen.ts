@@ -32,6 +32,7 @@ import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as CitySlugRouteImport } from './routes/city.$slug'
 import { Route as TravelFlightBookingRouteImport } from './routes/travel.flight-booking'
 import { Route as AuthenticatedBusinessNewRouteImport } from './routes/_authenticated/business.new'
+import { Route as ApiPushDispatchRouteImport } from './routes/api.push.dispatch'
 import { Route as AuthenticatedBusinessSlugClaimRouteImport } from './routes/_authenticated/business.$slug.claim'
 import { Route as AuthenticatedBusinessSlugEditRouteImport } from './routes/_authenticated/business.$slug.edit'
 import { Route as CitySlugCategoryCategoryRouteImport } from './routes/city.$slug.category.$category'
@@ -151,6 +152,11 @@ const AuthenticatedBusinessNewRoute =
     path: '/business/new',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPushDispatchRoute = ApiPushDispatchRouteImport.update({
+  id: '/api/push/dispatch',
+  path: '/api/push/dispatch',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedBusinessSlugClaimRoute =
   AuthenticatedBusinessSlugClaimRouteImport.update({
     id: '/business/$slug/claim',
@@ -193,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/city/$slug': typeof CitySlugRouteWithChildren
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
+  '/api/push/dispatch': typeof ApiPushDispatchRoute
   '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
   '/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
   '/city/$slug/category/$category': typeof CitySlugCategoryCategoryRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/city/$slug': typeof CitySlugRouteWithChildren
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/business/new': typeof AuthenticatedBusinessNewRoute
+  '/api/push/dispatch': typeof ApiPushDispatchRoute
   '/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
   '/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
   '/city/$slug/category/$category': typeof CitySlugCategoryCategoryRoute
@@ -249,6 +257,7 @@ export interface FileRoutesById {
   '/city/$slug': typeof CitySlugRouteWithChildren
   '/travel/flight-booking': typeof TravelFlightBookingRoute
   '/_authenticated/business/new': typeof AuthenticatedBusinessNewRoute
+  '/api/push/dispatch': typeof ApiPushDispatchRoute
   '/_authenticated/business/$slug/claim': typeof AuthenticatedBusinessSlugClaimRoute
   '/_authenticated/business/$slug/edit': typeof AuthenticatedBusinessSlugEditRoute
   '/city/$slug/category/$category': typeof CitySlugCategoryCategoryRoute
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
     | '/city/$slug'
     | '/travel/flight-booking'
     | '/business/new'
+    | '/api/push/dispatch'
     | '/business/$slug/claim'
     | '/business/$slug/edit'
     | '/city/$slug/category/$category'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/city/$slug'
     | '/travel/flight-booking'
     | '/business/new'
+    | '/api/push/dispatch'
     | '/business/$slug/claim'
     | '/business/$slug/edit'
     | '/city/$slug/category/$category'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/city/$slug'
     | '/travel/flight-booking'
     | '/_authenticated/business/new'
+    | '/api/push/dispatch'
     | '/_authenticated/business/$slug/claim'
     | '/_authenticated/business/$slug/edit'
     | '/city/$slug/category/$category'
@@ -357,6 +369,7 @@ export interface RootRouteChildren {
   CategorySlugRoute: typeof CategorySlugRoute
   CitySlugRoute: typeof CitySlugRouteWithChildren
   TravelFlightBookingRoute: typeof TravelFlightBookingRoute
+  ApiPushDispatchRoute: typeof ApiPushDispatchRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -522,6 +535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBusinessNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/push/dispatch': {
+      id: '/api/push/dispatch'
+      path: '/api/push/dispatch'
+      fullPath: '/api/push/dispatch'
+      preLoaderRoute: typeof ApiPushDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/business/$slug/claim': {
       id: '/_authenticated/business/$slug/claim'
       path: '/business/$slug/claim'
@@ -600,6 +620,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategorySlugRoute: CategorySlugRoute,
   CitySlugRoute: CitySlugRouteWithChildren,
   TravelFlightBookingRoute: TravelFlightBookingRoute,
+  ApiPushDispatchRoute: ApiPushDispatchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

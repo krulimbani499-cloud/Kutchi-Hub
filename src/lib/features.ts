@@ -35,6 +35,15 @@ export const SHOW_REFERRAL_ON_SIGNUP = false;
 export const SHOW_TRAVEL_BOOKINGS = false;
 
 /**
+ * City push notifications ("New business in Ahmedabad: <name> (<category>)"), phase 1 = the browser (web push). false = the
+ * "Get alerts for new businesses" card on the home page and the notification-switch in the admin approve list are not drawn, and
+ * nothing asks for the notification permission. It needs the Firebase settings too (VITE_FIREBASE_*): without them the card stays
+ * hidden even when this is true. The backend (supabase/pending/city-push, /api/push/dispatch) does not depend on this flag.
+ * The Android app joins in phase 2; the apps never show the card (old builds have no push set-up).
+ */
+export const SHOW_CITY_PUSH = false;
+
+/**
  * DIWALI THEME: ON automatically from DIWALI_START to DIWALI_END (IST), OFF before and after: nothing to switch by hand.
  * Next year: change these two dates (keep the +05:30). The year in DIWALI_START also names the "already dismissed / fireworks
  * played" flags, so they start fresh every year. Preview before the dates: add ?diwali=1 to any address (memory only, not stored).

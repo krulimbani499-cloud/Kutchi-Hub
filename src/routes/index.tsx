@@ -12,6 +12,7 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import ogImage from "@/assets/kutchi-hub-og.jpg";
 import { CitySelector } from "@/components/layout/CitySelector";
 import { DownloadAppButton } from "@/components/DownloadAppButton";
+import { CityPushCard } from "@/components/CityPushCard";
 
 // Lazy-load below-the-fold sections to speed up initial paint
 const MarketingBanner = lazy(() =>
@@ -142,6 +143,9 @@ function HomePage() {
               </Button>
             </div>
           </form>
+
+          {/* "Get alerts for new businesses" (city push): draws nothing unless SHOW_CITY_PUSH + the Firebase settings are on. */}
+          <CityPushCard />
         </div>
       </ScrollReveal>
 

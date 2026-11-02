@@ -1532,7 +1532,15 @@ export const listPendingBusinesses = createServerFn({ method: "GET" })
 export const reviewBusinessSubmission = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({ id: z.string().uuid(), action: z.enum(["approve", "reject"]), force: z.boolean().optional() }).parse(input),
+    z
+      .object({
+        id: z.string().uuid(),
+        action: z.enum(["approve", "reject"]),
+        force: z.boolean().optional(),
+        /** "Notify users of this city" (city push). Only `false` is sent: the database default is ON. */
+        notifyCity: z.boolean().optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const supabase = context.supabase;
@@ -1554,8 +1562,15 @@ export const reviewBusinessSubmission = createServerFn({ method: "POST" })
     }
 
     const newStatus = data.action === "approve" ? "published" : "rejected";
-    const { error } = await supabase.from("businesses").update({ status: newStatus }).eq("id", data.id);
-    if (error) throw new Error(error.message);
+    const patch: Record<string, unknown> = { status: newStatus };
+    if (data.action === "approve" && data.notifyCity === false) patch.notify_city = false;
+    const { error } = await supabase.from("businesses").update(patch as never).eq("id", data.id);
+    if (error) {
+      if (patch.notify_city === false && isMissingColumnError(error)) {
+        throw new Error("The 'Notify users of this city' switch is not in the database yet (run supabase/pending/city-push/01_migration.sql). Nothing was published.");
+      }
+      throw new Error(error.message);
+    }
     return { success: true as const, needsConfirm: false as const, status: newStatus };
   });
 
