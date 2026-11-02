@@ -1,16 +1,18 @@
 import { useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { sortCategoriesAZ } from "@/lib/category-sort";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { queryOptions } from "@tanstack/react-query";
-import { getCategories } from "@/lib/businesses.functions";
+import { useQuery, useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { getCategoriesWithCounts } from "@/lib/businesses.functions";
 import { CategoryGrid } from "@/components/business/CategoryGrid";
+import { useCity } from "@/hooks/useCity";
 import { BASE_URL } from "@/lib/seo";
 
-const categoriesQueryOptions = queryOptions({
-  queryKey: ["categories"],
-  queryFn: () => getCategories(),
-});
+// Every category with its number of published businesses: for the selected city, or all cities (city undefined).
+const categoriesQueryOptions = (city?: string) =>
+  queryOptions({
+    queryKey: ["categories-with-counts", city ?? null],
+    queryFn: () => getCategoriesWithCounts({ data: { city } }),
+    staleTime: 60_000,
+  });
 
 export const Route = createFileRoute("/categories")({
   head: () => ({
@@ -24,13 +26,22 @@ export const Route = createFileRoute("/categories")({
     ],
     links: [{ rel: "canonical", href: `${BASE_URL}/categories` }],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions),
+  // The server does not know the visitor's city, so the page itself is rendered with the all-cities numbers; the city's numbers load after.
+  loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQueryOptions()),
   component: CategoriesPage,
 });
 
 function CategoriesPage() {
-  const { data } = useSuspenseQuery(categoriesQueryOptions);
-  const categories = useMemo(() => sortCategoriesAZ(data), [data]);
+  const { city } = useCity();
+  const { data: all } = useSuspenseQuery(categoriesQueryOptions());
+  const { data: inCity } = useQuery({ ...categoriesQueryOptions(city ?? undefined), enabled: !!city });
+
+  // A city is picked: its own numbers (and its own order). Until they arrive no number is shown, so a wrong one never flashes.
+  const categories = useMemo(() => {
+    if (!city) return all;
+    if (inCity) return inCity;
+    return all.map(({ businessCount: _n, ...rest }) => rest);
+  }, [city, all, inCity]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">

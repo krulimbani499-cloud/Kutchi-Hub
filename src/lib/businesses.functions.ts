@@ -997,6 +997,40 @@ async function countPublishedByCategory(supabase: ReturnType<typeof createServer
   return counts;
 }
 
+/**
+ * The per-category counts, kept for a minute per server instance. ONE place for this, used by the home Popular Categories and by the
+ * All Categories page, so both always show the same number. No city = all cities.
+ */
+function cachedCategoryCounts(supabase: ReturnType<typeof createServerSupabaseClient>, city?: string) {
+  const trimmed = city?.trim();
+  return cachedFor(`home:counts:${trimmed ? trimmed.toLowerCase() : "*"}`, 60_000, () => countPublishedByCategory(supabase, trimmed || undefined));
+}
+
+/**
+ * All Categories page: every category A-Z, each with its number of published businesses (the same count as Popular Categories,
+ * for the selected city, or all cities when none). A category with none has no `businessCount` and goes after the others (A-Z too).
+ */
+export const getCategoriesWithCounts = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => z.object({ city: z.string().trim().max(80).optional() }).optional().parse(input) ?? {})
+  .handler(async ({ data }) => {
+    const supabase = createServerSupabaseClient();
+    const [{ data: categories }, counts] = await Promise.all([
+      cachedFor("home:categories", 60_000, async () => {
+        const res = await supabase.from("categories").select("*").order("display_order", { ascending: true });
+        if (res.error) throw new Error(res.error.message);
+        return res;
+      }),
+      cachedCategoryCounts(supabase, data?.city),
+    ]);
+    const withCount = (categories ?? []).map((c) => {
+      const n = counts.get(c.id) ?? 0;
+      return n > 0 ? { ...c, businessCount: n } : { ...c };
+    });
+    const has = withCount.filter((c) => "businessCount" in c).sort(compareCategoryName);
+    const none = withCount.filter((c) => !("businessCount" in c)).sort(compareCategoryName);
+    return [...has, ...none] as Array<(typeof withCount)[number] & { businessCount?: number }>;
+  });
+
 /** Categories with at least one business, most businesses first, ties A–Z by name. */
 function rankByCount<T extends { id: string; name: string }>(categories: T[], counts: Map<string, number>) {
   return categories
@@ -1111,8 +1145,8 @@ export const getHomeData = createServerFn({ method: "GET" })
       featuredQuery,
       offersQuery,
       spotlightQuery,
-      city ? cachedFor(`home:counts:${city.toLowerCase()}`, 60_000, () => countPublishedByCategory(supabase, city)) : Promise.resolve(null),
-      cachedFor("home:counts:*", 60_000, () => countPublishedByCategory(supabase)),
+      city ? cachedCategoryCounts(supabase, city) : Promise.resolve(null),
+      cachedCategoryCounts(supabase),
     ]);
     const categories = rankPopularCategories(allCategories ?? [], cityCounts, overallCounts, HOME_CATEGORY_TILES);
 
