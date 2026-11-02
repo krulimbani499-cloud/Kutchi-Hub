@@ -24,6 +24,7 @@ import { getDashboard } from "@/lib/businesses.functions";
 import { EventsManager } from "@/components/admin/EventsManager";
 import { PlansManager } from "@/components/admin/PlansManager";
 import { AdSlotsManager } from "@/components/admin/AdSlotsManager";
+import { PushTestCard } from "@/components/admin/PushTestCard";
 import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
 import { PlansRevenueOverview } from "@/components/admin/PlansRevenueOverview";
 import { BusinessesAdmin } from "@/components/admin/BusinessesAdmin";
@@ -199,6 +200,7 @@ function AdminPage() {
           <TabsTrigger value="adslots">Ad Slots</TabsTrigger>
           <TabsTrigger value="subs">Subscriptions</TabsTrigger>
           {SHOW_SEARCH_LEAD_FORM && <TabsTrigger value="leads">Search leads</TabsTrigger>}
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="audit">Audit Logs</TabsTrigger>
         </TabsList>
 
@@ -386,6 +388,9 @@ function AdminPage() {
             <SearchLeadsManager />
           </TabsContent>
         )}
+        <TabsContent value="notifications" className="mt-0">
+          <PushTestCard />
+        </TabsContent>
         <TabsContent value="audit" className="mt-0">
           <AuditLogsAdmin />
         </TabsContent>

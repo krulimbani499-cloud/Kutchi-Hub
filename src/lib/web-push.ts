@@ -4,7 +4,6 @@
 // the person taps it. The public Firebase settings come from VITE_FIREBASE_* variables (they are public by design: no secret
 // in this file; the server key stays on the server). Without them, or with the feature flag off, pushAvailable() is false and the
 // whole thing stays invisible. The Firebase scripts are loaded from Google's CDN only when a person turns the alerts on.
-import { SHOW_CITY_PUSH } from "@/lib/features";
 import { downloadAppMode } from "@/hooks/useDownloadApp";
 import { cityKeyFor } from "@/lib/city-push";
 import { registerPushSubscription, setPushCity, unregisterPushSubscription } from "@/lib/push.functions";
@@ -38,9 +37,9 @@ export function browserCanPush(): boolean {
   return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
 
-/** The one switch for the whole feature on this page: flag on, Firebase settings present, a browser that can do it. */
-export function pushAvailable(): boolean {
-  return SHOW_CITY_PUSH && firebaseWebConfig() !== null && browserCanPush();
+/** Can this page do it technically: the Firebase settings are present and the browser can do it. (Who may SEE it is decided by useCityPushAccess.) */
+export function pushSupported(): boolean {
+  return firebaseWebConfig() !== null && browserCanPush();
 }
 
 export type StoredPush = { token: string; cityKey: string; city: string };
@@ -85,7 +84,12 @@ export function dismissPush() {
 
 // ---- Firebase (compat build from Google's CDN, loaded only now)
 
-type FirebaseMessaging = { getToken(o: { vapidKey: string; serviceWorkerRegistration: ServiceWorkerRegistration }): Promise<string>; deleteToken(): Promise<boolean> };
+type FcmPayload = { data?: Record<string, string> };
+type FirebaseMessaging = {
+  getToken(o: { vapidKey: string; serviceWorkerRegistration: ServiceWorkerRegistration }): Promise<string>;
+  deleteToken(): Promise<boolean>;
+  onMessage(cb: (payload: FcmPayload) => void): () => void;
+};
 type FirebaseGlobal = { apps: unknown[]; initializeApp(c: Record<string, string>): unknown; messaging(): FirebaseMessaging };
 const firebaseGlobal = () => (window as unknown as { firebase?: FirebaseGlobal }).firebase;
 
@@ -128,7 +132,7 @@ export type EnableResult = { ok: true } | { ok: false; reason: "unavailable" | "
  */
 export async function enableWebPush(city: string, lang?: Lang): Promise<EnableResult> {
   const cfg = firebaseWebConfig();
-  if (!pushAvailable() || !cfg) return { ok: false, reason: "unavailable" };
+  if (!pushSupported() || !cfg) return { ok: false, reason: "unavailable" };
   try {
     if (Notification.permission === "denied") return { ok: false, reason: "denied" };
     const permission = await Notification.requestPermission();
@@ -139,9 +143,33 @@ export async function enableWebPush(city: string, lang?: Lang): Promise<EnableRe
     const answer = await registerPushSubscription({ data: { token, platform: "web", city, lang } });
     if (!answer.ok) return { ok: false, reason: "error" };
     writeStoredPush({ token, cityKey: cityKeyFor(city), city });
+    void attachForegroundMessages();
     return { ok: true };
   } catch {
     return { ok: false, reason: "error" };
+  }
+}
+
+let foregroundOn = false;
+
+/**
+ * While a tab of the site is open and in front, Firebase hands a message to the PAGE instead of the service worker (so nothing would
+ * show). This shows it as a normal notification in that case too. Called when alerts are on; does nothing without permission.
+ */
+export async function attachForegroundMessages(): Promise<void> {
+  if (foregroundOn) return;
+  const cfg = firebaseWebConfig();
+  if (!cfg || !browserCanPush() || Notification.permission !== "granted") return;
+  try {
+    const { messaging, registration } = await messagingFor(cfg);
+    foregroundOn = true;
+    messaging.onMessage((payload) => {
+      const d = payload?.data ?? {};
+      if (!d.title) return;
+      void registration.showNotification(d.title, { body: d.body ?? "", icon: "/favicon.png", badge: "/favicon.png", tag: d.tag || undefined, data: { url: d.link_url || "/" } });
+    });
+  } catch {
+    /* the notification still comes when the tab is in the background */
   }
 }
 

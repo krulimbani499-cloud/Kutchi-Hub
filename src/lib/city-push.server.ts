@@ -21,10 +21,11 @@ import {
   planCity,
   singleText,
   summaryText,
+  testText,
   type PushPlatform,
   type PushText,
 } from "./city-push";
-import { readFcmConfig, sendToMany, type SendSummary, type Target } from "./fcm.server";
+import { buildFcmMessage, readFcmConfig, sendFcm, sendToMany, type FcmResult, type SendSummary, type Target } from "./fcm.server";
 
 export type QueueRow = { id: string; business_id: string; city: string | null; attempts: number };
 export type PublicBusiness = { id: string; name: string; slug: string; city: string | null; category: string | null };
@@ -209,6 +210,58 @@ export async function runDispatch(deps: DispatchDeps, budgetMs = TIME_BUDGET_MS)
     }
   }
   return res;
+}
+
+// ------------------------------------------------------------------------------------------- the admin's test notification
+
+export type TestPushResult =
+  | { ok: true; platform: PushPlatform }
+  | { ok: false; reason: "not_configured" | "unknown_token" | "dead_token" | "refused" | "busy" | "failed" };
+
+export interface TestPushDeps {
+  canSend(): boolean;
+  /** The saved subscription of this token, or null. */
+  findSubscription(token: string): Promise<Subscriber | null>;
+  deleteSubscription(id: string): Promise<void>;
+  send(sub: Subscriber, text: PushText): Promise<FcmResult>;
+}
+
+/**
+ * One test notification to ONE device (the admin's own), right now. Not a business announcement: nothing is written to the queue or
+ * the log, so it never counts in a city's daily limit. A dead token is removed (turn the alerts off and on again to get a new one).
+ */
+export async function sendTestPush(token: string, deps: TestPushDeps): Promise<TestPushResult> {
+  if (!deps.canSend()) return { ok: false, reason: "not_configured" };
+  const sub = await deps.findSubscription(token);
+  if (!sub) return { ok: false, reason: "unknown_token" };
+  const out = await deps.send(sub, testText());
+  if (out.ok) return { ok: true, platform: sub.platform };
+  if (out.kind === "invalid") {
+    await deps.deleteSubscription(sub.id);
+    return { ok: false, reason: "dead_token" };
+  }
+  return { ok: false, reason: out.kind === "auth" ? "refused" : out.kind === "transient" ? "busy" : "failed" };
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export async function defaultTestDeps(): Promise<TestPushDeps> {
+  const cfg = readFcmConfig();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const db = supabaseAdmin as unknown as { from: (t: string) => any };
+  return {
+    canSend: () => cfg !== null,
+    async findSubscription(token) {
+      const { data, error } = await db.from("push_subscriptions").select("id, token, platform").eq("token", token).maybeSingle();
+      return error || !data ? null : (data as Subscriber);
+    },
+    async deleteSubscription(id) {
+      await db.from("push_subscriptions").delete().eq("id", id);
+    },
+    async send(sub, text) {
+      if (!cfg) return { ok: false, kind: "other", status: 0 };
+      return sendFcm(cfg, buildFcmMessage(sub.token, sub.platform, text, BASE_URL));
+    },
+  };
 }
 
 // ------------------------------------------------------------------------------------------- the real connections

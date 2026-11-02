@@ -78,6 +78,11 @@ export function summaryText(cityLabel: string, count: number, cityKey: string): 
   };
 }
 
+/** The admin's "Send test notification to my device". It is not a business announcement: no log row, so it never counts in the daily limit. */
+export function testText(): PushText {
+  return { title: "Kutchi Hub test", body: "Notifications kaam kar rahe hain ✅", link: "/", tag: "kh-test" };
+}
+
 // ---- what a browser / phone may send us
 
 /** A plausible FCM registration token (they are 140-200 characters of letters, digits, : - _ ). Not a proof: FCM is asked as well. */

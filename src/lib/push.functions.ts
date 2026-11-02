@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { RateLimiter } from "@/lib/rate-limit";
 import { PUSH_PLATFORMS, cityKeyFor, cityLabelFor, isPlausibleToken } from "@/lib/city-push";
 
@@ -97,6 +98,28 @@ export const setPushCity = createServerFn({ method: "POST" })
       return (rows ?? []).length > 0 ? { ok: true } : { ok: false, reason: "unknown_token" };
     } catch {
       return { ok: false, reason: "unavailable" };
+    }
+  });
+
+const testLimiter = new RateLimiter(6); // per admin and minute
+
+/**
+ * ADMIN ONLY: "Send test notification to my device". Sends "Kutchi Hub test" to the given token right now (it must be a saved
+ * subscription), so nobody has to wait for the 10-minute sender. Not logged, not queued: never counts in a city's daily limit.
+ */
+export const adminSendTestPush = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ token: tokenSchema }).parse(input))
+  .handler(async ({ data, context }): Promise<import("@/lib/city-push.server").TestPushResult | { ok: false; reason: "rate_limited" }> => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+    if (!testLimiter.take(context.userId)) return { ok: false, reason: "rate_limited" };
+    try {
+      const { sendTestPush, defaultTestDeps } = await import("@/lib/city-push.server");
+      return await sendTestPush(data.token, await defaultTestDeps());
+    } catch (e) {
+      console.error("[adminSendTestPush] failed", (e as Error)?.message);
+      return { ok: false, reason: "failed" };
     }
   });
 
