@@ -6,6 +6,13 @@
 
 @theme {
   --font-sans: "Open Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /*
+   * The width of the page content (header, home, search, lists, footer: every `max-w-7xl`). Up to a 1600px wide screen it is the
+   * usual 80rem (1280px), so phones, tablets and laptops look exactly as before. Beyond that it follows the screen, leaving 10rem
+   * (160px) free on each side, up to 100rem (1600px): a 1920px screen has 160px margins instead of 320px.
+   */
+  --container-7xl: clamp(80rem, calc(100vw - 20rem), 100rem);
 }
 
 #lovable-badge {
