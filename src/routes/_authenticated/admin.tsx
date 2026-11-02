@@ -45,6 +45,8 @@ import {
   BANNER_IMAGE_MAX_BYTES,
   BANNER_IMAGE_WIDTH,
   BANNER_IMAGE_HEIGHT,
+  BANNER_IMAGE_MIN_WIDTH,
+  BANNER_IMAGE_MIN_HEIGHT,
   BANNER_MOBILE_IMAGE_WIDTH,
   BANNER_MOBILE_IMAGE_HEIGHT,
 } from "@/lib/banner-images";
@@ -816,9 +818,10 @@ function BannersAdmin() {
           );
           return;
         }
-      } else if (width !== BANNER_IMAGE_WIDTH || height !== BANNER_IMAGE_HEIGHT) {
+      } else if (width !== height * 3 || width < BANNER_IMAGE_MIN_WIDTH) {
+        // 3:1 (2400 × 800 recommended); any exact 3:1 image of at least 1200 × 400 is accepted.
         setError(
-          `Image must be exactly ${BANNER_IMAGE_WIDTH} × ${BANNER_IMAGE_HEIGHT}px (3:1 ratio). This image is ${width} × ${height}px.`,
+          `Image must be 3:1 (${BANNER_IMAGE_WIDTH} × ${BANNER_IMAGE_HEIGHT}px recommended, at least ${BANNER_IMAGE_MIN_WIDTH} × ${BANNER_IMAGE_MIN_HEIGHT}px). This image is ${width} × ${height}px.`,
         );
         return;
       }
@@ -993,7 +996,9 @@ function BannersAdmin() {
                     }}
                   />
                 </label>
-                <span className="text-xs text-muted-foreground">JPG, PNG or WebP · up to 5MB · exactly 1200 × 400px</span>
+                <span className="text-xs text-muted-foreground">
+                  JPG, PNG or WebP · up to 5MB · Main: {BANNER_IMAGE_WIDTH}×{BANNER_IMAGE_HEIGHT} (min {BANNER_IMAGE_MIN_WIDTH}×{BANNER_IMAGE_MIN_HEIGHT}), Mobile: {BANNER_MOBILE_IMAGE_WIDTH}×{BANNER_MOBILE_IMAGE_HEIGHT}
+                </span>
               </div>
               {uploadError && <p className="mt-1 text-xs text-destructive">{uploadError}</p>}
               {form.image_url && (
