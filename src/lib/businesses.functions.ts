@@ -22,6 +22,10 @@ import { citySlug, parseKeywords, pickCityName, prettySlug, type CategoryLink } 
 import { cleanSearchTerm, compareTop, matchedIn, matchesTerm, pickHasNames, visibleMatches, type ShowSwitches } from "./all-business";
 import { NEARBY_WIDE_RADIUS_KM, rankNearby } from "./nearby";
 import cityCentres from "@/data/city-coords.json";
+import { cityCentres as groupCentres, orderByNearestCity, pageOfSplit, type Point } from "./search-split";
+
+const SEARCH_COLUMNS =
+  "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, featured_image, hours, status, latitude, longitude, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id!inner(id, name, slug, color), business_reviews(rating)";
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -39,6 +43,9 @@ const searchSchema = z.object({
   lng: z.number().min(-180).max(180).optional(),
   /** A locality was picked inside the city (lat / lng is its place): the default order puts the nearest businesses first. */
   areaFirst: z.boolean().optional(),
+  /** Where the chosen city is (the header's place): the other cities are listed nearest to it first. Optional: a known centre, else the city's own businesses, are used. */
+  cityLat: z.number().min(-90).max(90).optional(),
+  cityLng: z.number().min(-180).max(180).optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(50).optional().default(20),
 });
@@ -49,22 +56,12 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     const supabase = createServerSupabaseClient();
     const offset = (data.page - 1) * data.limit;
 
-    let query = supabase
-      .from("businesses")
-      // categories is an inner join so the category filter below needs no separate lookup, and the
-      // reviews come back embedded so ratings need no second query over the whole reviews table.
-      .select(
-        "id, name, slug, description, address, city, state, phone, verified, plan_tier_order, featured_image, hours, status, latitude, longitude, app_discount_percent, app_discount_label, app_discount_valid_until, categories:category_id!inner(id, name, slug, color), business_reviews(rating)",
-        // The true number of matching businesses comes back with the same query (no extra round trip).
-        { count: "exact" },
-      )
-      .eq("status", "published");
-
     // The words searched for. The same rule as the All Business page: the text must START a word of the business name, city,
     // description or category name, or of a product / service the owner shows on the profile ("cement" is not found in "replacement").
     // The database pattern below is the wide first cut (the text anywhere); the exact word-start check is done on the rows (inMemory).
     const term = cleanSearchTerm(data.q, 1);
     let hasByBusiness = new Map<string, string[]>();
+    let orParts: string | null = null;
     if (term) {
       const like = `%${term}%`;
       const [catRes, items] = await Promise.all([
@@ -77,28 +74,30 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       const catIds = (catRes.data ?? []).filter((c) => matchesTerm(c.name, term)).map((c) => c.id);
       if (catIds.length > 0) parts.push(`category_id.in.(${catIds.join(",")})`);
       if (items.ids.length > 0) parts.push(`id.in.(${items.ids.join(",")})`);
-      query = query.or(parts.join(","));
+      orParts = parts.join(",");
     }
 
-    if (data.category && data.category !== "all") {
+    // The chosen city (a real one, not "all"): its matches come first, the other cities' matches follow under "Other locations".
+    // Spelling aliases still apply: typing "Dehgam" finds the businesses saved as "Dahegam".
+    const chosenCity = data.city && data.city !== "all" ? canonicalCityName(data.city) : "";
+    // Same exact, case-insensitive match as the home page (so "Vadagam" never shows "Vadagam (Aravalli)").
+    const cityPattern = chosenCity ? exactIlike(chosenCity) : "";
+
+    /** The query with every filter except the city (the search text, the category, verified, offer). `scope` then picks the city side. */
+    const filtered = (scope: "any" | "city" | "other") => {
+      let q = supabase.from("businesses").select(SEARCH_COLUMNS, { count: "exact" }).eq("status", "published");
+      if (orParts) q = q.or(orParts);
       // Inner join on categories: an unknown slug simply yields no rows.
-      query = query.eq("categories.slug", data.category);
-    }
-
-    if (data.city && data.city !== "all") {
-      // Same exact, case-insensitive match as the home page (so "Vadagam" never shows "Vadagam (Aravalli)").
-      // Spelling aliases still apply: typing "Dehgam" finds the businesses saved as "Dahegam".
-      query = query.ilike("city", exactIlike(canonicalCityName(data.city)));
-    }
-
-    if (data.verified) query = query.eq("verified", true);
-
-    if (data.hasDiscount) {
-      const today = new Date().toISOString().slice(0, 10);
-      query = query
-        .gt("app_discount_percent", 0)
-        .or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`);
-    }
+      if (data.category && data.category !== "all") q = q.eq("categories.slug", data.category);
+      if (scope === "city" || (scope === "any" && cityPattern)) q = q.ilike("city", cityPattern);
+      if (scope === "other") q = q.not("city", "ilike", cityPattern);
+      if (data.verified) q = q.eq("verified", true);
+      if (data.hasDiscount) {
+        const today = new Date().toISOString().slice(0, 10);
+        q = q.gt("app_discount_percent", 0).or(`app_discount_valid_until.is.null,app_discount_valid_until.gte.${today}`);
+      }
+      return q;
+    };
 
     // The order is decided in the database so every page continues exactly where the last one stopped:
     //   relevance: plan priority, featured, verified, name;  newest: newest first;  discount: biggest discount first.
@@ -112,65 +111,120 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     const nearest = sortMode === "nearest" && here !== null;
     // A search text is checked word by word on the rows, so (like the other in-memory modes) all matches are loaded and paged here.
     const inMemory = data.sort === "rating" || nearest || (data.minRating ?? 0) > 0 || data.openNow || !!term;
-    let ordered = query;
-    if (data.sort === "newest") ordered = ordered.order("created_at", { ascending: false });
-    else if (data.sort === "discount") ordered = ordered.order("app_discount_percent", { ascending: false, nullsFirst: false });
-    ordered = ordered
-      .order("plan_tier_order", { ascending: false })
-      .order("plan_featured", { ascending: false })
-      .order("verified", { ascending: false })
-      .order("name", { ascending: true })
-      .order("id", { ascending: true });
+    const ordered = (q: ReturnType<typeof filtered>) => {
+      let o = q;
+      if (data.sort === "newest") o = o.order("created_at", { ascending: false });
+      else if (data.sort === "discount") o = o.order("app_discount_percent", { ascending: false, nullsFirst: false });
+      return o
+        .order("plan_tier_order", { ascending: false })
+        .order("plan_featured", { ascending: false })
+        .order("verified", { ascending: false })
+        .order("name", { ascending: true })
+        .order("id", { ascending: true });
+    };
 
-    const { data: businesses, error, count } = await (inMemory ? ordered.range(0, 999) : ordered.range(offset, offset + data.limit - 1));
-    if (error) throw new Error(error.message);
-
-    const matching = term
-      ? (businesses ?? []).filter(
-          (b) =>
-            matchesTerm(b.name, term) ||
-            matchesTerm(b.city, term) ||
-            matchesTerm(b.description, term) ||
-            matchesTerm(b.categories?.name, term) ||
-            hasByBusiness.has(b.id),
-        )
-      : (businesses ?? []);
-
-    let results = matching.map(({ business_reviews, latitude, longitude, ...b }) => {
-      const reviews = business_reviews ?? [];
-      const sum = reviews.reduce((total, r) => total + r.rating, 0);
-      return {
-        ...b,
-        avgRating: reviews.length ? Number((sum / reviews.length).toFixed(1)) : 0,
-        reviewCount: reviews.length,
-        // Only the distance leaves the server, never the coordinates themselves.
-        distanceKm: here && latitude != null && longitude != null ? Number(haversineKm(here.lat, here.lng, latitude, longitude).toFixed(1)) : null,
-      };
-    });
-
-    let total = count ?? results.length;
-    if (inMemory) {
-      if ((data.minRating ?? 0) > 0) results = results.filter((b) => b.avgRating >= data.minRating!);
+    type Row = NonNullable<Awaited<ReturnType<ReturnType<typeof ordered>["range"]>>["data"]>[number];
+    /** The word-start check on the rows, then the ratings and the distance. The coordinates themselves never leave the server. */
+    const toResults = (businesses: Row[]) => {
+      const matching = term
+        ? businesses.filter(
+            (b) =>
+              matchesTerm(b.name, term) ||
+              matchesTerm(b.city, term) ||
+              matchesTerm(b.description, term) ||
+              matchesTerm(b.categories?.name, term) ||
+              hasByBusiness.has(b.id),
+          )
+        : businesses;
+      return matching.map(({ business_reviews, latitude, longitude, ...b }) => {
+        const reviews = business_reviews ?? [];
+        const sum = reviews.reduce((total, r) => total + r.rating, 0);
+        return {
+          ...b,
+          avgRating: reviews.length ? Number((sum / reviews.length).toFixed(1)) : 0,
+          reviewCount: reviews.length,
+          distanceKm: here && latitude != null && longitude != null ? Number(haversineKm(here.lat, here.lng, latitude, longitude).toFixed(1)) : null,
+        };
+      });
+    };
+    /** Minimum rating, open now, and the rating / nearest orders. Array.sort is stable: equal ratings / distances keep the plan-priority order. */
+    const refine = (list: ReturnType<typeof toResults>, byNearest: boolean) => {
+      let out = list;
+      if ((data.minRating ?? 0) > 0) out = out.filter((b) => b.avgRating >= data.minRating!);
       if (data.openNow) {
         const clock = wallClockDate("Asia/Kolkata");
-        results = results.filter((b) => isOpenNow(b.hours, clock) === true);
+        out = out.filter((b) => isOpenNow(b.hours, clock) === true);
       }
-      // Array.sort is stable: equal ratings / distances keep the plan-priority order above.
-      if (data.sort === "rating") results = [...results].sort((a, b) => b.avgRating - a.avgRating);
+      if (data.sort === "rating") out = [...out].sort((a, b) => b.avgRating - a.avgRating);
       // Nearest first; a business without a location goes last.
-      if (nearest) results = [...results].sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+      if (byNearest) out = [...out].sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+      return out;
+    };
+    /** Everything that matches on one side of the city, a thousand rows at a time (the database caps one answer at 1000). */
+    const loadAll = async (scope: "city" | "other") => {
+      const rows: Row[] = [];
+      for (let from = 0; from < 10_000; from += 1000) {
+        const { data: chunk, error } = await ordered(filtered(scope)).range(from, from + 999);
+        if (error) throw new Error(error.message);
+        rows.push(...(chunk ?? []));
+        if ((chunk?.length ?? 0) < 1000) break;
+      }
+      return rows;
+    };
+    /** The extras (more photos, service names) for the businesses on THIS page only. */
+    const withExtras = async <T extends { id: string }>(results: T[]) => {
+      const extras = await loadListExtras(supabase, results.map((b) => b.id));
+      return results.map((b) => ({ ...b, photos: extras.photos.get(b.id) ?? [], serviceTags: extras.services.get(b.id) ?? [] }));
+    };
+
+    if (chosenCity) {
+      // ---- the chosen city first, then "Other locations" (nearest city first, then package tier). Paged as ONE list, 20 at a time.
+      const [cityRows, otherRows] = await Promise.all([loadAll("city"), loadAll("other")]);
+      const cityList = refine(toResults(cityRows), nearest);
+      let otherList = refine(toResults(otherRows), data.sort === "nearest" && here !== null);
+      if (data.sort === "relevance") {
+        // The default order of the other cities: the city nearest to the chosen city first, inside a city the usual package order.
+        const known = cityCentres as Record<string, Point>;
+        const centres = groupCentres(otherRows, (k) => known[k]);
+        let from: Point | null = data.cityLat !== undefined && data.cityLng !== undefined ? { lat: data.cityLat, lng: data.cityLng } : (known[cityKey(chosenCity)] ?? null);
+        if (!from) {
+          // No known centre for the chosen city: the average place of its own businesses (one small query).
+          const own = await supabase.from("businesses").select("city, latitude, longitude").eq("status", "published").ilike("city", cityPattern).not("latitude", "is", null).limit(100);
+          from = groupCentres(own.data ?? [], () => null).get(cityKey(chosenCity)) ?? null;
+        }
+        otherList = orderByNearestCity(otherList, from, centres);
+      }
+      const page = pageOfSplit(cityList, otherList, offset, data.limit);
+      return {
+        items: await withExtras(page.items),
+        /** How many businesses match in total (the chosen city's and the other cities' together). */
+        total: page.total,
+        /** The split: how many are in the chosen city and how many in other locations (null when no city is chosen). */
+        cityTotal: cityList.length as number | null,
+        otherTotal: otherList.length as number | null,
+        page: data.page,
+        hasMore: page.hasMore,
+      };
+    }
+
+    // ---- no city chosen / All locations: one list, exactly as before
+    const { data: businesses, error, count } = await (inMemory ? ordered(filtered("any")).range(0, 999) : ordered(filtered("any")).range(offset, offset + data.limit - 1));
+    if (error) throw new Error(error.message);
+
+    let results = toResults(businesses ?? []);
+    let total = count ?? results.length;
+    if (inMemory) {
+      results = refine(results, nearest);
       total = results.length;
       results = results.slice(offset, offset + data.limit);
     }
 
-    // Extras for the businesses on THIS page only: more photos (the card can swipe through them) and a few service names.
-    const extras = await loadListExtras(supabase, results.map((b) => b.id));
-    const items = results.map((b) => ({ ...b, photos: extras.photos.get(b.id) ?? [], serviceTags: extras.services.get(b.id) ?? [] }));
-
     return {
-      items,
+      items: (await withExtras(results)).map((b) => ({ ...b, section: "city" as "city" | "other" })),
       /** How many businesses match in total (not just on this page). */
       total,
+      cityTotal: null as number | null,
+      otherTotal: null as number | null,
       page: data.page,
       hasMore: offset + results.length < total,
     };

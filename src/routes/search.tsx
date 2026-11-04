@@ -16,6 +16,7 @@ import { SHOW_SEARCH_LEAD_FORM } from "@/lib/features";
 import { ResultCard, ResultCardSkeleton } from "@/components/search/ResultCard";
 import { ResultsHeader } from "@/components/search/ResultsHeader";
 import { roundPos, useVisitorPosition, type Position } from "@/hooks/useVisitorPosition";
+import { useT } from "@/lib/i18n";
 import { CITY_ALL, effectiveCity, validateSearchParams, type SearchParams, type SortValue } from "@/lib/search-filters";
 
 // Businesses are loaded one page at a time; the server also returns the true total of matches.
@@ -34,6 +35,8 @@ const searchInfiniteOptions = (p: {
   verified: boolean;
   offer: boolean;
   here: Position | null;
+  /** Where the chosen city is: the other cities are listed nearest to it first. */
+  cityAt: Position | null;
   /** A locality was picked inside the city: the default order is nearest to it first. */
   areaFirst: boolean;
 }) => ({
@@ -52,6 +55,8 @@ const searchInfiniteOptions = (p: {
         openNow: p.open,
         lat: p.here?.lat,
         lng: p.here?.lng,
+        cityLat: p.cityAt?.lat,
+        cityLng: p.cityAt?.lng,
         areaFirst: p.areaFirst || undefined,
         page: pageParam,
         limit: PAGE_SIZE,
@@ -95,6 +100,7 @@ export const Route = createFileRoute("/search")({
 });
 
 function SearchPage() {
+  const t = useT();
   const params = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: categoriesData, isPending: categoriesPending } = useQuery(categoriesQueryOptions);
@@ -200,6 +206,7 @@ function SearchPage() {
       verified: !!params.verified,
       offer: !!params.offer,
       here,
+      cityAt: cityCentre,
       areaFirst: !!areaPos && sort === "relevance",
     }),
     enabled: searchEnabled,
@@ -223,7 +230,12 @@ function SearchPage() {
     }
     return list;
   }, [searchData]);
-  const total = searchData?.pages[searchData.pages.length - 1]?.total ?? 0;
+  const lastPage = searchData?.pages[searchData.pages.length - 1];
+  const total = lastPage?.total ?? 0;
+  // With a city chosen the list is "the city's businesses, then Other locations"; these are the two sizes (null = one plain list).
+  const cityTotal = lastPage?.cityTotal ?? null;
+  const otherTotal = lastPage?.otherTotal ?? null;
+  const split = cityTotal !== null && otherTotal !== null && otherTotal > 0;
   const activeCategory = useMemo(() => categories.find((c) => c.slug === params.category) ?? null, [categories, params.category]);
   // The category banner sits above the list: the list stays behind its skeleton until the banner is known, so it never jumps down.
   const { settled: bannerSettled } = useCategoryBanners(activeCategory?.id, city);
@@ -249,7 +261,12 @@ function SearchPage() {
   }, [hasNextPage, isFetchingNextPage, resultsStale, fetchNextPage, results.length]);
 
   const anyFilter = !!(params.q || params.category || params.rating || params.open || params.verified || params.offer);
-  const countText = loading || resultsStale ? "Loading..." : `${total} ${total === 1 ? "result" : "results"}`;
+  const countText =
+    loading || resultsStale
+      ? "Loading..."
+      : split
+        ? (cityTotal === 0 ? t("search.countOther") : t("search.countSplit")).replace("{a}", String(cityTotal)).replace("{city}", () => city).replace("{b}", String(otherTotal))
+        : `${total} ${total === 1 ? "result" : "results"}`;
 
   const leadForm = (className = "") =>
     SHOW_SEARCH_LEAD_FORM && (
@@ -274,7 +291,7 @@ function SearchPage() {
         city={city}
         category={activeCategory}
         total={loading || resultsStale ? null : total}
-        right={<p className="shrink-0 pb-1 text-sm text-muted-foreground">{countText}</p>}
+        right={<p className="max-w-full shrink-0 pb-1 text-sm text-muted-foreground">{countText}</p>}
       />
 
       <FilterBar
@@ -322,7 +339,21 @@ function SearchPage() {
             <div key="list" data-results-list className={`flex flex-col gap-4 transition-opacity ${resultsStale ? "opacity-60" : ""}`}>
               {results.map((business, i) => (
                 <Fragment key={business.id}>
-                  <ResultCard business={business} distanceFrom={distanceFrom} areaName={areaPos ? area?.name : null} priority={i < 2} />
+                  {/* Nothing of the chosen city matched: say so, then the other cities follow. */}
+                  {i === 0 && split && cityTotal === 0 && (
+                    <p data-none-in-city className="rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground">
+                      {(params.q ? t("search.noneInCity") : t("search.noneInCityFilters")).replace("{q}", () => params.q ?? "").replace("{city}", () => city)}
+                    </p>
+                  )}
+                  {/* The first business of the other cities: the divider. */}
+                  {split && business.section === "other" && results[i - 1]?.section !== "other" && (
+                    <div data-other-locations role="separator" className="mt-2 flex items-center gap-3">
+                      <span className="h-px flex-1 bg-border" />
+                      <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">{t("search.otherLocations")}</h2>
+                      <span className="h-px flex-1 bg-border" />
+                    </div>
+                  )}
+                  <ResultCard business={business} distanceFrom={distanceFrom} areaName={areaPos ? area?.name : null} priority={i < 2} showCity={split && business.section === "other"} />
                   {SHOW_SEARCH_LEAD_FORM && i === Math.min(PHONE_FORM_AFTER, results.length) - 1 && <div className="lg:hidden">{leadForm()}</div>}
                 </Fragment>
               ))}

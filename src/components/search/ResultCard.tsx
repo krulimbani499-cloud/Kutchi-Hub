@@ -57,8 +57,11 @@ export function ResultCard({
   distanceFrom = "you",
   areaName = null,
   priority = false,
+  showCity = false,
 }: {
   business: ResultBusiness;
+  /** Under "Other locations": the city of the business is shown as its own clear tag. */
+  showCity?: boolean;
   /** What the distance is measured from: the visitor's own position, or the centre of the chosen city. */
   distanceFrom?: "you" | "city" | "area";
   /** The locality picked inside the city ("Naroda"): businesses whose address mentions it get an "In Naroda" tag. */
@@ -227,6 +230,15 @@ export function ResultCard({
             </span>
           )}
         </div>
+
+        {showCity && business.city && (
+          <p data-other-city className="mt-1">
+            <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate">{business.city}</span>
+            </span>
+          </p>
+        )}
 
         {(business.matchedHas?.length ?? 0) > 0 && (
           <p data-matched-has className="mt-1 line-clamp-2 text-sm text-foreground/80">

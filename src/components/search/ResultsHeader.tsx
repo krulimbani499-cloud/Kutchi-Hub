@@ -82,7 +82,8 @@ export function ResultsHeader({
           })}
         </ol>
       </nav>
-      <div className="flex items-end justify-between gap-3">
+      {/* flex-wrap: a long count ("3 in Ahmedabad · 6 in other locations") drops under the heading on a phone instead of widening the page. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
         <h1 data-results-heading className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">
           {heading ?? resultsHeading({ q, categoryName: category?.name, city })}
         </h1>
