@@ -11,9 +11,7 @@ import { NotificationsBell } from "@/components/layout/NotificationsBell";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
 import { useT } from "@/lib/i18n";
 import { usePricingVisible } from "@/hooks/usePricingVisible";
-import { useDiwali } from "@/hooks/useDiwali";
 import { SHOW_SAVED } from "@/lib/features";
-import { DiwaliToran } from "@/components/diwali/DiwaliToran";
 
 /**
  * TEMPORARY: the home page already has its own search (location picker + mic) in the hero, so the header search is hidden there.
@@ -28,7 +26,6 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
   const hideHeaderSearch = hideSearch ?? ((HIDE_HEADER_SEARCH_ON_HOME && pathname === "/") || pathname === "/all-business");
   const { user, isLoading } = useAuth();
   const t = useT();
-  const diwali = useDiwali().active; // the festival strip, on the Diwali days only (features.ts)
   const showPricing = usePricingVisible(); // false for everyone but admins while SHOW_PUBLIC_PRICING is off (and always in the iOS app)
   const [search, setSearch] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -199,7 +196,6 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
           )}
         </div>
       </div>
-      {diwali && <DiwaliToran />}
     </header>
   );
 }

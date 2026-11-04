@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDiwali } from "@/hooks/useDiwali";
 
 const TILE = 32; // px: one hanging diya per tile
 
@@ -24,10 +25,14 @@ function Diya() {
 
 /**
  * The diya toran under the header: a thin strip of small hanging diyas with flickering flames. Pure SVG + CSS, no images.
- * It is drawn OVER the page (absolute, under the header's bottom edge), so it takes no space and moves nothing; it ignores
- * taps (pointer-events: none) and is hidden from screen readers. Reduced motion: the diyas stay, the flames stop.
+ * It sits in the normal page flow right below the sticky header, in a zero-height box, and is drawn OVER the top of the page
+ * (absolute inside that box): it takes no space and moves nothing, and because it is NOT inside the sticky header it scrolls away
+ * with the page (the header, which stays, covers it as it goes) and is there again at the top. It ignores taps
+ * (pointer-events: none) and is hidden from screen readers. Reduced motion: the diyas stay, the flames stop.
+ * Draws nothing outside the Diwali days (useDiwali).
  */
 export function DiwaliToran() {
+  const active = useDiwali().active;
   const [count, setCount] = useState(14);
   useEffect(() => {
     const update = () => setCount(Math.ceil(window.innerWidth / TILE) + 1);
@@ -35,8 +40,10 @@ export function DiwaliToran() {
     window.addEventListener("resize", update, { passive: true });
     return () => window.removeEventListener("resize", update);
   }, []);
+  if (!active) return null;
   return (
-    <div aria-hidden="true" data-diwali-toran className="pointer-events-none absolute inset-x-0 top-full z-10 h-[26px] select-none overflow-hidden">
+    <div className="relative z-40 h-0 w-full">
+    <div aria-hidden="true" data-diwali-toran className="pointer-events-none absolute inset-x-0 top-0 h-[26px] select-none overflow-hidden">
       <svg width="0" height="0" className="absolute" focusable="false">
         <defs>
           <radialGradient id="diwali-glow">
@@ -58,6 +65,7 @@ export function DiwaliToran() {
           <Diya key={i} />
         ))}
       </div>
+    </div>
     </div>
   );
 }

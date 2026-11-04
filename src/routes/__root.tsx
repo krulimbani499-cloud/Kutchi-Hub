@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Header } from "@/components/layout/Header";
+import { DiwaliToran } from "@/components/diwali/DiwaliToran";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { supabase } from "@/integrations/supabase/client";
@@ -196,6 +197,8 @@ function RootComponent() {
         <ComingSoonGate>
         <div className="flex min-h-screen flex-col">
           <Header />
+          {/* The Diwali toran hangs under the header but is NOT part of it: it scrolls away with the page (draws nothing outside the Diwali days). */}
+          <DiwaliToran />
           <main className="min-h-[70vh] flex-1 pb-16 sm:pb-0">
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
