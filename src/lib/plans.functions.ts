@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
 import { slugify } from "./slug";
+import { clearPublicCaches } from "./server-cache";
 import { buildPlanOverview, type OverviewBusinessInput, type OverviewPlanInput, type OverviewSubInput } from "./subscription-utils";
 
 export const listActivePlans = createServerFn({ method: "GET" }).handler(async () => {
@@ -307,6 +308,7 @@ export const assignPlanToBusiness = createServerFn({ method: "POST" })
       await context.supabase.from("businesses").update({ current_plan_id: data.planId } as never).eq("id", data.businessId);
       await notifyQuickLeadOwner(data.businessId, data.planId);
     }
+    clearPublicCaches(); // a plan decides the order of the public lists: this instance forgets its saved answers at once
     return sub;
   });
 
@@ -344,6 +346,7 @@ export const updateBusinessSubscription = createServerFn({ method: "POST" })
     if (row.status === "active") {
       await context.supabase.from("businesses").update({ current_plan_id: data.planId } as never).eq("id", row.business_id);
     }
+    clearPublicCaches(); // a plan decides the order of the public lists: this instance forgets its saved answers at once
     return { success: true };
   });
 
@@ -363,6 +366,7 @@ export const cancelBusinessSubscription = createServerFn({ method: "POST" })
     if (businessId) {
       await context.supabase.from("businesses").update({ current_plan_id: null } as never).eq("id", businessId);
     }
+    clearPublicCaches(); // a plan decides the order of the public lists: this instance forgets its saved answers at once
     return { success: true };
   });
 

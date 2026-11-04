@@ -82,8 +82,10 @@ export async function runDispatch(deps: DispatchDeps, budgetMs = TIME_BUDGET_MS)
   const outOfTime = () => deps.nowMs() - started > budgetMs;
   const now = deps.now();
   const clock = istClock(now);
-  res.expired = await deps.expireOld(now.toISOString());
+  // Quiet hours: nothing to do and nothing to ask the database (expiry is only bookkeeping: the claim below already ignores rows
+  // past their 72 hours, so the morning's first run marks them).
   if (inQuietHours(clock.hour)) return { ...res, skipped: "quiet_hours" };
+  res.expired = await deps.expireOld(now.toISOString());
 
   // ---- 1. the waiting businesses
   const rows = await deps.claim(CLAIM_LIMIT);

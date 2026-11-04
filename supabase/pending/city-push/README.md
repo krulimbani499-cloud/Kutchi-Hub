@@ -12,6 +12,7 @@ in phase 2 with the same tables and sender.
    - **Vercel Hobby**: run `04_schedule_pg_cron.sql` in the Supabase SQL editor (the secret is stored in Supabase Vault).
    - **Vercel Pro**: add to `vercel.json` (do NOT add it on Hobby: the deploy would fail)
      `"crons": [{ "path": "/api/push/dispatch", "schedule": "*/10 * * * *" }]`. Vercel sends `Authorization: Bearer $CRON_SECRET` itself.
+   - Optional, saves function runs: after `04`, run `05_cron_daytime.sql` to call the sender only in the daytime (India 08:00-21:30) instead of all night too.
 5. Turn the feature on: `SHOW_CITY_PUSH = true` in `src/lib/features.ts` (the card appears on the home page, the admin approve list gets
    "Notify users of this city"). The sender works without the flag; the flag only shows the UI.
 

@@ -5,7 +5,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { activeEnterpriseBusinessIds, authEmailsByIds, createServerSupabaseClient, findAuthUserByEmail, uniqueBusinessSlug } from "./businesses.server";
 import { BANNER_PLACEMENTS, composeHomeBanners, shuffleByPriority, showsInAllLocations, type BannerPlacement } from "./banner-rules";
 import { completionChecklist, publishGaps } from "./listing-completeness";
-import { cachedFor, clearCached } from "./server-cache";
+import { cachedFor, clearCached, clearPublicCaches } from "./server-cache";
+import { MEMORY_TTL_S } from "./cache-policy";
 import { findPhoneDuplicate } from "./quick-add";
 import type { Json, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { slugify, ensureSlug } from "./slug";
@@ -50,9 +51,38 @@ const searchSchema = z.object({
   limit: z.coerce.number().min(1).max(50).optional().default(20),
 });
 
+const ms = (seconds: number) => seconds * 1000;
+
+/**
+ * Everything that changes a search answer, as one string (the cache key). The visitor's position is part of it because the distances
+ * in the answer depend on it. "Open now" changes with the clock, so the minute is part of the key then.
+ */
+function searchCacheKey(data: z.infer<typeof searchSchema>, withPage: boolean): string {
+  return JSON.stringify([
+    cleanSearchTerm(data.q, 1),
+    data.category ?? "",
+    data.city && data.city !== "all" ? canonicalCityName(data.city).toLowerCase() : "",
+    data.minRating ?? 0,
+    data.sort,
+    data.hasDiscount,
+    data.verified,
+    data.openNow ? Math.floor(Date.now() / 60_000) : false,
+    data.lat ?? null,
+    data.lng ?? null,
+    data.areaFirst ?? false,
+    data.cityLat ?? null,
+    data.cityLng ?? null,
+    ...(withPage ? [data.page, data.limit] : []),
+  ]);
+}
+
+// Same input = same answer, so a result page is kept for 30 s per server instance: repeat searches, the "load more" of other
+// visitors and crawlers cost no database work. Failed answers are never kept. See cache-policy.ts for the numbers.
 export const searchBusinesses = createServerFn({ method: "GET" })
   .inputValidator((input) => searchSchema.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }) => cachedFor(`search:page:${searchCacheKey(data, true)}`, ms(MEMORY_TTL_S.search), () => runSearchBusinesses(data)));
+
+async function runSearchBusinesses(data: z.infer<typeof searchSchema>) {
     const supabase = createServerSupabaseClient();
     const offset = (data.page - 1) * data.limit;
 
@@ -179,21 +209,26 @@ export const searchBusinesses = createServerFn({ method: "GET" })
 
     if (chosenCity) {
       // ---- the chosen city first, then "Other locations" (nearest city first, then package tier). Paged as ONE list, 20 at a time.
-      const [cityRows, otherRows] = await Promise.all([loadAll("city"), loadAll("other")]);
-      const cityList = refine(toResults(cityRows), nearest);
-      let otherList = refine(toResults(otherRows), data.sort === "nearest" && here !== null);
-      if (data.sort === "relevance") {
-        // The default order of the other cities: the city nearest to the chosen city first, inside a city the usual package order.
-        const known = cityCentres as Record<string, Point>;
-        const centres = groupCentres(otherRows, (k) => known[k]);
-        let from: Point | null = data.cityLat !== undefined && data.cityLng !== undefined ? { lat: data.cityLat, lng: data.cityLng } : (known[cityKey(chosenCity)] ?? null);
-        if (!from) {
-          // No known centre for the chosen city: the average place of its own businesses (one small query).
-          const own = await supabase.from("businesses").select("city, latitude, longitude").eq("status", "published").ilike("city", cityPattern).not("latitude", "is", null).limit(100);
-          from = groupCentres(own.data ?? [], () => null).get(cityKey(chosenCity)) ?? null;
+      // Loading, filtering and ordering EVERY match is the heavy part. It does not depend on the page, so it is kept for 30 s and
+      // page 2, 3 ... of the same search are only cut from it.
+      const { cityList, otherList } = await cachedFor(`search:list:${searchCacheKey(data, false)}`, ms(MEMORY_TTL_S.search), async () => {
+        const [cityRows, otherRows] = await Promise.all([loadAll("city"), loadAll("other")]);
+        const cityList = refine(toResults(cityRows), nearest);
+        let otherList = refine(toResults(otherRows), data.sort === "nearest" && here !== null);
+        if (data.sort === "relevance") {
+          // The default order of the other cities: the city nearest to the chosen city first, inside a city the usual package order.
+          const known = cityCentres as Record<string, Point>;
+          const centres = groupCentres(otherRows, (k) => known[k]);
+          let from: Point | null = data.cityLat !== undefined && data.cityLng !== undefined ? { lat: data.cityLat, lng: data.cityLng } : (known[cityKey(chosenCity)] ?? null);
+          if (!from) {
+            // No known centre for the chosen city: the average place of its own businesses (one small query).
+            const own = await supabase.from("businesses").select("city, latitude, longitude").eq("status", "published").ilike("city", cityPattern).not("latitude", "is", null).limit(100);
+            from = groupCentres(own.data ?? [], () => null).get(cityKey(chosenCity)) ?? null;
+          }
+          otherList = orderByNearestCity(otherList, from, centres);
         }
-        otherList = orderByNearestCity(otherList, from, centres);
-      }
+        return { cityList, otherList };
+      });
       const page = pageOfSplit(cityList, otherList, offset, data.limit);
       return {
         items: await withExtras(page.items),
@@ -208,15 +243,22 @@ export const searchBusinesses = createServerFn({ method: "GET" })
     }
 
     // ---- no city chosen / All locations: one list, exactly as before
-    const { data: businesses, error, count } = await (inMemory ? ordered(filtered("any")).range(0, 999) : ordered(filtered("any")).range(offset, offset + data.limit - 1));
-    if (error) throw new Error(error.message);
-
-    let results = toResults(businesses ?? []);
-    let total = count ?? results.length;
+    let results: ReturnType<typeof toResults>;
+    let total: number;
     if (inMemory) {
-      results = refine(results, nearest);
-      total = results.length;
-      results = results.slice(offset, offset + data.limit);
+      // Up to 1000 rows loaded, word-checked, filtered and ordered: kept for 30 s (it does not depend on the page).
+      const all = await cachedFor(`search:list:${searchCacheKey(data, false)}`, ms(MEMORY_TTL_S.search), async () => {
+        const { data: businesses, error } = await ordered(filtered("any")).range(0, 999);
+        if (error) throw new Error(error.message);
+        return refine(toResults(businesses ?? []), nearest);
+      });
+      total = all.length;
+      results = all.slice(offset, offset + data.limit);
+    } else {
+      const { data: businesses, error, count } = await ordered(filtered("any")).range(offset, offset + data.limit - 1);
+      if (error) throw new Error(error.message);
+      results = toResults(businesses ?? []);
+      total = count ?? results.length;
     }
 
     return {
@@ -228,7 +270,7 @@ export const searchBusinesses = createServerFn({ method: "GET" })
       page: data.page,
       hasMore: offset + results.length < total,
     };
-  });
+}
 
 const LIST_PHOTOS_PER_BUSINESS = 6;
 const LIST_SERVICES_PER_BUSINESS = 3;
@@ -332,12 +374,22 @@ async function matchProductsAndServices(supabase: ReturnType<typeof createServer
   return visibleMatches(prodRows, svcRows, toggles.error ? null : ((toggles.data ?? []) as ShowSwitches[]));
 }
 
+// Like searchBusinesses: the same input gives the same answer, so a result page is kept for 30 s per server instance, and the
+// matching rows of one search text (the heavy part, shared by every filter / sort / page of it) too.
 export const searchAllBusinesses = createServerFn({ method: "GET" })
   .inputValidator((input) => allBusinessSchema.parse(input))
-  .handler(async ({ data }) => {
-    const supabase = createServerSupabaseClient();
-    const term = cleanSearchTerm(data.q);
+  .handler(async ({ data }) =>
+    cachedFor(
+      `allbiz:page:${JSON.stringify([cleanSearchTerm(data.q), data.category ?? "", data.city ?? "", data.sort, data.minRating ?? 0, data.hasDiscount, data.verified, data.openNow ? Math.floor(Date.now() / 60_000) : false, data.lat ?? null, data.lng ?? null, data.page, data.limit])}`,
+      ms(MEMORY_TTL_S.search),
+      () => runSearchAllBusinesses(data),
+    ),
+  );
 
+/** The rows that match one search text (name / description / category in the query itself, products and services beside it). */
+async function loadAllBusinessRows(term: string) {
+  return cachedFor(`allbiz:rows:${term}`, ms(MEMORY_TTL_S.search), async () => {
+    const supabase = createServerSupabaseClient();
     // ---- which businesses match the text: name / description / category in the query itself, products and services beside it
     let orFilter: string | null = null;
     let hasByBusiness = new Map<string, string[]>();
@@ -367,6 +419,14 @@ export const searchAllBusinesses = createServerFn({ method: "GET" })
       rows.push(...((chunk ?? []) as unknown as AllBusinessRow[]));
       if ((chunk?.length ?? 0) < 1000) break;
     }
+    return { rows, hasByBusiness };
+  });
+}
+
+async function runSearchAllBusinesses(data: z.infer<typeof allBusinessSchema>) {
+    const supabase = createServerSupabaseClient();
+    const term = cleanSearchTerm(data.q);
+    const { rows, hasByBusiness } = await loadAllBusinessRows(term);
 
     // The database filter above is wide (the text anywhere inside a word: "cement" is in "replacement" and "reinforcement"). The
     // list keeps only the businesses where the text starts a word of the name, city, description or category name, or matched one of
@@ -449,7 +509,7 @@ export const searchAllBusinesses = createServerFn({ method: "GET" })
       page: data.page,
       hasMore: offset + pageRows.length < list.length,
     };
-  });
+}
 
 let profilesUnreadable = false;
 
@@ -464,54 +524,60 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
-    let query = supabase
-      .from("businesses")
-      .select(
-        "*, categories:category_id(id, name, slug, color, icon)",
-      )
-      .eq("slug", data.slug)
-      .eq("status", "published");
+    // The business itself, its photos and the catalog check are kept for a minute per server instance (a crawler or a busy business
+    // page costs no database work). The REVIEWS are always read live below, so a review that was just added shows at once.
+    // A business that is not found / not published throws inside and is therefore never kept.
+    const { business, photos, catalogAllowed } = await cachedFor(`biz:${data.slug}|${data.city ?? ""}`, ms(MEMORY_TTL_S.business), async () => {
+      let query = supabase
+        .from("businesses")
+        .select(
+          "*, categories:category_id(id, name, slug, color, icon)",
+        )
+        .eq("slug", data.slug)
+        .eq("status", "published");
 
-    if (data.city) {
-      query = query.eq("city", data.city);
-    }
-
-    // Two businesses can share a slug in old data: show the oldest instead of failing with "multiple rows".
-    const { data: found, error } = await query.order("created_at", { ascending: true }).limit(1);
-    if (error) throw new Error(error.message);
-    const business = found?.[0] ?? null;
-    if (!business) {
-      // Not published. If it's merely awaiting review, say so (and nothing more);
-      // rejected or missing businesses stay a plain not-found.
-      let inReview = false;
-      try {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        let pendingQuery = supabaseAdmin
-          .from("businesses")
-          .select("status")
-          .eq("slug", data.slug)
-          .eq("status", "pending");
-        if (data.city) pendingQuery = pendingQuery.eq("city", data.city);
-        const { data: pending } = await pendingQuery.limit(1);
-        inReview = !!pending && pending.length > 0;
-      } catch {
-        // lookup unavailable — fall back to plain not-found
+      if (data.city) {
+        query = query.eq("city", data.city);
       }
-      throw inReview ? notFound({ data: { inReview: true } }) : notFound();
-    }
 
-    // Reviews, photos and the catalog-plan check do not depend on each other: ask for all three at once.
-    const [{ data: reviews }, { data: photos }, catalogAllowed] = await Promise.all([
-      supabase.from("business_reviews").select("*").eq("business_id", business.id).order("created_at", { ascending: false }),
-      supabase.from("business_photos").select("*").eq("business_id", business.id).order("display_order", { ascending: true }),
-      // Show the catalog only while the business's active plan includes it. Nothing is deleted: the file and the
-      // saved values stay, they just are not shown. Fails open (shown, as before) if the database function is missing.
-      business.catalog_url || business.catalog_link
-        ? supabase
-            .rpc("business_can_use_catalog", { _business_id: business.id })
-            .then(({ data: canCatalog, error: canCatalogError }) => (canCatalogError ? true : canCatalog === true))
-        : Promise.resolve(true),
-    ]);
+      // Two businesses can share a slug in old data: show the oldest instead of failing with "multiple rows".
+      const { data: found, error } = await query.order("created_at", { ascending: true }).limit(1);
+      if (error) throw new Error(error.message);
+      const business = found?.[0] ?? null;
+      if (!business) {
+        // Not published. If it's merely awaiting review, say so (and nothing more);
+        // rejected or missing businesses stay a plain not-found.
+        let inReview = false;
+        try {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          let pendingQuery = supabaseAdmin
+            .from("businesses")
+            .select("status")
+            .eq("slug", data.slug)
+            .eq("status", "pending");
+          if (data.city) pendingQuery = pendingQuery.eq("city", data.city);
+          const { data: pending } = await pendingQuery.limit(1);
+          inReview = !!pending && pending.length > 0;
+        } catch {
+          // lookup unavailable — fall back to plain not-found
+        }
+        throw inReview ? notFound({ data: { inReview: true } }) : notFound();
+      }
+
+      // Photos and the catalog-plan check do not depend on each other: ask for both at once.
+      const [{ data: photos }, catalogAllowed] = await Promise.all([
+        supabase.from("business_photos").select("*").eq("business_id", business.id).order("display_order", { ascending: true }),
+        // Show the catalog only while the business's active plan includes it. Nothing is deleted: the file and the
+        // saved values stay, they just are not shown. Fails open (shown, as before) if the database function is missing.
+        business.catalog_url || business.catalog_link
+          ? supabase
+              .rpc("business_can_use_catalog", { _business_id: business.id })
+              .then(({ data: canCatalog, error: canCatalogError }) => (canCatalogError ? true : canCatalog === true))
+          : Promise.resolve(true),
+      ]);
+      return { business, photos: photos ?? [], catalogAllowed };
+    });
+    const { data: reviews } = await supabase.from("business_reviews").select("*").eq("business_id", business.id).order("created_at", { ascending: false });
 
     const userIds = [...new Set((reviews ?? []).map((r) => r.user_id))];
     const profiles: Record<string, { display_name: string | null; avatar_url: string | null }> = {};
@@ -541,21 +607,23 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
     return {
       business: { ...business, catalog_allowed: catalogAllowed },
       reviews: reviewsWithProfiles,
-      photos: photos ?? [],
+      photos,
       avgRating,
       reviewCount: reviews?.length ?? 0,
     };
   });
 
-export const getCategories = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("display_order", { ascending: true });
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
+export const getCategories = createServerFn({ method: "GET" }).handler(async () =>
+  cachedFor("home:categories:list", ms(MEMORY_TTL_S.categories), async () => {
+    const supabase = createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  }),
+);
 
 const createCategorySchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
@@ -594,6 +662,7 @@ export const createCategory = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(friendlyBannerError(error));
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return inserted;
   });
 
@@ -662,6 +731,7 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
       throw new Error(friendlyBannerError(error));
     }
     clearCached("directory"); // the landing pages read keywords from the directory cache
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return updated;
   });
 
@@ -681,6 +751,7 @@ export const adminDeleteCategory = createServerFn({ method: "POST" })
     }
     const { error } = await context.supabase.from("categories").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { ok: true };
   });
 
@@ -717,7 +788,13 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
       })
       .parse(input ?? {}),
   )
+  // Kept for a minute per server instance (the random order inside a priority is drawn again each minute, see composeHomeBanners).
   .handler(async ({ data }) => {
+    if (!data.city && !data.all) return [];
+    return cachedFor(`banners:city:${JSON.stringify([data.city?.toLowerCase() ?? "", data.all ?? false, data.placement ?? "home_top"])}`, ms(MEMORY_TTL_S.banners), () => runBannerAdsForCity(data));
+  });
+
+async function runBannerAdsForCity(data: { city?: string; all?: boolean; placement?: BannerPlacement }) {
     const supabase = createServerSupabaseClient();
     // Only show banners for the selected city. If no city is selected AND "All locations" was not chosen,
     // return nothing so city-specific banners don't leak across locations.
@@ -820,7 +897,7 @@ export const getBannerAdsForCity = createServerFn({ method: "GET" })
       image_url: normalizeBannerImageUrl(banner.image_url),
       mobile_image_url: banner.mobile_image_url ? normalizeBannerImageUrl(banner.mobile_image_url) : null,
     }));
-  });
+}
 
 export const getBannerAdsForCategory = createServerFn({ method: "GET" })
   .inputValidator((input) =>
@@ -828,7 +905,9 @@ export const getBannerAdsForCategory = createServerFn({ method: "GET" })
       .object({ categoryId: z.string().uuid(), city: z.string().trim().min(1).max(80).optional() })
       .parse(input),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data }) => cachedFor(`banners:category:${JSON.stringify([data.categoryId, data.city?.toLowerCase() ?? ""])}`, ms(MEMORY_TTL_S.banners), () => runBannerAdsForCategory(data)));
+
+async function runBannerAdsForCategory(data: { categoryId: string; city?: string }) {
     const supabase = createServerSupabaseClient();
     const now = new Date().toISOString();
     let query = supabase
@@ -848,7 +927,7 @@ export const getBannerAdsForCategory = createServerFn({ method: "GET" })
       image_url: normalizeBannerImageUrl(banner.image_url),
       mobile_image_url: banner.mobile_image_url ? normalizeBannerImageUrl(banner.mobile_image_url) : null,
     }));
-  });
+}
 
 const bannerInputSchema = z.object({
   business_id: z.string().uuid().nullable().optional(),
@@ -978,6 +1057,7 @@ export const adminCreateBannerAd = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return inserted;
   });
 
@@ -1010,6 +1090,7 @@ export const adminUpdateBannerAd = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return updated;
   });
 
@@ -1020,6 +1101,7 @@ export const adminDeleteBannerAd = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { error } = await context.supabase.from("banner_ads").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { ok: true };
   });
 
@@ -1052,12 +1134,12 @@ async function countPublishedByCategory(supabase: ReturnType<typeof createServer
 }
 
 /**
- * The per-category counts, kept for a minute per server instance. ONE place for this, used by the home Popular Categories and by the
+ * The per-category counts, kept for a few minutes per server instance (cache-policy.ts). ONE place for this, used by the home Popular Categories and by the
  * All Categories page, so both always show the same number. No city = all cities.
  */
 function cachedCategoryCounts(supabase: ReturnType<typeof createServerSupabaseClient>, city?: string) {
   const trimmed = city?.trim();
-  return cachedFor(`home:counts:${trimmed ? trimmed.toLowerCase() : "*"}`, 60_000, () => countPublishedByCategory(supabase, trimmed || undefined));
+  return cachedFor(`home:counts:${trimmed ? trimmed.toLowerCase() : "*"}`, ms(MEMORY_TTL_S.counts), () => countPublishedByCategory(supabase, trimmed || undefined));
 }
 
 /**
@@ -1069,7 +1151,7 @@ export const getCategoriesWithCounts = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const supabase = createServerSupabaseClient();
     const [{ data: categories }, counts] = await Promise.all([
-      cachedFor("home:categories", 60_000, async () => {
+      cachedFor("home:categories", ms(MEMORY_TTL_S.categories), async () => {
         const res = await supabase.from("categories").select("*").order("display_order", { ascending: true });
         if (res.error) throw new Error(res.error.message);
         return res;
@@ -1144,7 +1226,10 @@ export const getHomeData = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z.object({ city: z.string().optional(), lat: z.number().min(-90).max(90).optional(), lng: z.number().min(-180).max(180).optional() }).optional().parse(input) ?? {},
   )
-  .handler(async ({ data }) => {
+  // The whole home answer is kept for a short time per server instance (same city + same locality = same answer).
+  .handler(async ({ data }) => cachedFor(`home:data:${JSON.stringify([data?.city?.trim() ?? "", data?.lat ?? null, data?.lng ?? null])}`, ms(MEMORY_TTL_S.home), () => runHomeData(data)));
+
+async function runHomeData(data: { city?: string; lat?: number; lng?: number } | undefined) {
     const supabase = createServerSupabaseClient();
     const city = data?.city?.trim();
     let featuredQuery = supabase
@@ -1182,7 +1267,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     // Popular Categories are ranked by published businesses: in the selected city first, then (to fill the
     // tiles) overall. Two count queries run in parallel with the rest — never one query per category.
     // Everything runs at once. The category list and the per-category counts change rarely, so each server instance keeps them
-    // for a minute (cachedFor) instead of asking the database on every home page view.
+    // for a while (cachedFor, cache-policy.ts) instead of asking the database on every home page view.
     const [
       { data: allCategories },
       { data: featured },
@@ -1191,7 +1276,7 @@ export const getHomeData = createServerFn({ method: "GET" })
       cityCounts,
       overallCounts,
     ] = await Promise.all([
-      cachedFor("home:categories", 60_000, async () => {
+      cachedFor("home:categories", ms(MEMORY_TTL_S.categories), async () => {
         const res = await supabase.from("categories").select("*").order("display_order", { ascending: true });
         if (res.error) throw new Error(res.error.message);
         return res;
@@ -1211,7 +1296,7 @@ export const getHomeData = createServerFn({ method: "GET" })
     const platinumSpotlight = orderByDistance(withRatingSummary(spotlight), at);
 
     return { categories, featured: listings, topOffers, platinumSpotlight };
-  });
+}
 
 // Personalized recommendations based on the user's recently-viewed categories.
 // Client passes category slugs (from localStorage) + business IDs to exclude.
@@ -1418,6 +1503,7 @@ export const createBusiness = createServerFn({ method: "POST" })
       await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: "business_owner" }).select();
     }
 
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return business;
   });
 
@@ -1501,6 +1587,7 @@ export const createQuickListing = createServerFn({ method: "POST" })
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: "business_owner" }).select();
     }
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return business;
   });
 
@@ -1579,6 +1666,7 @@ export const updateBusiness = createServerFn({ method: "POST" })
       if (!rows || rows.length === 0) throw new Error(EDIT_LOCKED_MESSAGE);
       updatedRows = rows;
     }
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { success: true, slug: finalSlug };
   });
 
@@ -1659,6 +1747,7 @@ export const reviewBusinessSubmission = createServerFn({ method: "POST" })
       }
       throw new Error(error.message);
     }
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { success: true as const, needsConfirm: false as const, status: newStatus };
   });
 
@@ -1708,6 +1797,7 @@ export const adminSetVerified = createServerFn({ method: "POST" })
       .update({ verified: data.verified })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { success: true };
   });
 
@@ -2089,6 +2179,7 @@ export const adminQuickAddBusiness = createServerFn({ method: "POST" })
       }
     }
     if (!saved) throw new Error("Could not save the lead. Please try again.");
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { saved, sourceSaved: !source || sourceSaved, duplicate: null };
   });
 
@@ -2190,6 +2281,7 @@ export const adminAssignBusinessOwner = createServerFn({ method: "POST" })
     } catch (e) {
       console.error("[adminAssignBusinessOwner] notification failed", e);
     }
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { ok: true as const, ownerEmail: newOwner.email ?? null, planName };
   });
 
@@ -2204,6 +2296,7 @@ export const adminSetBusinessStatus = createServerFn({ method: "POST" })
     const { data: rows, error } = await (data.status === "archived" ? query.neq("status", "archived") : query.eq("status", "archived")).select("id");
     if (error) throw new Error(error.message);
     if (!rows || rows.length === 0) throw new Error(data.status === "archived" ? "Business is already archived" : "Only an archived business can be restored");
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { success: true, status: data.status };
   });
 
@@ -2245,6 +2338,7 @@ export const adminDeleteBusinessPermanently = createServerFn({ method: "POST" })
     // Row-level security silently skips a delete it does not allow (e.g. before no-hard-delete/01_migration.sql is applied
     // it is allowed; after it, only admins): report instead of pretending it worked.
     if (!deleted || deleted.length === 0) throw new Error("The database did not delete the business.");
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { success: true };
   });
 
@@ -2286,7 +2380,7 @@ export const getBusinessForEdit = createServerFn({ method: "GET" })
 
 // -------- Category / City landing page data --------
 
-const DIRECTORY_TTL_MS = 60_000;
+const DIRECTORY_TTL_MS = ms(MEMORY_TTL_S.directory);
 
 /** Every published business (only what the directory map needs), in pages of 1000: the database caps one answer at 1000 rows. */
 async function fetchPublishedRows(): Promise<DirectoryRow[]> {
@@ -2323,9 +2417,13 @@ async function loadDirectory(): Promise<{ dir: Directory; categories: Array<Dire
 const BUSINESS_LIST_COLUMNS =
   "id, name, slug, description, address, city, phone, verified, plan_tier_order, featured_image, hours, categories:category_id!inner(id, name, slug, color), business_reviews(rating)";
 
+// The three landing-page answers (category, city, city + category) and the related businesses are kept for a minute per server
+// instance: the directory map they read is cached too (cache-policy.ts has the numbers).
 export const getCategoryPageData = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }) => cachedFor(`directory:category:${data.slug}`, ms(MEMORY_TTL_S.landing), () => runCategoryPageData(data)));
+
+async function runCategoryPageData(data: { slug: string }) {
     const supabase = createServerSupabaseClient();
     const [{ dir, categories }, { data: businesses, error }] = await Promise.all([
       loadDirectory(),
@@ -2356,11 +2454,13 @@ export const getCategoryPageData = createServerFn({ method: "GET" })
       total: Math.max(entry?.count ?? 0, listings.length),
       keywords: (category.seo_keywords as string | null | undefined) ?? null,
     };
-  });
+}
 
 export const getCityPageData = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ slug: z.string() }).parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }) => cachedFor(`directory:city:${citySlug(data.slug)}`, ms(MEMORY_TTL_S.landing), () => runCityPageData(data)));
+
+async function runCityPageData(data: { slug: string }) {
     const supabase = createServerSupabaseClient();
     const slug = citySlug(data.slug);
     const { dir } = await loadDirectory();
@@ -2390,7 +2490,7 @@ export const getCityPageData = createServerFn({ method: "GET" })
       /** ALL its categories with their number of businesses (not only the ones among the 80 listed). */
       categories: entry.categories,
     };
-  });
+}
 
 export const getRelatedBusinesses = createServerFn({ method: "GET" })
   .inputValidator((input) =>
@@ -2400,7 +2500,9 @@ export const getRelatedBusinesses = createServerFn({ method: "GET" })
       city: z.string().nullable().optional(),
     }).parse(input),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data }) => cachedFor(`biz:related:${JSON.stringify([data.businessId, data.categoryId ?? "", data.city?.toLowerCase() ?? ""])}`, ms(MEMORY_TTL_S.business), () => runRelatedBusinesses(data)));
+
+async function runRelatedBusinesses(data: { businessId: string; categoryId?: string | null; city?: string | null }) {
     const supabase = createServerSupabaseClient();
     let query = supabase
       .from("businesses")
@@ -2419,13 +2521,15 @@ export const getRelatedBusinesses = createServerFn({ method: "GET" })
       .order("name", { ascending: true });
     if (error) throw new Error(error.message);
     return businesses ?? [];
-  });
+}
 
 export const getCityCategoryPageData = createServerFn({ method: "GET" })
   .inputValidator((input) =>
     z.object({ city: z.string(), category: z.string() }).parse(input),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data }) => cachedFor(`directory:combo:${citySlug(data.city)}|${data.category}`, ms(MEMORY_TTL_S.landing), () => runCityCategoryPageData(data)));
+
+async function runCityCategoryPageData(data: { city: string; category: string }) {
     const supabase = createServerSupabaseClient();
     const slug = citySlug(data.city);
     const { dir, categories } = await loadDirectory();
@@ -2456,20 +2560,23 @@ export const getCityCategoryPageData = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const listings = withRatingSummary(businesses);
     return { cityName, citySlug: slug, category: categoryRow, businesses: listings, total: Math.max(pair.count, listings.length), keywords, otherCategories, otherCities };
-  });
+}
 
 /** For /sitemap.xml: only pages that have at least one published business, each with the date its content last changed. */
-export const getSitemapData = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = createServerSupabaseClient();
-  const [rows, { data: categoryRows }] = await Promise.all([fetchPublishedRows(), supabase.from("categories").select("id, name, slug")]);
-  const dir = buildDirectory(rows, (categoryRows ?? []) as DirectoryCategory[]);
-  return {
-    businesses: rows.map((r) => ({ slug: r.slug, updated_at: r.updated_at })),
-    categories: [...dir.categories.values()].map((c) => ({ slug: c.slug, lastmod: c.lastmod })),
-    cities: [...dir.cities.values()].map((c) => ({ slug: c.slug, lastmod: c.lastmod })),
-    combos: dir.combos.map((c) => ({ city: c.city, category: c.category, lastmod: c.lastmod })),
-  };
-});
+export const getSitemapData = createServerFn({ method: "GET" }).handler(async () =>
+  // Reads every published business (a full table scan): kept for 10 minutes per server instance. Only crawlers read the sitemap.
+  cachedFor("sitemap", ms(MEMORY_TTL_S.sitemap), async () => {
+    const supabase = createServerSupabaseClient();
+    const [rows, { data: categoryRows }] = await Promise.all([fetchPublishedRows(), supabase.from("categories").select("id, name, slug")]);
+    const dir = buildDirectory(rows, (categoryRows ?? []) as DirectoryCategory[]);
+    return {
+      businesses: rows.map((r) => ({ slug: r.slug, updated_at: r.updated_at })),
+      categories: [...dir.categories.values()].map((c) => ({ slug: c.slug, lastmod: c.lastmod })),
+      cities: [...dir.cities.values()].map((c) => ({ slug: c.slug, lastmod: c.lastmod })),
+      combos: dir.combos.map((c) => ({ city: c.city, category: c.category, lastmod: c.lastmod })),
+    };
+  }),
+);
 
 // -------- App-exclusive discount claims --------
 

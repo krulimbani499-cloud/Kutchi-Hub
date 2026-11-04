@@ -21,6 +21,10 @@ async function handle(request: Request): Promise<Response> {
   if (!secret) return json({ ok: false, error: "not configured" }, 503);
   if (!authorized(request, secret)) return json({ ok: false, error: "unauthorized" }, 401);
   try {
+    // Without the Firebase service account nothing can be sent: answer at once, before loading the sender, the database client
+    // and the queue (the same answer runDispatch gives for this case).
+    const { readFcmConfig } = await import("@/lib/fcm.server");
+    if (!readFcmConfig()) return json({ ok: true, skipped: "not_configured", expired: 0, claimed: 0, announced: 0, held: 0, summaries: 0, notPublicYet: 0, noSubscribers: 0, retry: 0, devicesReached: 0 });
     const { runDispatch, defaultDeps } = await import("@/lib/city-push.server");
     const result = await runDispatch(await defaultDeps());
     return json(result, result.ok ? 200 : 502);

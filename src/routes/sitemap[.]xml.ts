@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { getSitemapData } from "@/lib/businesses.functions";
 import { BASE_URL } from "@/lib/seo";
+import { cacheControl } from "@/lib/cache-policy";
 
 interface SitemapEntry {
   path: string;
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/delete-account", changefreq: "yearly", priority: "0.3" },
         ];
 
+        let complete = true;
         try {
           const data = await getSitemapData();
           // Only pages that have at least one published business are listed (the data is built from the published businesses), each
@@ -37,7 +39,8 @@ export const Route = createFileRoute("/sitemap.xml")({
             entries.push({ path: `/business/${b.slug}`, changefreq: "weekly", priority: "0.6", lastmod: day(b.updated_at) });
           }
         } catch {
-          // Fall through to static entries only
+          // Fall through to static entries only (and do not let the CDN keep this thin copy for an hour)
+          complete = false;
         }
 
         const urls = entries.map((e) =>
@@ -63,7 +66,8 @@ export const Route = createFileRoute("/sitemap.xml")({
         return new Response(body, {
           headers: {
             "Content-Type": "application/xml",
-            "Cache-Control": "public, max-age=3600",
+            // The CDN keeps it for an hour (and serves the old copy while it refreshes): only crawlers read this file.
+            "Cache-Control": complete ? cacheControl("sitemap") : "public, max-age=0, s-maxage=60",
           },
         });
       },
