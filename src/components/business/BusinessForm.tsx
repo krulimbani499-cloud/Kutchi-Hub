@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createBusiness, updateBusiness } from "@/lib/businesses.functions";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ADD_CATEGORY_VALUE, AddCategoryDialog } from "@/components/admin/AddCategoryDialog";
 import { CityAutocomplete } from "./CityAutocomplete";
 import { PhotoUploader } from "./PhotoUploader";
@@ -84,8 +83,6 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
   const navigate = useNavigate();
   const createFn = useServerFn(createBusiness);
   const updateFn = useServerFn(updateBusiness);
-  // "+ Add new category" is for admins only (the server and the database check it too); an owner never sees it.
-  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
   // "Show Services / Products on my profile". A missing value (the section-toggles SQL is not applied yet) counts as ON: that is how profiles behave today.
   const [sections, setSections] = useState({ services: initial?.show_services ?? true, products: initial?.show_products ?? true });
@@ -278,7 +275,7 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
-            {isAdmin && <SelectItem value={ADD_CATEGORY_VALUE} className="font-medium text-primary">+ Add new category</SelectItem>}
+            <SelectItem value={ADD_CATEGORY_VALUE} className="font-medium text-primary">+ Add new category</SelectItem>
             {sortCategoriesAZ(categoryList).map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 {cat.name}
@@ -286,20 +283,19 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
             ))}
           </SelectContent>
         </Select>
-        {isAdmin && (
-          <AddCategoryDialog
-            open={addCategoryOpen}
-            onOpenChange={setAddCategoryOpen}
-            onDone={(created) => {
-              setCategoryList((list) => (list.some((c) => c.id === created.id) ? list : [...list, created]));
-              // Selected one tick later, when the new item is in the select's list (the select can not pick what it does not have yet).
-              window.setTimeout(() => setForm((f) => ({ ...f, category_id: created.id })), 0);
-              setErrors((e) => ({ ...e, category_id: "" }));
-              // Marked old, not fetched now (another server instance may still send the old list and drop the new category).
-              void queryClient.invalidateQueries({ queryKey: ["categories"], refetchType: "none" });
-            }}
-          />
-        )}
+        {/* Owners and admins both: the server checks the name, duplicates and the daily limit. */}
+        <AddCategoryDialog
+          open={addCategoryOpen}
+          onOpenChange={setAddCategoryOpen}
+          onDone={(created) => {
+            setCategoryList((list) => (list.some((c) => c.id === created.id) ? list : [...list, created]));
+            // Selected one tick later, when the new item is in the select's list (the select can not pick what it does not have yet).
+            window.setTimeout(() => setForm((f) => ({ ...f, category_id: created.id })), 0);
+            setErrors((e) => ({ ...e, category_id: "" }));
+            // Marked old, not fetched now (another server instance may still send the old list and drop the new category).
+            void queryClient.invalidateQueries({ queryKey: ["categories"], refetchType: "none" });
+          }}
+        />
         {errors.category_id && <p className="text-xs text-destructive">{errors.category_id}</p>}
       </div>
 

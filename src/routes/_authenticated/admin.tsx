@@ -9,6 +9,7 @@ import {
   getCategories,
   adminUpdateCategory,
   adminDeleteCategory,
+  adminListCategoryCreators,
   adminListBannerAds,
   adminCreateBannerAd,
   adminUpdateBannerAd,
@@ -401,6 +402,9 @@ function AdminPage() {
 
 function CategoriesAdmin() {
   const { data: categories, refetch } = useSuspenseQuery(categoriesAdminQueryOptions);
+  // Who added which category (names / e-mails: admins only). Empty for the original categories.
+  const { data: creators = [] } = useQuery({ queryKey: ["admin", "category-creators"], queryFn: () => adminListCategoryCreators() });
+  const creatorOf = new Map(creators.map((x) => [x.categoryId, x]));
   const updateFn = useServerFn(adminUpdateCategory);
   const deleteFn = useServerFn(adminDeleteCategory);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -739,6 +743,20 @@ function CategoriesAdmin() {
                       >
                         <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
                       </Button>
+                        {(() => {
+                          const by = creatorOf.get(c.id);
+                          if (!by) return null;
+                          // "Created by": the client's name / e-mail (a client-made category is marked, so the admin can check, rename or delete it).
+                          return (
+                            <p data-created-by className="flex basis-full flex-wrap items-center gap-x-2 gap-y-1 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                              {!by.isAdmin && <Badge variant="secondary" className="text-[10px]">Added by client</Badge>}
+                              <span>
+                                Created by: {[by.name, by.email].filter((v, i, a) => v && a.indexOf(v) === i).join(" · ") || by.userId.slice(0, 8)}
+                              </span>
+                              <span>· {new Date(by.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                            </p>
+                          );
+                        })()}
                     </div>
                   )}
                 </li>

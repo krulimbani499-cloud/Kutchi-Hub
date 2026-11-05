@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Loader2, MessageCircle } from "lucide-react";
@@ -15,6 +16,7 @@ import { CONTACT_WHATSAPP } from "@/lib/contact";
 import { useIsIosApp } from "@/hooks/useIsIosApp";
 import { usePricingVisible } from "@/hooks/usePricingVisible";
 import { ContactToActivate } from "@/components/ContactToActivate";
+import { ADD_CATEGORY_VALUE, AddCategoryDialog } from "@/components/admin/AddCategoryDialog";
 
 type Category = { id: string; name: string };
 type Errors = Partial<Record<"name" | "contactName" | "phone" | "city", string>>;
@@ -58,6 +60,10 @@ export function QuickListingThanks({ name }: { name: string }) {
 /** The short sign-up form for owners: 4 details (category optional); the team calls to activate the listing. */
 export function QuickListingForm({ categories }: { categories: Category[] }) {
   const createFn = useServerFn(createQuickListing);
+  const queryClient = useQueryClient();
+  // The list can grow while the form is open: "+ Add new category" (same dialog and rules as the business form).
+  const [categoryList, setCategoryList] = useState(categories);
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [form, setForm] = useState({ name: "", contactName: "", phone: "", city: "", categoryId: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
@@ -134,15 +140,30 @@ export function QuickListingForm({ categories }: { categories: Category[] }) {
           id="q-category"
           className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
           value={form.categoryId}
-          onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
+          onChange={(e) => {
+            if (e.target.value === ADD_CATEGORY_VALUE) setAddCategoryOpen(true); // the choice stays as it was
+            else setForm((f) => ({ ...f, categoryId: e.target.value }));
+          }}
         >
           <option value="">Not sure yet</option>
-          {sortCategoriesAZ(categories).map((c) => (
+          <option value={ADD_CATEGORY_VALUE}>+ Add new category</option>
+          {sortCategoriesAZ(categoryList).map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
           ))}
         </select>
+        <AddCategoryDialog
+          open={addCategoryOpen}
+          onOpenChange={setAddCategoryOpen}
+          onDone={(created, existed) => {
+            setCategoryList((list) => (list.some((c) => c.id === created.id) ? list : [...list, created]));
+            setForm((f) => ({ ...f, categoryId: created.id }));
+            // Marked old, not fetched now (another server instance may still send the old list and drop the new category).
+            void queryClient.invalidateQueries({ queryKey: ["categories"], refetchType: "none" });
+            toast.success(existed ? `"${created.name}" already exists - selected it` : `Category "${created.name}" added and selected`);
+          }}
+        />
       </div>
       <Button type="submit" size="lg" disabled={busy} className="w-full bg-[#ff6a00] text-white hover:bg-[#e65a00] sm:w-auto">
         {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

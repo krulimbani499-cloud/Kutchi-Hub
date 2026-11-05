@@ -730,6 +730,8 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          // who added the category (null for the original ones); needs supabase/pending/category-creator
+          created_by: string | null
           display_order: number
           icon: string | null
           icon_url: string | null
@@ -744,6 +746,7 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
+          created_by?: string | null
           display_order?: number
           icon?: string | null
           icon_url?: string | null
@@ -758,6 +761,7 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
+          created_by?: string | null
           display_order?: number
           icon?: string | null
           icon_url?: string | null

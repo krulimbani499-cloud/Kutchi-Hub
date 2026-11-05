@@ -657,22 +657,62 @@ export const getCategories = createServerFn({ method: "GET" }).handler(async () 
 );
 
 const createCategorySchema = z.object({
-  name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
+  // The real rule (letters / digits / space / & / -, 2-50) is validateCategoryName in category-create.ts; this only bounds the input.
+  name: z.string().min(1, "Enter the category name").max(200),
 });
 
+/** People whose category is being added right now (a second click / request from the same person waits for the answer). */
+const creatingCategory = new Set<string>();
+
 /**
- * ADMIN ONLY: a new category. The name is trimmed (inner spaces collapsed) and the slug is made from it. A category with the same
- * name (any case) or the same slug is NOT created again: the existing one comes back with `existed: true`, so the screen can say
- * "already there" and select it. The database allows the insert for admins only too (supabase/pending/category-admin-insert).
+ * Any signed-in person can add a category (it is saved at once, no approval). The checks are in category-create.ts: the name rule
+ * (English letters, digits, space, & and -, 2-50), the duplicate check (same name or link name in any case: the old one comes back
+ * with `existed: true` and is selected on screen), and 3 new categories per 24 hours for everybody who is not an admin. The category
+ * is saved with who created it (categories.created_by, see supabase/pending/category-creator). The insert is done here with the
+ * service role AFTER the checks: the database itself accepts category inserts from admins only, so nobody can skip these checks by
+ * calling the API directly.
  */
 export const createCategory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => createCategorySchema.parse(input))
   .handler(async ({ data, context }) => {
+    const userId = context.userId;
+    if (creatingCategory.has(userId)) throw new Error("Please wait, your category is still being added.");
+    creatingCategory.add(userId);
+    try {
+      const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const res = await createCategoryRecord(supabaseAdmin as unknown as CategoryDb, data.name, { userId, isAdmin: isAdmin === true });
+      if (!res.existed) clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
+      return { category: res.category as Tables<"categories">, existed: res.existed };
+    } finally {
+      creatingCategory.delete(userId);
+    }
+  });
+
+/**
+ * Admin: who created which category (only the categories that have a creator): the person's name and e-mail, whether they are an
+ * admin, and when. Empty until supabase/pending/category-creator is applied. Names / e-mails never go to anybody but admins.
+ */
+export const adminListCategoryCreators = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const res = await createCategoryRecord(context.supabase as unknown as CategoryDb, data.name);
-    if (!res.existed) clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
-    return { category: res.category as Tables<"categories">, existed: res.existed };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as unknown as { from: (t: string) => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { data: rows, error } = await db.from("categories").select("id, created_by, created_at").not("created_by", "is", null);
+    if (error) return [] as Array<{ categoryId: string; userId: string; name: string | null; email: string | null; isAdmin: boolean; createdAt: string }>; // column not there yet
+    const list = (rows ?? []) as Array<{ id: string; created_by: string; created_at: string }>;
+    const ids = [...new Set(list.map((r) => r.created_by))];
+    if (ids.length === 0) return [];
+    const [emails, profiles, roles] = await Promise.all([
+      authEmailsByIds(ids).catch(() => new Map<string, string>()),
+      db.from("profiles").select("user_id, display_name").in("user_id", ids),
+      db.from("user_roles").select("user_id, role").in("user_id", ids),
+    ]);
+    const names = new Map<string, string | null>(((profiles.data ?? []) as Array<{ user_id: string; display_name: string | null }>).map((p) => [p.user_id, p.display_name]));
+    const admins = new Set(((roles.data ?? []) as Array<{ user_id: string; role: string }>).filter((r) => r.role === "admin").map((r) => r.user_id));
+    return list.map((r) => ({ categoryId: r.id, userId: r.created_by, name: names.get(r.created_by) ?? null, email: emails.get(r.created_by) ?? null, isAdmin: admins.has(r.created_by), createdAt: r.created_at }));
   });
 
 const updateCategorySchema = z.object({

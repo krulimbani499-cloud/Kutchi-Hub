@@ -6,14 +6,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createCategory } from "@/lib/businesses.functions";
-import { slugify } from "@/lib/slug";
+import { CATEGORY_NAME_MAX, validateCategoryName } from "@/lib/category-create";
 import type { Tables } from "@/integrations/supabase/types";
 
 /** Value of the "+ Add new category" entry in a category dropdown (never a real category id). */
 export const ADD_CATEGORY_VALUE = "__add_new_category__";
 
 /**
- * ADMIN ONLY: a small dialog for a new category name (English). The server checks admin and duplicates; a category that already
+ * A small dialog for a new category name (English), for owners and admins. The server checks the name, duplicates and the daily limit; a category that already
  * exists (same name in any case, or the same link name) is not created again - the existing one is handed back and `existed` is true.
  * It never touches the form behind it, so what was typed there stays. (No <form> here on purpose: a submit would bubble through the
  * portal into the form behind the dialog and save it.)
@@ -40,17 +40,17 @@ export function AddCategoryDialog({
     }
   }, [open]);
 
-  const clean = name.replace(/\s+/g, " ").trim();
-  const slug = slugify(clean, 80);
+  // The same rule as the server (2-50 English letters / digits / space / & / -): the person is told while typing, the server still checks.
+  const checked = validateCategoryName(name);
+  const slug = checked.ok ? checked.slug : "";
 
   const save = async () => {
     if (busy) return;
-    if (clean.length < 2) return setError("Enter the category name (at least 2 letters).");
-    if (!slug) return setError("Write the name in English letters or numbers.");
+    if (!checked.ok) return setError(checked.message);
     setBusy(true);
     setError("");
     try {
-      const res = await addFn({ data: { name: clean } });
+      const res = await addFn({ data: { name: checked.name } });
       onDone(res.category as Tables<"categories">, res.existed);
       onOpenChange(false);
     } catch (e) {
@@ -65,14 +65,14 @@ export function AddCategoryDialog({
       <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
         <DialogHeader>
           <DialogTitle>Add new category</DialogTitle>
-          <DialogDescription>It is saved right away and selected in the form. The icon can be changed later on the Categories page.</DialogDescription>
+          <DialogDescription>It is saved right away and selected in the form. English letters, numbers, spaces, &amp; and - only.</DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">
           <Label htmlFor="new-category-name">Category name (English)</Label>
           <Input
             id="new-category-name"
             value={name}
-            maxLength={80}
+            maxLength={CATEGORY_NAME_MAX}
             autoComplete="off"
             autoFocus
             placeholder="e.g. Solar Panels"
@@ -89,7 +89,7 @@ export function AddCategoryDialog({
             }}
             aria-invalid={!!error}
           />
-          {slug && !error && <p className="break-all text-xs text-muted-foreground">Link name: {slug}</p>}
+          {checked.ok && !error && <p className="break-all text-xs text-muted-foreground">Link name: {slug}</p>}
           {error && (
             <p role="alert" className="text-xs text-destructive">
               {error}
@@ -100,7 +100,7 @@ export function AddCategoryDialog({
           <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={busy || clean.length < 2} onClick={() => void save()}>
+          <Button type="button" disabled={busy || !checked.ok} onClick={() => void save()}>
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save category
           </Button>
         </DialogFooter>
