@@ -18,7 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createBusiness, updateBusiness, createCategory } from "@/lib/businesses.functions";
+import { createBusiness, updateBusiness } from "@/lib/businesses.functions";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { ADD_CATEGORY_VALUE, AddCategoryDialog } from "@/components/admin/AddCategoryDialog";
 import { CityAutocomplete } from "./CityAutocomplete";
 import { PhotoUploader } from "./PhotoUploader";
 import { PHOTO_SIZE_HINT } from "@/lib/business-photos";
@@ -78,7 +80,8 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
   const navigate = useNavigate();
   const createFn = useServerFn(createBusiness);
   const updateFn = useServerFn(updateBusiness);
-  const createCategoryFn = useServerFn(createCategory);
+  // "+ Add new category" is for admins only (the server and the database check it too); an owner never sees it.
+  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
   // "Show Services / Products on my profile". A missing value (the section-toggles SQL is not applied yet) counts as ON: that is how profiles behave today.
   const [sections, setSections] = useState({ services: initial?.show_services ?? true, products: initial?.show_products ?? true });
@@ -90,9 +93,7 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [categoryList, setCategoryList] = useState(categories);
-  const [showAddCategory, setShowAddCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [addingCategory, setAddingCategory] = useState(false);
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
 
@@ -261,11 +262,19 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
 
       <div className="space-y-2">
         <Label htmlFor="category">Category</Label>
-        <Select value={form.category_id || undefined} onValueChange={(value) => setForm((f) => ({ ...f, category_id: value }))}>
+        <Select
+          // "" (not undefined) keeps the select controlled, so choosing "+ Add new category" can not leave it showing that text
+          value={form.category_id}
+          onValueChange={(value) => {
+            if (value === ADD_CATEGORY_VALUE) setAddCategoryOpen(true); // the choice stays as it was
+            else if (value) setForm((f) => ({ ...f, category_id: value })); // "" is the select's own reset while its list changes: ignored
+          }}
+        >
           <SelectTrigger id="category">
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
+            {isAdmin && <SelectItem value={ADD_CATEGORY_VALUE} className="font-medium text-primary">+ Add new category</SelectItem>}
             {sortCategoriesAZ(categoryList).map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 {cat.name}
@@ -273,61 +282,19 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
             ))}
           </SelectContent>
         </Select>
-        {!showAddCategory ? (
-          <button
-            type="button"
-            onClick={() => setShowAddCategory(true)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-          >
-            <Plus className="h-3 w-3" /> Add new category
-          </button>
-        ) : (
-          <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-3 sm:flex-row sm:items-center">
-            <Input
-              placeholder="New category name"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              className="h-9"
-            />
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                disabled={addingCategory || newCategoryName.trim().length < 2}
-                onClick={async () => {
-                  setAddingCategory(true);
-                  setFormMessage("");
-                  try {
-                    const created = await createCategoryFn({ data: { name: newCategoryName.trim() } });
-                    setCategoryList((list) =>
-                      list.some((c) => c.id === created.id) ? list : [...list, created],
-                    );
-                    setForm((f) => ({ ...f, category_id: created.id }));
-                    setNewCategoryName("");
-                    setShowAddCategory(false);
-                  } catch (err) {
-                    setFormMessage(err instanceof Error ? err.message : "Could not add category.");
-                  } finally {
-                    setAddingCategory(false);
-                  }
-                }}
-              >
-                {addingCategory ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
-                Add
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setShowAddCategory(false);
-                  setNewCategoryName("");
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
+        {isAdmin && (
+          <AddCategoryDialog
+            open={addCategoryOpen}
+            onOpenChange={setAddCategoryOpen}
+            onDone={(created) => {
+              setCategoryList((list) => (list.some((c) => c.id === created.id) ? list : [...list, created]));
+              // Selected one tick later, when the new item is in the select's list (the select can not pick what it does not have yet).
+              window.setTimeout(() => setForm((f) => ({ ...f, category_id: created.id })), 0);
+              setErrors((e) => ({ ...e, category_id: "" }));
+              // Marked old, not fetched now (another server instance may still send the old list and drop the new category).
+              void queryClient.invalidateQueries({ queryKey: ["categories"], refetchType: "none" });
+            }}
+          />
         )}
         {errors.category_id && <p className="text-xs text-destructive">{errors.category_id}</p>}
       </div>

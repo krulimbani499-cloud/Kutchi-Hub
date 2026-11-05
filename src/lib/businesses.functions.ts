@@ -7,6 +7,7 @@ import { BANNER_PLACEMENTS, composeHomeBanners, shuffleByPriority, showsInAllLoc
 import { completionChecklist, publishGaps } from "./listing-completeness";
 import { cachedFor, clearCached, clearPublicCaches } from "./server-cache";
 import { MEMORY_TTL_S } from "./cache-policy";
+import { createCategoryRecord, type CategoryDb } from "./category-create";
 import { findPhoneDuplicate } from "./quick-add";
 import type { Json, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { slugify, ensureSlug } from "./slug";
@@ -629,41 +630,19 @@ const createCategorySchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
 });
 
+/**
+ * ADMIN ONLY: a new category. The name is trimmed (inner spaces collapsed) and the slug is made from it. A category with the same
+ * name (any case) or the same slug is NOT created again: the existing one comes back with `existed: true`, so the screen can say
+ * "already there" and select it. The database allows the insert for admins only too (supabase/pending/category-admin-insert).
+ */
 export const createCategory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => createCategorySchema.parse(input))
   .handler(async ({ data, context }) => {
-    const supabase = context.supabase;
-    const name = data.name.trim();
-    const baseSlug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 80) || "category";
-
-    // Reuse if a category with the same slug or case-insensitive name already exists.
-    const { data: existing } = await supabase
-      .from("categories")
-      .select("*")
-      .or(`slug.eq.${baseSlug},name.ilike.${name}`)
-      .maybeSingle();
-    if (existing) return existing;
-
-    let slug = baseSlug;
-    for (let i = 2; i < 20; i++) {
-      const { data: hit } = await supabase.from("categories").select("id").eq("slug", slug).maybeSingle();
-      if (!hit) break;
-      slug = `${baseSlug}-${i}`;
-    }
-
-    const { data: inserted, error } = await supabase
-      .from("categories")
-      .insert({ name, slug })
-      .select("*")
-      .single();
-    if (error) throw new Error(friendlyBannerError(error));
-    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
-    return inserted;
+    await assertAdmin(context.supabase, context.userId);
+    const res = await createCategoryRecord(context.supabase as unknown as CategoryDb, data.name);
+    if (!res.existed) clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
+    return { category: res.category as Tables<"categories">, existed: res.existed };
   });
 
 const updateCategorySchema = z.object({

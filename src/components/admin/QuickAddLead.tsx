@@ -12,6 +12,8 @@ import { CityAutocomplete } from "@/components/business/CityAutocomplete";
 import { isValidIndianMobile, PHONE_ERROR, telHref, whatsappHref } from "@/lib/phone";
 import { sortCategoriesAZ } from "@/lib/category-sort";
 import { readValidationError } from "@/lib/edit-lock";
+import { ADD_CATEGORY_VALUE, AddCategoryDialog } from "@/components/admin/AddCategoryDialog";
+import type { Tables } from "@/integrations/supabase/types";
 
 const STORE_KEY = "kh:quick-add:v1";
 type Kept = { categoryId: string; city: string; source: string };
@@ -46,6 +48,7 @@ export function QuickAddLead({ onSaved }: { onSaved: () => void | Promise<void> 
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [duplicate, setDuplicate] = useState<Duplicate | null>(null);
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   // Category / City / Source of the last entry (this device), so a new session continues where the last one stopped.
@@ -59,6 +62,19 @@ export function QuickAddLead({ onSaved }: { onSaved: () => void | Promise<void> 
     } catch {
       /* storage unavailable */
     }
+  };
+
+  // A category was added (or found: it existed already) in the dialog: it joins the list, is selected, and is remembered like any
+  // other choice. Nothing else in the form changes.
+  const onCategoryDone = (category: Tables<"categories">, existed: boolean) => {
+    queryClient.setQueryData<Tables<"categories">[]>(["categories"], (old) => (old ?? []).some((c) => c.id === category.id) ? old : [...(old ?? []), category]);
+    // Marked old, but NOT fetched now: another server instance may still hold the old list for a minute or two, and fetching it
+    // would drop the category that was just added from the dropdown.
+    void queryClient.invalidateQueries({ queryKey: ["categories"], refetchType: "none" });
+    setForm((f) => ({ ...f, categoryId: category.id }));
+    setErrors((e) => ({ ...e, categoryId: undefined }));
+    keep({ categoryId: category.id, city: form.city, source: form.source });
+    toast.success(existed ? `"${category.name}" already exists - selected it` : `Category "${category.name}" added and selected`);
   };
 
   const save = async (force: boolean) => {
@@ -144,10 +160,14 @@ export function QuickAddLead({ onSaved }: { onSaved: () => void | Promise<void> 
                 id="qa-category"
                 className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                 value={form.categoryId}
-                onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
+                onChange={(e) => {
+                  if (e.target.value === ADD_CATEGORY_VALUE) setAddCategoryOpen(true); // the choice stays as it was
+                  else setForm((f) => ({ ...f, categoryId: e.target.value }));
+                }}
                 aria-invalid={!!errors.categoryId}
               >
                 <option value="">Choose a category</option>
+                <option value={ADD_CATEGORY_VALUE}>+ Add new category</option>
                 {sortCategoriesAZ(categories).map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
@@ -209,6 +229,7 @@ export function QuickAddLead({ onSaved }: { onSaved: () => void | Promise<void> 
           )}
         </div>
       </CardContent>
+      <AddCategoryDialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen} onDone={onCategoryDone} />
     </Card>
   );
 }
