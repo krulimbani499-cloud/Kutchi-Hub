@@ -8,6 +8,7 @@ import { completionChecklist, publishGaps } from "./listing-completeness";
 import { cachedFor, clearCached, clearPublicCaches } from "./server-cache";
 import { MEMORY_TTL_S } from "./cache-policy";
 import { createCategoryRecord, type CategoryDb } from "./category-create";
+import { restoreArchivedBusiness, type RestoreDb } from "./business-restore";
 import { planFeaturesFor, sectionPlanMessage } from "./plan-features";
 import { loadPlanFeatures, type PlanDb } from "./plan-features.server";
 import { findPhoneDuplicate } from "./quick-add";
@@ -2125,8 +2126,10 @@ export const adminListAllBusinesses = createServerFn({ method: "GET" })
     const base =
       "id, name, slug, city, phone, phone_secondary, email, status, verified, created_at, category_id, address, featured_image, owner_id, categories:category_id(name), plans:current_plan_id(name)";
     const query = (cols: string) => context.supabase.from("businesses").select(cols).order("created_at", { ascending: false }).limit(2000);
-    // lead_source exists once supabase/pending/quick-add has run, contact_name / quick_lead once quick-listing has: fall back step by step.
-    let res = await query(`${base}, contact_name, quick_lead, lead_source`);
+    // lead_source exists once supabase/pending/quick-add has run, contact_name / quick_lead once quick-listing has, the archive columns once
+    // supabase/pending/business-archive-info has: fall back step by step.
+    let res = await query(`${base}, contact_name, quick_lead, lead_source, archived_from_status, archived_at, archived_by`);
+    if (res.error && isMissingColumnError(res.error)) res = await query(`${base}, contact_name, quick_lead, lead_source`);
     if (res.error && isMissingColumnError(res.error)) res = await query(`${base}, contact_name, quick_lead`);
     if (res.error && isMissingColumnError(res.error)) res = await query(base);
     if (res.error) throw new Error(res.error.message);
@@ -2134,19 +2137,36 @@ export const adminListAllBusinesses = createServerFn({ method: "GET" })
       id: string; name: string; slug: string; city: string | null; phone: string | null; phone_secondary: string | null;
       email: string | null; status: string; verified: boolean; created_at: string; category_id: string | null;
       address: string | null; featured_image: string | null; owner_id: string | null; contact_name?: string | null; quick_lead?: boolean; lead_source?: string | null;
+      archived_from_status?: string | null; archived_at?: string | null; archived_by?: string | null;
       categories: { name: string } | null; plans: { name: string } | null;
     }>;
     // Photo counts only for the leads that are still pending (that is where the warning is shown).
     const pendingIds = rows.filter((b) => b.status === "pending").map((b) => b.id);
     const photos = await photoCountsFor(context.supabase, pendingIds);
-    // Who owns each business, as an e-mail (service client, admin-only function). If it cannot be read the list still works.
+    // When / by whom / from which status each ARCHIVED business was archived: the columns when they exist (they cover every way of archiving),
+    // otherwise the audit log entry written by adminSetBusinessStatus (only archives done after this was added).
+    const archivedRows = rows.filter((b) => b.status === "archived");
+    const fromAudit = archivedRows.some((b) => !b.archived_at) ? await archiveEventsFromAudit(context.supabase) : new Map<string, ArchiveEvent>();
+    const archiveOf = new Map<string, ArchiveEvent>();
+    for (const b of archivedRows) {
+      const ev = fromAudit.get(b.id);
+      archiveOf.set(b.id, { at: b.archived_at ?? ev?.at ?? null, byId: b.archived_by ?? ev?.byId ?? null, fromStatus: b.archived_from_status ?? ev?.fromStatus ?? null });
+    }
+    // Who owns each business (and who archived it), as an e-mail (service client, admin-only function). If it cannot be read the list still works.
     let ownerEmails = new Map<string, string>();
     try {
-      ownerEmails = await authEmailsByIds([...new Set(rows.map((b) => b.owner_id).filter((id): id is string => !!id))]);
+      ownerEmails = await authEmailsByIds([...new Set([...rows.map((b) => b.owner_id), ...[...archiveOf.values()].map((a) => a.byId)].filter((id): id is string => !!id))]);
     } catch (e) {
       console.error("[adminListAllBusinesses] owner e-mails unavailable", e);
     }
     return rows.map((b) => ({
+      /** Only for archived businesses: when, by whom (e-mail) and from which status it was archived. Any part can be null (not recorded). */
+      archive: b.status === "archived"
+        ? (() => {
+            const a = archiveOf.get(b.id);
+            return { at: a?.at ?? null, byEmail: a?.byId ? ownerEmails.get(a.byId) ?? null : null, fromStatus: a?.fromStatus ?? null };
+          })()
+        : null,
       ownerId: b.owner_id,
       ownerEmail: b.owner_id ? ownerEmails.get(b.owner_id) ?? null : null,
       id: b.id,
@@ -2347,19 +2367,75 @@ export const adminAssignBusinessOwner = createServerFn({ method: "POST" })
     return { ok: true as const, ownerEmail: newOwner.email ?? null, planName };
   });
 
-/** Archive (hide everywhere public) or restore (back to 'published'). Nothing is deleted either way. */
+type ArchiveEvent = { at: string | null; byId: string | null; fromStatus: string | null };
+type DbLike = ReturnType<typeof createServerSupabaseClient>;
+
+/** The latest "business_archived" audit entry of every business (newest first wins): when, who, and the status it had before. */
+async function archiveEventsFromAudit(supabase: DbLike): Promise<Map<string, ArchiveEvent>> {
+  const out = new Map<string, ArchiveEvent>();
+  try {
+    const { data } = await supabase.from("audit_logs").select("actor_id, details, created_at").eq("event_type", "business_archived").order("created_at", { ascending: false }).limit(2000);
+    for (const row of (data ?? []) as unknown as Array<{ actor_id: string | null; details: { businessId?: string; fromStatus?: string } | null; created_at: string }>) {
+      const id = row.details?.businessId;
+      if (id && !out.has(id)) out.set(id, { at: row.created_at, byId: row.actor_id, fromStatus: row.details?.fromStatus ?? null });
+    }
+  } catch (e) {
+    console.error("[archiveEventsFromAudit] unavailable", e);
+  }
+  return out;
+}
+
+/** Writes one audit log line (service role: nobody writes the log from the browser). Never lets a logging problem fail the action. */
+async function logBusinessEvent(event: "business_archived" | "business_restored", actorId: string, details: Record<string, string | null>) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("audit_logs").insert({ event_type: event, actor_id: actorId, details });
+  } catch (e) {
+    console.error(`[${event}] audit log not written`, (e as Error)?.message);
+  }
+}
+
+/** The status an archived business had before it was archived (the column, else the audit log), or null when nobody recorded it. */
+async function statusBeforeArchive(supabase: DbLike, id: string): Promise<string | null> {
+  const col = await supabase.from("businesses").select("archived_from_status" as never).eq("id", id).maybeSingle();
+  const fromColumn = !col.error ? (col.data as unknown as { archived_from_status?: string | null } | null)?.archived_from_status : null;
+  if (fromColumn) return fromColumn;
+  return (await archiveEventsFromAudit(supabase)).get(id)?.fromStatus ?? null;
+}
+
+/** Archive (hide everywhere public). Nothing is deleted. (Bringing one back is adminRestoreBusiness.) */
 export const adminSetBusinessStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ id: z.string().uuid(), status: z.enum(["archived", "published"]) }).parse(input))
   .handler(async ({ data, context }) => {
     await requireAdmin(context as never);
+    const { data: before } = await context.supabase.from("businesses").select("name, status").eq("id", data.id).maybeSingle();
     // Archive only a business that is not archived yet; restore only an archived one.
     const query = context.supabase.from("businesses").update({ status: data.status }).eq("id", data.id);
     const { data: rows, error } = await (data.status === "archived" ? query.neq("status", "archived") : query.eq("status", "archived")).select("id");
     if (error) throw new Error(error.message);
     if (!rows || rows.length === 0) throw new Error(data.status === "archived" ? "Business is already archived" : "Only an archived business can be restored");
+    if (data.status === "archived") await logBusinessEvent("business_archived", context.userId, { businessId: data.id, name: before?.name ?? null, fromStatus: before?.status ?? null });
     clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
     return { success: true, status: data.status };
+  });
+
+/**
+ * ADMIN ONLY: bring an archived business back, as 'published' or 'pending' (the admin chooses; the screen suggests the status it had
+ * before it was archived). Only the status changes: photos, services, reviews, owner and plan were never touched by the archive.
+ * No city notification goes out: the enqueue trigger (supabase/pending/city-push) ignores a move out of 'archived'. A business that
+ * was PUBLISHED before and comes back as 'pending' has its city-notification switch turned off, so approving it later is not
+ * announced as a new business either (the admin can turn it on again in the approve list).
+ */
+export const adminRestoreBusiness = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid(), status: z.enum(["published", "pending"]) }).parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context as never);
+    const { name, previous } = await restoreArchivedBusiness(context.supabase as unknown as RestoreDb, data.id, data.status, () => statusBeforeArchive(context.supabase, data.id));
+    await logBusinessEvent("business_restored", context.userId, { businessId: data.id, name, restoredTo: data.status, fromStatus: previous });
+    clearPublicCaches(); // this server instance forgets its saved public answers at once (others within a few minutes)
+    return { success: true as const, status: data.status };
   });
 
 /** What a permanent delete would take with it, for the confirm dialog. */

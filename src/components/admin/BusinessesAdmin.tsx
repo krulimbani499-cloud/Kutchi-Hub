@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   adminListAllBusinesses,
   adminSetBusinessStatus,
+  adminRestoreBusiness,
   adminBusinessDeleteImpact,
   adminDeleteBusinessPermanently,
   adminLookupOwnerByEmail,
@@ -49,6 +50,7 @@ export function BusinessesAdmin() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Row | null>(null);
   const [toAssign, setToAssign] = useState<Row | null>(null);
+  const [toRestore, setToRestore] = useState<Row | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const chips: Chip<string>[] = useMemo(
@@ -82,12 +84,12 @@ export function BusinessesAdmin() {
     toast.success(`Exported ${quickLeads.length} lead${quickLeads.length === 1 ? "" : "s"}`);
   };
 
-  const change = async (r: Row, status: "archived" | "published") => {
-    if (status === "archived" && !confirm(`Archive "${r.name}"?\n\nIt will disappear from the website. Its subscription and payment history are kept, and you can restore it from the Archived filter.`)) return;
+  const archive = async (r: Row) => {
+    if (!confirm(`Archive "${r.name}"?\n\nIt will disappear from the website. Its subscription and payment history are kept, and you can restore it from the Archived filter.`)) return;
     setBusyId(r.id);
     try {
-      await setStatusFn({ data: { id: r.id, status } });
-      toast.success(status === "archived" ? "Business archived" : "Business restored");
+      await setStatusFn({ data: { id: r.id, status: "archived" } });
+      toast.success("Business archived");
       await refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Action failed");
@@ -111,7 +113,7 @@ export function BusinessesAdmin() {
       <div>
         <h2 className="text-xl font-bold text-foreground">Businesses</h2>
         <p className="text-sm text-muted-foreground">
-          Archive hides a business from the whole website without deleting anything. Restore brings it back as published.
+          Archive hides a business from the whole website without deleting anything. Restore (Archived filter) brings it back as Published or Pending, your choice.
         </p>
       </div>
 
@@ -164,6 +166,13 @@ export function BusinessesAdmin() {
                         {r.ownerEmail ?? (r.ownerId ? "account without e-mail" : "no owner")}
                       </span>
                     </p>
+                    {r.status === "archived" && r.archive && (
+                      <p data-archive-info className="mt-0.5 break-words text-xs text-muted-foreground">
+                        {r.archive.at ? `Archived ${new Date(r.archive.at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : "Archive date not recorded"}
+                        {r.archive.byEmail ? <> · by <span className="break-all font-medium text-foreground">{r.archive.byEmail}</span></> : null}
+                        {r.archive.fromStatus ? <> · was <span className="font-medium capitalize text-foreground">{r.archive.fromStatus}</span></> : null}
+                      </p>
+                    )}
                     {r.quickLead && (
                       <div className="mt-2 space-y-2">
                         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -197,8 +206,8 @@ export function BusinessesAdmin() {
                     </Button>
                     {r.status === "archived" ? (
                       <>
-                        <Button size="sm" variant="outline" disabled={busyId === r.id} onClick={() => change(r, "published")}>
-                          {busyId === r.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ArchiveRestore className="mr-1 h-4 w-4" />} Restore
+                        <Button size="sm" variant="outline" disabled={busyId === r.id} onClick={() => setToRestore(r)}>
+                          <ArchiveRestore className="mr-1 h-4 w-4" /> Restore
                         </Button>
                         {/* Permanent delete exists only here, on the Archived filter. */}
                         {filter === "archived" && (
@@ -208,7 +217,7 @@ export function BusinessesAdmin() {
                         )}
                       </>
                     ) : (
-                      <Button size="sm" variant="outline" disabled={busyId === r.id} onClick={() => change(r, "archived")}>
+                      <Button size="sm" variant="outline" disabled={busyId === r.id} onClick={() => archive(r)}>
                         {busyId === r.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Archive className="mr-1 h-4 w-4" />} Archive
                       </Button>
                     )}
@@ -229,6 +238,16 @@ export function BusinessesAdmin() {
         }}
       />
 
+      <RestoreDialog
+        key={toRestore?.id ?? "none"}
+        row={toRestore}
+        onClose={() => setToRestore(null)}
+        onDone={async () => {
+          setToRestore(null);
+          await refresh();
+        }}
+      />
+
       <PermanentDeleteDialog
         row={toDelete}
         onClose={() => setToDelete(null)}
@@ -238,6 +257,79 @@ export function BusinessesAdmin() {
         }}
       />
     </div>
+  );
+}
+
+/**
+ * Restore an archived business: a confirmation naming it, and the status to bring it back as. The status it had before the archive is
+ * suggested when it is known (Published or Pending); otherwise the admin has to pick one. Only the status changes: photos, services,
+ * reviews, owner and plan stay exactly as they were, and no city notification is sent.
+ */
+function RestoreDialog({ row, onClose, onDone }: { row: Row | null; onClose: () => void; onDone: () => void | Promise<void> }) {
+  const restoreFn = useServerFn(adminRestoreBusiness);
+  const before = row?.archive?.fromStatus ?? null;
+  const suggested: "published" | "pending" | "" = before === "published" || before === "pending" ? before : "";
+  const [choice, setChoice] = useState<"published" | "pending" | "">(suggested);
+  const [busy, setBusy] = useState(false);
+
+  const run = async () => {
+    if (!row || !choice || busy) return;
+    setBusy(true);
+    try {
+      await restoreFn({ data: { id: row.id, status: choice } });
+      toast.success(`"${row.name}" restored as ${choice === "published" ? "Published" : "Pending"}`);
+      await onDone();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Restore failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const options: Array<{ value: "published" | "pending"; label: string; hint: string }> = [
+    { value: "published", label: "Published", hint: "Website par turant dikhega." },
+    { value: "pending", label: "Pending", hint: "Approve list mein jayega; approve karne par dikhega." },
+  ];
+  return (
+    <Dialog open={!!row} onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><ArchiveRestore className="h-5 w-5" /> Restore business</DialogTitle>
+          <DialogDescription className="break-words text-foreground">
+            <strong>{row?.name}</strong> ko wapas laana hai?
+          </DialogDescription>
+        </DialogHeader>
+        {row && (
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              {suggested
+                ? `Archive se pehle ye ${suggested === "published" ? "Published" : "Pending"} tha, wahi chuna gaya hai.`
+                : before
+                  ? `Archive se pehle ye ${before} tha. Kaunsa status chahiye, chuno.`
+                  : "Archive se pehle ka status save nahi hai. Kaunsa status chahiye, chuno."}
+            </p>
+            <div role="radiogroup" aria-label="Restore as" className="space-y-2">
+              {options.map((o) => (
+                <label key={o.value} className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 ${choice === o.value ? "border-primary bg-primary/5" : "border-border"}`}>
+                  <input type="radio" name="restore-as" value={o.value} checked={choice === o.value} onChange={() => setChoice(o.value)} className="mt-1" />
+                  <span>
+                    <span className="block font-medium text-foreground">{o.label}{suggested === o.value ? " (pehle yahi tha)" : ""}</span>
+                    <span className="block text-xs text-muted-foreground">{o.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">Photos, services, reviews, owner aur plan waisa hi rahega. City notification nahi jayegi.</p>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
+              <Button onClick={run} disabled={!choice || busy}>
+                {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ArchiveRestore className="mr-1 h-4 w-4" />} Restore
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
