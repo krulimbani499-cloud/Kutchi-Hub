@@ -17,6 +17,8 @@ const editBusinessQueryOptions = (slug: string) =>
   queryOptions({
     queryKey: ["edit-business", slug],
     queryFn: () => getBusinessForEdit({ data: { slug } }),
+    // Always read again when the page opens: a plan upgrade (Silver to Gold) must show its sections at once.
+    staleTime: 0,
   });
 
 export const Route = createFileRoute("/_authenticated/business/$slug/edit")({
@@ -69,7 +71,7 @@ function EditBusinessPage() {
       <h1 className="mb-2 text-2xl font-bold text-foreground">Edit Business</h1>
       <p className="mb-6 text-muted-foreground">Update your business details below.</p>
       <div className="rounded-2xl border border-border bg-card p-6">
-        <BusinessForm categories={categories} initial={data.business} photos={data.photos} catalogAllowed={data.catalogAllowed} />
+        <BusinessForm categories={categories} initial={data.business} photos={data.photos} catalogAllowed={data.catalogAllowed} planFeatures={data.planFeatures} />
       </div>
     </div>
   );

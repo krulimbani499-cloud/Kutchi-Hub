@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
 import { EDIT_LOCKED_MESSAGE, friendlyEditError } from "./edit-lock";
 import { httpsLink } from "./url";
+import { assertPlanAllowsSection, type PlanDb } from "./plan-features.server";
 
 export const listBusinessProducts = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
@@ -59,6 +60,14 @@ export const upsertBusinessProduct = createServerFn({ method: "POST" })
       active: data.active ?? true,
       ...(data.linkUrl !== undefined ? { link_url: data.linkUrl || null } : {}),
     };
+    // The plan decides first (an admin is never stopped): a plan without Products can neither add nor change a product. For a change
+    // the business is taken from the saved row, not from what the browser sent.
+    let businessId = data.businessId;
+    if (data.id) {
+      const { data: own } = await context.supabase.from("business_products").select("business_id").eq("id", data.id).maybeSingle();
+      if (own?.business_id) businessId = own.business_id;
+    }
+    await assertPlanAllowsSection(context.supabase as unknown as PlanDb, context.userId, businessId, "products");
     if (data.id) {
       const { data: row, error } = await context.supabase
         .from("business_products")

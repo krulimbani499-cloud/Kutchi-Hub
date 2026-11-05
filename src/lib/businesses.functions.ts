@@ -8,6 +8,8 @@ import { completionChecklist, publishGaps } from "./listing-completeness";
 import { cachedFor, clearCached, clearPublicCaches } from "./server-cache";
 import { MEMORY_TTL_S } from "./cache-policy";
 import { createCategoryRecord, type CategoryDb } from "./category-create";
+import { planFeaturesFor, sectionPlanMessage } from "./plan-features";
+import { loadPlanFeatures, type PlanDb } from "./plan-features.server";
 import { findPhoneDuplicate } from "./quick-add";
 import type { Json, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { slugify, ensureSlug } from "./slug";
@@ -286,17 +288,19 @@ async function loadListExtras(supabase: ReturnType<typeof createServerSupabaseCl
   const photos = new Map<string, string[]>();
   const services = new Map<string, string[]>();
   if (ids.length === 0) return { photos, services };
-  const [photoRes, serviceRes, toggleRes] = await Promise.all([
+  const [photoRes, serviceRes, toggleRes, blocked] = await Promise.all([
     supabase.from("business_photos").select("business_id, url, display_order").in("business_id", ids).order("display_order", { ascending: true }).limit(ids.length * 10),
     supabase.from("business_services").select("business_id, name, display_order").eq("active", true).in("business_id", ids).order("display_order", { ascending: true }).limit(ids.length * 10),
     supabase.from("businesses").select("id, show_services").in("id", ids),
+    planBlockedSections(supabase, ids),
   ]);
   for (const r of photoRes.data ?? []) {
     const list = photos.get(r.business_id) ?? [];
     if (list.length < LIST_PHOTOS_PER_BUSINESS && r.url) list.push(r.url);
     photos.set(r.business_id, list);
   }
-  const hidden = new Set<string>();
+  // Hidden: the owner switched Services off, or the business's plan does not include Services (Silver). Saved rows are never deleted.
+  const hidden = new Set<string>(blocked.services);
   if (!toggleRes.error) for (const r of toggleRes.data ?? []) if ((r as { show_services?: boolean }).show_services === false) hidden.add(r.id);
   for (const r of serviceRes.data ?? []) {
     if (hidden.has(r.business_id) || !r.name?.trim()) continue;
@@ -355,7 +359,25 @@ type AllBusinessRow = {
   business_reviews: Array<{ rating: number }> | null;
 };
 
-/** The product / service names that match (the search text at the start of a word), and which businesses they belong to. Only names the owner shows publicly count. */
+/**
+ * Which of these businesses have a plan WITHOUT Services / Products (Silver: both). Their saved items are not shown on the business
+ * page, so they are not shown on a search card and do not make the business match a search either. A plan that cannot be read
+ * blocks nothing; a business without any plan follows the free defaults (allowed), exactly like planFeaturesFor.
+ */
+async function planBlockedSections(supabase: ReturnType<typeof createServerSupabaseClient>, ids: string[]) {
+  const blocked = { services: new Set<string>(), products: new Set<string>() };
+  if (ids.length === 0) return blocked;
+  const { data, error } = await supabase.from("businesses").select("id, current_plan_id, plans:current_plan_id(name, max_services, max_products)").in("id", ids);
+  if (error) return blocked;
+  for (const row of (data ?? []) as unknown as Array<{ id: string; current_plan_id: string | null; plans: { name: string; max_services: number | null; max_products: number | null } | null }>) {
+    const f = planFeaturesFor(row.plans, { isAdmin: false, hasPlan: row.current_plan_id != null });
+    if (!f.services) blocked.services.add(row.id);
+    if (!f.products) blocked.products.add(row.id);
+  }
+  return blocked;
+}
+
+/** The product / service names that match (the search text at the start of a word), and which businesses they belong to. Only names the owner shows publicly (and whose plan includes the section) count. */
 async function matchProductsAndServices(supabase: ReturnType<typeof createServerSupabaseClient>, like: string, term: string) {
   const [prodRes, svcRes] = await Promise.all([
     // Trigram-indexable pattern on the name (perf-indexes SQL); only products that are switched on.
@@ -371,8 +393,9 @@ async function matchProductsAndServices(supabase: ReturnType<typeof createServer
   if (ids.size === 0) return { has: new Map<string, string[]>(), ids: [] as string[] };
 
   // The owner's "Show Products / Services on my profile" switches (see visibleMatches). A failing query = the columns do not exist yet.
-  const toggles = await supabase.from("businesses").select("id, show_products, show_services").in("id", [...ids]);
-  return visibleMatches(prodRows, svcRows, toggles.error ? null : ((toggles.data ?? []) as ShowSwitches[]));
+  // And the plan: Silver has no Services / Products, so its saved items do not count at all.
+  const [toggles, blocked] = await Promise.all([supabase.from("businesses").select("id, show_products, show_services").in("id", [...ids]), planBlockedSections(supabase, [...ids])]);
+  return visibleMatches(prodRows, svcRows, toggles.error ? null : ((toggles.data ?? []) as ShowSwitches[]), blocked);
 }
 
 // Like searchBusinesses: the same input gives the same answer, so a result page is kept for 30 s per server instance, and the
@@ -528,7 +551,7 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
     // The business itself, its photos and the catalog check are kept for a minute per server instance (a crawler or a busy business
     // page costs no database work). The REVIEWS are always read live below, so a review that was just added shows at once.
     // A business that is not found / not published throws inside and is therefore never kept.
-    const { business, photos, catalogAllowed } = await cachedFor(`biz:${data.slug}|${data.city ?? ""}`, ms(MEMORY_TTL_S.business), async () => {
+    const { business, photos, catalogAllowed, planSections } = await cachedFor(`biz:${data.slug}|${data.city ?? ""}`, ms(MEMORY_TTL_S.business), async () => {
       let query = supabase
         .from("businesses")
         .select(
@@ -576,7 +599,14 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
               .then(({ data: canCatalog, error: canCatalogError }) => (canCatalogError ? true : canCatalog === true))
           : Promise.resolve(true),
       ]);
-      return { business, photos: photos ?? [], catalogAllowed };
+      // Which sections (Services, Products) the business's plan includes, for the public page (an admin sees all of them: that is
+      // decided in the browser). Nothing is deleted: a section that the plan lacks is only not shown. A plan that cannot be read
+      // (e.g. switched off) hides nothing.
+      const planRow = business.current_plan_id
+        ? (await supabase.from("plans").select("name, max_photos, max_products, max_services").eq("id", business.current_plan_id).maybeSingle()).data
+        : null;
+      const features = planFeaturesFor(planRow, { isAdmin: false, hasPlan: business.current_plan_id != null });
+      return { business, photos: photos ?? [], catalogAllowed, planSections: { services: features.services, products: features.products } };
     });
     const { data: reviews } = await supabase.from("business_reviews").select("*").eq("business_id", business.id).order("created_at", { ascending: false });
 
@@ -606,7 +636,7 @@ export const getBusinessBySlug = createServerFn({ method: "GET" })
         : 0;
 
     return {
-      business: { ...business, catalog_allowed: catalogAllowed },
+      business: { ...business, catalog_allowed: catalogAllowed, plan_sections: planSections },
       reviews: reviewsWithProfiles,
       photos,
       avgRating,
@@ -1589,6 +1619,13 @@ export const updateBusiness = createServerFn({ method: "POST" })
     const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     if (existing.owner_id !== userId && !isAdmin) throw new Error("Unauthorized");
 
+    // "Show Services / Products on my profile": a plan without that section cannot switch it ON (switching OFF is always fine).
+    if (!isAdmin && (data.show_services === true || data.show_products === true)) {
+      const features = await loadPlanFeatures(supabase as unknown as PlanDb, userId, data.id);
+      if (data.show_services === true && !features.services) throw new Error(sectionPlanMessage("services"));
+      if (data.show_products === true && !features.products) throw new Error(sectionPlanMessage("products"));
+    }
+
     // Work out the coordinates again only when the map link or address changed, or there are none yet.
     // A changed place whose new location can't be found loses the old (now wrong) coordinates.
     const same = (a?: string | null, b?: string | null) => (a ?? "").trim() === (b ?? "").trim();
@@ -1897,7 +1934,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     ]);
 
     const baseCols =
-      "id, name, slug, status, city, phone, phone_secondary, category_id, current_plan_id, plan_tier_order, plans:current_plan_id(name, slug, analytics_access), categories:category_id(name, slug)";
+      "id, name, slug, status, city, phone, phone_secondary, category_id, current_plan_id, plan_tier_order, plans:current_plan_id(name, slug, analytics_access, max_services, max_products), categories:category_id(name, slug)";
     const buildQuery = (cols: string) => {
       let q = supabase.from("businesses").select(cols).order("created_at", { ascending: false });
       if (!isAdmin) q = q.eq("owner_id", userId);
@@ -1978,6 +2015,12 @@ export const getDashboard = createServerFn({ method: "GET" })
       planName: (b as unknown as { plans: { name: string } | null }).plans?.name ?? null,
       planTierOrder: (b as unknown as { plan_tier_order: number }).plan_tier_order ?? 0,
       analyticsAccess: !!(b as unknown as { plans: { analytics_access: boolean } | null }).plans?.analytics_access,
+      // Which sections this business's plan includes (an admin sees everything).
+      sections: (() => {
+        const row = b as unknown as { current_plan_id: string | null; plans: { name: string; max_services: number | null; max_products: number | null } | null };
+        const f = planFeaturesFor(row.plans, { isAdmin: !!isAdmin, hasPlan: row.current_plan_id != null });
+        return { services: f.services, products: f.products };
+      })(),
     }));
 
     const typedClaims = (claims ?? []).map((c) => ({
@@ -2353,8 +2396,10 @@ export const getBusinessForEdit = createServerFn({ method: "GET" })
     ]);
     const editLocked = !!canEditRes && !canEditRes.error && canEditRes.data === false;
     const catalogAllowed = canCatalogRes ? (canCatalogRes.error ? true : canCatalogRes.data === true) : true;
+    // Which sections (Services, Products) the business's plan includes: read fresh on every visit, so an upgrade shows at once.
+    const planFeatures = await loadPlanFeatures(supabase as unknown as PlanDb, context.userId, business.id);
 
-    return { business, photos: photos ?? [], editLocked, catalogAllowed };
+    return { business, photos: photos ?? [], editLocked, catalogAllowed, planFeatures: { services: planFeatures.services, products: planFeatures.products } };
   });
 
 // -------- Category / City landing page data --------

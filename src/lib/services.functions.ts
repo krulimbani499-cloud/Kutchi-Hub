@@ -4,6 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerSupabaseClient } from "./businesses.server";
 import { EDIT_LOCKED_MESSAGE, friendlyEditError, isEditLockedError } from "./edit-lock";
 import { SHOW_PUBLIC_PRICING } from "./features";
+import { loadPlanFeatures, type PlanDb } from "./plan-features.server";
+import { sectionPlanMessage } from "./plan-features";
 
 export const listBusinessServices = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ businessId: z.string().uuid() }).parse(input))
@@ -86,6 +88,15 @@ export const upsertBusinessService = createServerFn({ method: "POST" })
       return { ok: false, message: describeServiceError(err) };
     };
     try {
+      // The plan decides first (an admin is never stopped): a plan without Services can neither add nor change a service. For a change
+      // the business is taken from the saved row, not from what the browser sent.
+      let businessId = data.businessId;
+      if (data.id) {
+        const { data: own } = await context.supabase.from("business_services").select("business_id").eq("id", data.id).maybeSingle();
+        if (own?.business_id) businessId = own.business_id;
+      }
+      const features = await loadPlanFeatures(context.supabase as unknown as PlanDb, context.userId, businessId);
+      if (!features.services) return { ok: false, message: sectionPlanMessage("services") };
       // An update the database refuses (owner without an active plan) comes back as "no row": friendly message.
       const { data: row, error } = data.id
         ? await context.supabase.from("business_services").update(payload).eq("id", data.id).select("*").single()

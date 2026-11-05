@@ -20,6 +20,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessAnalyticsCard } from "@/components/business/BusinessAnalyticsCard";
 import { ServicesManager } from "@/components/business/ServicesManager";
 import { ProductsManager } from "@/components/business/ProductsManager";
+import { SectionsUpgradeCard } from "@/components/business/SectionsUpgradeCard";
+import { missingSections } from "@/lib/plan-features";
 import { useState } from "react";
 import { BusinessFilterBar, NoBusinessMatch, useBusinessFilters } from "@/components/business/BusinessFilterBar";
 import { RewardsCard } from "@/components/gamification/RewardsCard";
@@ -248,32 +250,38 @@ It will disappear from the website. Its subscription and payment history are kep
                           <CompleteDetailsBanner planName={b.planName} slug={b.slug} checklist={b.checklist} />
                         </div>
                       )}
-                      <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
-                        <Button
-                          size="sm"
-                          variant={expanded[b.id] === "services" ? "default" : "outline"}
-                          onClick={() => toggle(b.id, "services")}
-                        >
-                          <Wrench className="mr-1 h-3.5 w-3.5" />
-                          Services
-                          {expanded[b.id] === "services" ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={expanded[b.id] === "products" ? "default" : "outline"}
-                          onClick={() => toggle(b.id, "products")}
-                        >
-                          <Package className="mr-1 h-3.5 w-3.5" />
-                          Products
-                          {expanded[b.id] === "products" ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
-                        </Button>
+                      <div className={`mt-3 flex flex-wrap gap-2 border-t border-border pt-3 ${b.sections.services || b.sections.products ? "" : "hidden"}`}>
+                        {b.sections.services && (
+                          <Button
+                            size="sm"
+                            variant={expanded[b.id] === "services" ? "default" : "outline"}
+                            onClick={() => toggle(b.id, "services")}
+                          >
+                            <Wrench className="mr-1 h-3.5 w-3.5" />
+                            Services
+                            {expanded[b.id] === "services" ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
+                          </Button>
+                        )}
+                        {b.sections.products && (
+                          <Button
+                            size="sm"
+                            variant={expanded[b.id] === "products" ? "default" : "outline"}
+                            onClick={() => toggle(b.id, "products")}
+                          >
+                            <Package className="mr-1 h-3.5 w-3.5" />
+                            Products
+                            {expanded[b.id] === "products" ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
+                          </Button>
+                        )}
                       </div>
-                      {expanded[b.id] === "services" && (
+                      {/* A plan without Services / Products (Silver): one short line + WhatsApp instead of the buttons. */}
+                      {missingSections(b.sections).length > 0 && <SectionsUpgradeCard className="mt-3" missing={missingSections(b.sections)} businessName={b.name} />}
+                      {b.sections.services && expanded[b.id] === "services" && (
                         <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
                           <ServicesManager businessId={b.id} />
                         </div>
                       )}
-                      {expanded[b.id] === "products" && (
+                      {b.sections.products && expanded[b.id] === "products" && (
                         <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
                           <ProductsManager businessId={b.id} />
                         </div>

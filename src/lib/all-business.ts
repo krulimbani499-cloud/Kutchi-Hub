@@ -106,9 +106,11 @@ export function visibleMatches(
   products: readonly NamedItem[],
   services: readonly NamedItem[],
   switches: readonly ShowSwitches[] | null,
+  /** Businesses whose PLAN does not include Products / Services (Silver): their saved items never count (see plan-features.ts). */
+  planBlocked?: { products: ReadonlySet<string>; services: ReadonlySet<string> },
 ): { has: Map<string, string[]>; ids: string[] } {
-  const hiddenProducts = new Set<string>();
-  const hiddenServices = new Set<string>();
+  const hiddenProducts = new Set<string>(planBlocked?.products);
+  const hiddenServices = new Set<string>(planBlocked?.services);
   for (const r of switches ?? []) {
     if (r.show_products === false) hiddenProducts.add(r.id);
     if (r.show_services === false) hiddenServices.add(r.id);

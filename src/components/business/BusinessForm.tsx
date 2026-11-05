@@ -28,6 +28,8 @@ import { CatalogUploader } from "./CatalogUploader";
 import { CatalogUpgradeCard } from "./CatalogUpgradeCard";
 import { ServicesManager } from "./ServicesManager";
 import { ProductsManager } from "./ProductsManager";
+import { SectionsUpgradeCard } from "./SectionsUpgradeCard";
+import { missingSections } from "@/lib/plan-features";
 import type { Tables } from "@/integrations/supabase/types";
 import { slugify, slugifyInput, ensureSlug } from "@/lib/slug";
 import { sortCategoriesAZ } from "@/lib/category-sort";
@@ -74,9 +76,11 @@ interface BusinessFormProps {
   photos?: Tables<"business_photos">[];
   /** False only for an owner whose active plan does not include the catalog. Defaults to true (admins, and before the SQL is applied). */
   catalogAllowed?: boolean;
+  /** Which sections the business's plan includes. Defaults to both (admins, and when the plan could not be read). Silver: neither. */
+  planFeatures?: { services: boolean; products: boolean };
 }
 
-export function BusinessForm({ categories, initial, photos = [], catalogAllowed = true }: BusinessFormProps) {
+export function BusinessForm({ categories, initial, photos = [], catalogAllowed = true, planFeatures = { services: true, products: true } }: BusinessFormProps) {
   const navigate = useNavigate();
   const createFn = useServerFn(createBusiness);
   const updateFn = useServerFn(updateBusiness);
@@ -537,7 +541,10 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
         </div>
       )}
 
-      {initial && (
+      {/* A plan without Services / Products (Silver) gets ONE short line + WhatsApp instead of those sections. Admins always get both. */}
+      {initial && missingSections(planFeatures).length > 0 && <SectionsUpgradeCard missing={missingSections(planFeatures)} businessName={initial.name} />}
+
+      {initial && planFeatures.services && (
         <div className="rounded-lg border border-border bg-muted/50 p-4">
           <Label className="mb-2 block">Services</Label>
           <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-border bg-background p-3">
@@ -554,7 +561,7 @@ export function BusinessForm({ categories, initial, photos = [], catalogAllowed 
         </div>
       )}
 
-      {initial && (
+      {initial && planFeatures.products && (
         <div className="rounded-lg border border-border bg-muted/50 p-4">
           <Label className="mb-2 block">Products</Label>
           <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-border bg-background p-3">

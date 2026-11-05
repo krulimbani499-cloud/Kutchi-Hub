@@ -31,6 +31,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { telHref } from "@/lib/phone";
 import { useAuth } from "@/lib/auth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { SectionsUpgradeCard } from "./SectionsUpgradeCard";
+import { missingSections } from "@/lib/plan-features";
 import { useServerFn } from "@tanstack/react-start";
 import { addReview } from "@/lib/businesses.functions";
 import { logBusinessEvent } from "@/lib/leads.functions";
@@ -59,6 +62,8 @@ interface BusinessDetailProps {
     featured_image_url?: string | null;
     /** false = the business's plan does not include the catalog (hide "View catalog"). Missing = show, as before. */
     catalog_allowed?: boolean;
+    /** Which sections the business's plan includes (Silver: neither). Missing = both, as before. Admins see both whatever it says. */
+    plan_sections?: { services: boolean; products: boolean };
   };
   reviews: (Tables<"business_reviews"> & {
     profiles: { display_name: string | null; avatar_url: string | null } | null;
@@ -84,6 +89,10 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const [replyBusy, setReplyBusy] = useState<string | null>(null);
   const [replySaved, setReplySaved] = useState<Record<string, string>>({});
   const isOwner = !!user && user.id === business.owner_id;
+  // Services / Products are shown only when the plan includes them (Silver: no). An admin always sees them. The saved items are
+  // never deleted: they come back as soon as the plan includes the section again.
+  const isAdmin = useIsAdmin();
+  const planSections = isAdmin ? { services: true, products: true } : (business.plan_sections ?? { services: true, products: true });
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const myReview = user ? reviews.find((r) => r.user_id === user.id) ?? null : null;
 
@@ -122,11 +131,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   }, [business.id, business.slug, business.name, business.city, business.categories?.name, business.featured_image]);
 
   const { data: services = [] } = useQuery({
+    enabled: planSections.services,
     queryKey: ["services", business.id],
     queryFn: () => listBusinessServices({ data: { businessId: business.id } }),
   });
 
   const { data: products = [] } = useQuery({
+    enabled: planSections.products,
     queryKey: ["products", business.id],
     queryFn: () => listBusinessProducts({ data: { businessId: business.id } }),
   });
@@ -516,7 +527,12 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
 
             {/* Services / Products: the public sees a section only when the owner switched it on AND it has at least one item.
                 A missing switch (the section-toggles SQL is not applied yet) counts as on, as before. The owner always gets the manager. */}
-            {(isOwner || (business.show_services !== false && services.length > 0)) && (
+            {/* The owner of a plan without these sections gets the same short upgrade line as in the edit form (not in the iOS app);
+                the public sees nothing. */}
+            {isOwner && missingSections(planSections).length > 0 && (
+              <SectionsUpgradeCard missing={missingSections(planSections)} businessName={business.name} />
+            )}
+            {planSections.services && (isOwner || (business.show_services !== false && services.length > 0)) && (
               <section>
                 <h2 className="mb-2 text-lg font-semibold text-foreground">Services</h2>
                 {isOwner ? (
@@ -527,7 +543,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               </section>
             )}
 
-            {(isOwner || (business.show_products !== false && products.length > 0)) && (
+            {planSections.products && (isOwner || (business.show_products !== false && products.length > 0)) && (
               <section>
                 <h2 className="mb-2 text-lg font-semibold text-foreground">Products</h2>
                 {isOwner ? (
