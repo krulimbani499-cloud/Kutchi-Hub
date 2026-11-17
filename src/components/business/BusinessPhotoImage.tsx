@@ -96,7 +96,7 @@ function signedUrlFor(key: string, width?: number): Promise<string> {
     // Resized: signed on its own (the size is part of the token). On any failure the caller falls back to the original.
     promise = supabase.storage
       .from(BUSINESS_PHOTOS_BUCKET)
-      .createSignedUrl(key, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, { transform: { width: Math.round(width), resize: "contain", quality: 72 } })
+      .createSignedUrl(key, SIGNED_BUSINESS_PHOTO_TTL_SECONDS, { transform: { width: Math.round(width), resize: "contain", quality: width >= 1200 ? 85 : 72 } })
       .then(({ data, error }) => {
         const url = error ? "" : data?.signedUrl ?? "";
         if (url) {

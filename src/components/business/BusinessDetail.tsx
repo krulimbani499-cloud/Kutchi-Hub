@@ -605,9 +605,13 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                 {photos.map((photo) => (
-                  <div
+                  // Tap a photo: the full-screen viewer opens on that photo (the viewer lists the cover first, so look its place up).
+                  <button
                     key={photo.id}
-                    className="overflow-hidden rounded-lg border border-border"
+                    type="button"
+                    onClick={() => setLightboxIndex(Math.max(0, galleryPhotos.findIndex((g) => g.id === photo.id)))}
+                    aria-label="Open photo"
+                    className="block overflow-hidden rounded-lg border border-border text-left"
                   >
                     <div className="aspect-square w-full">
                       <BlurFillImage
@@ -618,7 +622,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                         imgClassName="transition-transform hover:scale-105"
                       />
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

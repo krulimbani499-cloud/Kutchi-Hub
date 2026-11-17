@@ -23,7 +23,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { PlanUpgradeCard } from "./PlanUpgradeCard";
 import { HiddenFromProfileNote } from "./HiddenFromProfileNote";
 import { useSectionToggles } from "@/hooks/useSectionToggles";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { PhotoLightbox } from "./PhotoLightbox";
 
 interface Props {
   businessId: string;
@@ -429,36 +429,15 @@ function ProductRow({ product: p, onEdit, onDelete }: { product: Product; onEdit
         </div>
       )}
 
-      <Dialog open={viewerIndex !== null} onOpenChange={(o) => !o && setViewerIndex(null)}>
-        <DialogContent className="max-w-3xl border-0 bg-background p-3 sm:p-4">
-          <DialogTitle className="text-base">{p.name}</DialogTitle>
-          {viewerIndex !== null && (
-            <div className="space-y-3">
-              <div className="flex max-h-[70vh] items-center justify-center overflow-hidden rounded-lg bg-muted">
-                <BusinessPhotoImage
-                  src={gallery[viewerIndex]}
-                  alt={p.name}
-                  className="max-h-[70vh] w-full object-contain"
-                />
-              </div>
-              {gallery.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
-                  {gallery.map((key, i) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setViewerIndex(i)}
-                      className={`h-14 w-14 flex-shrink-0 overflow-hidden rounded-md border-2 ${i === viewerIndex ? "border-[#ff6a00]" : "border-border"}`}
-                    >
-                      <BusinessPhotoImage src={key} alt={`${p.name} ${i + 1}`} className="h-full w-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Same full-screen viewer as the business photos: zoom, pan, swipe, Back button. */}
+      {viewerIndex !== null && gallery.length > 0 && (
+        <PhotoLightbox
+          photos={gallery.map((url, i) => ({ id: `${p.id}-${i}`, url, caption: p.name }))}
+          index={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+          onIndexChange={setViewerIndex}
+        />
+      )}
     </div>
   );
 }
