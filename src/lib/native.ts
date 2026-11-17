@@ -20,19 +20,7 @@ export function nativePluginAvailable(name: string): boolean {
   return isIosApp() && Capacitor.isPluginAvailable(name);
 }
 
-/** Open the iOS / Android share sheet. Returns false when the native plugin is not there (caller falls back). */
-export async function nativeShare(opts: { title: string; text?: string; url: string }): Promise<boolean> {
-  if (!nativePluginAvailable("Share")) return false;
-  try {
-    const { Share } = await import("@capacitor/share");
-    await Share.share({ title: opts.title, text: opts.text, url: opts.url, dialogTitle: "Share" });
-    return true;
-  } catch (e) {
-    // The person closing the share sheet rejects with "Share canceled": that is a normal outcome, not a failure.
-    if (e instanceof Error && /cancel/i.test(e.message)) return true;
-    return false;
-  }
-}
+// Sharing a business lives in src/lib/share.ts (works in the iOS app, the Android app, browsers).
 
 export type NativeFix = { latitude: number; longitude: number; accuracy: number };
 

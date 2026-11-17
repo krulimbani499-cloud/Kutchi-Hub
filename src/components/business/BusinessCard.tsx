@@ -5,6 +5,7 @@ import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
 import { BlurFillImage } from "./BlurFillImage";
 import { FavoriteButton } from "./FavoriteButton";
+import { ShareMenu } from "./ShareMenu";
 import { SHOW_SAVED } from "@/lib/features";
 import { isOpenNow, hasAnyHours } from "@/lib/business-hours";
 import { useEffect, useState, type CSSProperties } from "react";
@@ -201,6 +202,11 @@ export function BusinessCard({ business, delayMs, areaName = null }: BusinessCar
               Details
             </Link>
           </Button>
+          <ShareMenu
+            variant="icon"
+            className="!h-8 !w-8"
+            business={{ name: business.name, slug: business.slug, category: business.categories?.name, city: business.city }}
+          />
         </div>
       </div>
     </div>

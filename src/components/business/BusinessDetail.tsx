@@ -448,8 +448,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               )}
               <div className="ml-auto">
                 <ShareMenu
-                  title={business.name}
-                  text={`${business.name} — ${business.categories?.name ?? "Business"}${business.city ? " in " + business.city : ""} on Kutchi Hub`}
+                  business={{ name: business.name, slug: business.slug, category: business.categories?.name, city: business.city }}
                   onShare={() => trackClick("share_click")}
                 />
               </div>

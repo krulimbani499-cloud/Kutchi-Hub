@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { BadgeCheck, ChevronLeft, ChevronRight, Clock, Crown, MapPin, MessageCircle, Navigation, Phone, Star, Tag } from "lucide-react";
 import { BlurFillImage } from "@/components/business/BlurFillImage";
 import { FavoriteButton } from "@/components/business/FavoriteButton";
+import { ShareMenu } from "@/components/business/ShareMenu";
 import { SHOW_SAVED } from "@/lib/features";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getBusinessPhotoStorageKey } from "@/lib/business-photos";
@@ -348,6 +349,10 @@ export function ResultCard({
           >
             Details
           </Link>
+          <ShareMenu
+            variant="icon"
+            business={{ name: business.name, slug: business.slug, category: business.categories?.name, city: business.city }}
+          />
         </div>
       </div>
     </article>
