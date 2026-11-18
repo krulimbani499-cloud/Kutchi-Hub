@@ -45,3 +45,6 @@ migration/data/
 *.jks
 *.keystore
 key.properties
+
+# App Store screenshots (generated locally)
+app-store-screenshots/

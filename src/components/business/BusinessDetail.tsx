@@ -51,6 +51,8 @@ import { EnquiryDialog } from "./EnquiryDialog";
 import { ServicesManager, ServicesDisplay } from "./ServicesManager";
 import { ProductsManager, ProductsDisplay } from "./ProductsManager";
 import { ReportButton } from "./ReportButton";
+import { ReviewActions } from "./ReviewActions";
+import { useReviewBlocks } from "@/hooks/useReviewBlocks";
 import { RelatedBusinesses } from "./RelatedBusinesses";
 import { ShareMenu } from "./ShareMenu";
 import { trackRecentlyViewed } from "@/hooks/useRecentlyViewed";
@@ -75,8 +77,12 @@ interface BusinessDetailProps {
   reviewCount: number;
 }
 
-export function BusinessDetail({ business, reviews, photos, avgRating, reviewCount }: BusinessDetailProps) {
+export function BusinessDetail({ business, reviews: allReviews, photos, avgRating, reviewCount }: BusinessDetailProps) {
   const { user } = useAuth();
+  // "Hide user": reviews written by people this viewer hid are left out (only for this viewer).
+  const { blocked: blockedAuthors, block: hideReviewAuthor, unblock: showReviewAuthor } = useReviewBlocks();
+  const reviews = blockedAuthors.size > 0 ? allReviews.filter((r) => !blockedAuthors.has(r.user_id)) : allReviews;
+  const hiddenByMe = allReviews.filter((r) => blockedAuthors.has(r.user_id));
   const router = useRouter();
   const submitReview = useServerFn(addReview);
   const editReview = useServerFn(updateReview);
@@ -96,7 +102,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
   const isAdmin = useIsAdmin();
   const planSections = isAdmin ? { services: true, products: true } : (business.plan_sections ?? { services: true, products: true });
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const myReview = user ? reviews.find((r) => r.user_id === user.id) ?? null : null;
+  const myReview = user ? allReviews.find((r) => r.user_id === user.id) ?? null : null;
 
   const handleReply = async (reviewId: string) => {
     const text = (replyDrafts[reviewId] ?? "").trim();
@@ -682,6 +688,21 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
               </div>
             )}
 
+            {hiddenByMe.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+                <span>
+                  {hiddenByMe.length === 1 ? "1 review is" : `${hiddenByMe.length} reviews are`} hidden because you hid {new Set(hiddenByMe.map((r) => r.user_id)).size === 1 ? "this user" : "these users"}.
+                </span>
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:underline"
+                  onClick={() => { for (const id of new Set(hiddenByMe.map((r) => r.user_id))) void showReviewAuthor(id); }}
+                >
+                  Show again
+                </button>
+              </div>
+            )}
+
             <div className="space-y-4">
               {reviews.map((review) => (
                 <div key={review.id} className="border-b border-border pb-4 last:border-0 last:pb-0">
@@ -699,9 +720,7 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
                     <ThumbsUp className="h-3 w-3" />
                     <span>{review.helpful_count} found helpful</span>
                     {user && user.id !== review.user_id && (
-                      <div className="ml-auto">
-                        <ReportButton entityType="review" entityId={review.id} label="Report" />
-                      </div>
+                      <ReviewActions reviewId={review.id} authorId={review.user_id} onHideUser={hideReviewAuthor} />
                     )}
                   </div>
                   {(replySaved[review.id] ?? review.owner_reply) && (

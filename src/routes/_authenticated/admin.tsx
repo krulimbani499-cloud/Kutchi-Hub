@@ -29,6 +29,7 @@ import { PushTestCard } from "@/components/admin/PushTestCard";
 import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
 import { PlansRevenueOverview } from "@/components/admin/PlansRevenueOverview";
 import { BusinessesAdmin } from "@/components/admin/BusinessesAdmin";
+import { ReviewReportsAdmin } from "@/components/admin/ReviewReportsAdmin";
 import { SearchLeadsManager } from "@/components/admin/SearchLeadsManager";
 import { SHOW_CITY_PUSH, SHOW_SEARCH_LEAD_FORM } from "@/lib/features";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -196,6 +197,7 @@ function AdminPage() {
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="banners">Banner Ads</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="review-reports">Reported reviews</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="plans">Plans</TabsTrigger>
           <TabsTrigger value="adslots">Ad Slots</TabsTrigger>
@@ -371,6 +373,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="reports" className="mt-0">
           <ReportsAdmin />
+        </TabsContent>
+        <TabsContent value="review-reports" className="mt-0">
+          <ReviewReportsAdmin />
         </TabsContent>
         <TabsContent value="events" className="mt-0">
           <EventsManager />
