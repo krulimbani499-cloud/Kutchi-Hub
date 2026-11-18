@@ -2,6 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useBusinessPhotoSrc } from "./BusinessPhotoImage";
 import { SafeImage } from "./SafeImage";
 
+/** Photos that are not in the first view are signed at the latest this long after they appear. */
+const LATE_MS = 5000;
+
 /**
  * A business photo that fills its box (give the parent a fixed size / aspect ratio) with no empty side space.
  * Once the picture has loaded its shape is compared with the box:
@@ -18,6 +21,7 @@ export function BlurFillImage({
   fallback,
   imgClassName = "",
   width,
+  priority = false,
 }: {
   src: string | null | undefined;
   alt: string;
@@ -27,8 +31,30 @@ export function BlurFillImage({
   imgClassName?: string;
   /** Ask for a resized picture of about this width (2x the width it is shown at); the full file is used if that fails. */
   width?: number;
+  /** The picture the page is judged on (first cards): loaded at once (eager) and fetched first (fetchpriority high). */
+  priority?: boolean;
 }) {
-  const { src: resolved, fallBackToOriginal } = useBusinessPhotoSrc(src, width);
+  // A resized photo is signed with its own request (+ a CORS preflight), and a row has 20+ cards. Asking for all of them at once made the
+  // first card's photo (the one the page is judged on) wait in the same queue. So: the priority / eager photo is signed at once; the others
+  // when they come near the screen, or at the latest after LATE_MS (a card inside a swipe row is clipped by the row, so it only "comes near"
+  // when swiped to; by then its photo is usually ready already).
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(priority || loading === "eager" || typeof IntersectionObserver === "undefined");
+  useEffect(() => {
+    if (near) return;
+    const el = wrapRef.current;
+    // At the latest after LATE_MS, and then only when the browser is idle: a burst of 20 sign-ins right while the first photo arrives made
+    // that photo wait for the main thread (measured: loaded at 13.4 s, painted at 16.2 s on a throttled phone).
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+    const timer = setTimeout(() => (ric ? ric(() => setNear(true), { timeout: 2000 }) : setNear(true)), LATE_MS);
+    let io: IntersectionObserver | null = null;
+    if (el) {
+      io = new IntersectionObserver(([e]) => { if (e?.isIntersecting) setNear(true); }, { rootMargin: "300px" });
+      io.observe(el);
+    }
+    return () => { clearTimeout(timer); io?.disconnect(); };
+  }, [near]);
+  const { src: resolved, fallBackToOriginal } = useBusinessPhotoSrc(near ? src : null, width);
   // Remember WHICH url failed / was measured, so a changed photo is handled again.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [shape, setShape] = useState<{ src: string; ratio: number } | null>(null);
@@ -50,7 +76,7 @@ export function BlurFillImage({
     return () => ro.disconnect();
   }, [resolved]);
 
-  if (!resolved || failedSrc === resolved) return <>{fallback ?? null}</>;
+  if (!resolved || failedSrc === resolved) return <div ref={wrapRef} className="h-full w-full">{fallback ?? null}</div>;
 
   const known = shape?.src === resolved ? shape.ratio : null;
   // Wider than (or as wide as) the box -> keep it whole over the blur; taller -> fill the box.
@@ -73,7 +99,8 @@ export function BlurFillImage({
       <SafeImage
         src={resolved}
         alt={alt}
-        loading={loading}
+        loading={priority ? "eager" : loading}
+        fetchPriority={priority ? "high" : undefined}
         className={`relative h-full w-full transition-opacity duration-200 ${
           known === null ? "object-contain opacity-0" : tall ? "object-cover object-center" : "object-contain"
         } ${imgClassName}`}

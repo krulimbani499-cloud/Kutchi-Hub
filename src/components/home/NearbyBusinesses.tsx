@@ -21,6 +21,9 @@ export function NearbyBusinesses() {
   const [error, setError] = useState<string | null>(null);
   // Location refused: the whole section is hidden (no message, nothing to nag about).
   const [denied, setDenied] = useState(false);
+  // Nothing is drawn until the browser has said whether location is allowed (a few ms after the page starts): the block used to appear
+  // and then vanish for people who refused location, which moved everything below it (layout shift).
+  const [permKnown, setPermKnown] = useState(false);
 
   const detect = async () => {
     setError(null);
@@ -38,7 +41,10 @@ export function NearbyBusinesses() {
 
   // Use the location straight away if permission was already granted; hide the section if it was refused.
   useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.permissions) return;
+    if (typeof navigator === "undefined" || !navigator.permissions) {
+      setPermKnown(true);
+      return;
+    }
     let status: PermissionStatus | null = null;
     const apply = () => {
       if (!status) return;
@@ -52,9 +58,10 @@ export function NearbyBusinesses() {
       .then((p) => {
         status = p;
         apply();
+        setPermKnown(true);
         p.onchange = apply;
       })
-      .catch(() => {});
+      .catch(() => setPermKnown(true));
     return () => {
       if (status) status.onchange = null;
     };
@@ -68,7 +75,7 @@ export function NearbyBusinesses() {
     staleTime: 60_000,
   });
 
-  if (denied && !area) return null;
+  if (!area && (!permKnown || denied)) return null;
 
   const businesses = data?.businesses ?? [];
 

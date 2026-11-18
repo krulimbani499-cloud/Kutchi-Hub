@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -30,11 +30,31 @@ export function MarketingBanner({ intervalMs = 4500, placement = "home_top" }: P
     setIndex(0);
   }, [banners.length]);
 
+  // The slides only turn while the banner is on screen and the app / tab is in front: no timer, no re-render, no picture download
+  // for a banner nobody can see (scrolled away, another tab, the app in the background).
+  const boxRef = useRef<HTMLElement>(null);
+  const [onScreen, setOnScreen] = useState(true);
+  const [tabVisible, setTabVisible] = useState(true);
   useEffect(() => {
-    if (banners.length <= 1) return;
+    const el = boxRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setOnScreen(!!e?.isIntersecting), { threshold: 0.2 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [banners.length]);
+  useEffect(() => {
+    const onVis = () => setTabVisible(!document.hidden);
+    onVis();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  const rotating = banners.length > 1 && onScreen && tabVisible;
+  useEffect(() => {
+    if (!rotating) return;
     const t = setInterval(() => setIndex((i) => (i + 1) % banners.length), intervalMs);
     return () => clearInterval(t);
-  }, [banners.length, intervalMs]);
+  }, [rotating, banners.length, intervalMs]);
 
   if (banners.length === 0) return null;
   const current = banners[index]!;
@@ -42,21 +62,21 @@ export function MarketingBanner({ intervalMs = 4500, placement = "home_top" }: P
 
   return (
     // Phones: 8px side margins (wider, so taller at the same 3:1 ratio the banner images already have); md+ keeps 16px.
-    <section data-banner-slot={placement} className="mx-auto w-full max-w-7xl px-2 pt-4 md:px-4">
+    <section ref={boxRef} data-banner-slot={placement} className="mx-auto w-full max-w-7xl px-2 pt-4 md:px-4">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         {current.cta_url ? (
           // An address typed on the banner wins ...
           <a href={current.cta_url} target="_blank" rel="noreferrer" className="block">
-            <BannerImage banner={current} carouselHasMobile={carouselHasMobile} />
+            <BannerImage banner={current} carouselHasMobile={carouselHasMobile} priority={placement === "home_top" && index === 0} />
           </a>
         ) : current.business_slug ? (
           // ... otherwise a banner made for a business opens that business's page.
           <Link to="/business/$slug" params={{ slug: current.business_slug }} className="block">
-            <BannerImage banner={current} carouselHasMobile={carouselHasMobile} />
+            <BannerImage banner={current} carouselHasMobile={carouselHasMobile} priority={placement === "home_top" && index === 0} />
           </Link>
         ) : (
           <div className="block">
-            <BannerImage banner={current} carouselHasMobile={carouselHasMobile} />
+            <BannerImage banner={current} carouselHasMobile={carouselHasMobile} priority={placement === "home_top" && index === 0} />
           </div>
         )}
 

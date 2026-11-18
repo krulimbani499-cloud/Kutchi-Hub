@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -23,7 +23,8 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { PlanUpgradeCard } from "./PlanUpgradeCard";
 import { HiddenFromProfileNote } from "./HiddenFromProfileNote";
 import { useSectionToggles } from "@/hooks/useSectionToggles";
-import { PhotoLightbox } from "./PhotoLightbox";
+// Loaded the first time a product picture is opened.
+const PhotoLightbox = lazy(() => import("./PhotoLightbox").then((m) => ({ default: m.PhotoLightbox })));
 
 interface Props {
   businessId: string;
@@ -431,12 +432,14 @@ function ProductRow({ product: p, onEdit, onDelete }: { product: Product; onEdit
 
       {/* Same full-screen viewer as the business photos: zoom, pan, swipe, Back button. */}
       {viewerIndex !== null && gallery.length > 0 && (
-        <PhotoLightbox
-          photos={gallery.map((url, i) => ({ id: `${p.id}-${i}`, url, caption: p.name }))}
-          index={viewerIndex}
-          onClose={() => setViewerIndex(null)}
-          onIndexChange={setViewerIndex}
-        />
+        <Suspense fallback={null}>
+          <PhotoLightbox
+            photos={gallery.map((url, i) => ({ id: `${p.id}-${i}`, url, caption: p.name }))}
+            index={viewerIndex}
+            onClose={() => setViewerIndex(null)}
+            onIndexChange={setViewerIndex}
+          />
+        </Suspense>
       )}
     </div>
   );

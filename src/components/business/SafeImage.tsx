@@ -10,6 +10,7 @@ export function SafeImage({
   className,
   alt = "",
   loading,
+  fetchPriority,
   onFail,
   onLoad,
 }: {
@@ -17,6 +18,7 @@ export function SafeImage({
   className?: string;
   alt?: string;
   loading?: "lazy" | "eager";
+  fetchPriority?: "high" | "low" | "auto";
   onFail: () => void;
   onLoad?: (img: HTMLImageElement) => void;
 }) {
@@ -34,6 +36,7 @@ export function SafeImage({
       src={src}
       alt={alt}
       loading={loading}
+      fetchPriority={fetchPriority}
       className={className}
       onError={onFail}
       onLoad={(e) => onLoad?.(e.currentTarget)}

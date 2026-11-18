@@ -35,11 +35,13 @@ interface BusinessCardProps {
     categories: { id: string; name: string; slug: string; color: string | null } | null;
   };
   delayMs?: number;
+  /** One of the first cards on the page: its photo is loaded at once and first (it is what the page is judged on). */
+  priority?: boolean;
   /** The locality picked inside the city ("Naroda"): a business whose address mentions it gets an "In Naroda" tag. */
   areaName?: string | null;
 }
 
-export function BusinessCard({ business, delayMs, areaName = null }: BusinessCardProps) {
+export function BusinessCard({ business, delayMs, priority = false, areaName = null }: BusinessCardProps) {
   const animateOnScroll = delayMs !== undefined;
   const diwali = useDiwali().active;
   const t = useT();
@@ -75,7 +77,9 @@ export function BusinessCard({ business, delayMs, areaName = null }: BusinessCar
           src={imageSrc}
           alt={business.name}
           loading="lazy"
-          width={640}
+          priority={priority}
+          // ~2x the width a card is shown at in a swipe row; Supabase serves WebP to browsers that accept it.
+          width={480}
           imgClassName="transition-transform group-hover:scale-105"
           fallback={
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted/50 text-muted-foreground">

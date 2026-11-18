@@ -237,7 +237,7 @@ function AllBusinessPage() {
       </h1>
 
       {/* Sticky search: business name, category, description, and the products / services the owner shows publicly. */}
-      <div data-all-business-search className="sticky z-30 -mx-4 mb-3 bg-background/95 px-4 py-2.5 backdrop-blur" style={{ top: headerH }}>
+      <div data-all-business-search className="sticky z-30 -mx-4 mb-3 bg-background px-4 py-2.5 sm:bg-background/95 sm:backdrop-blur" style={{ top: headerH }}>
         <form
           role="search"
           onSubmit={(e) => {

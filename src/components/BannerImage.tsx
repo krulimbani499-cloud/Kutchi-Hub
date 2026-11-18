@@ -35,7 +35,7 @@ function widthSet(url: string, widths: number[]): string | undefined {
   return widths.map((w) => `${resizedPublicUrl(url, w)} ${w}w`).join(", ");
 }
 
-export function BannerImage({ banner }: { banner: BannerImageData; carouselHasMobile?: boolean }) {
+export function BannerImage({ banner, priority = false }: { banner: BannerImageData; carouselHasMobile?: boolean; priority?: boolean }) {
   const hasMobile = !!banner.mobile_image_url;
   // If a resized picture fails to load, the originals are used (no resizing, no srcset).
   const [original, setOriginal] = useState(false);
@@ -62,7 +62,7 @@ export function BannerImage({ banner }: { banner: BannerImageData; carouselHasMo
       {/* Soft backdrop: only visible where the picture does not reach the edges. */}
       <picture aria-hidden className="absolute inset-0 block h-full w-full">
         {hasMobile && <source media="(min-width: 768px)" srcSet={blurDesktop} />}
-        <img src={blurPhone} alt="" className="h-full w-full scale-125 object-cover opacity-70 blur-2xl" loading="lazy" decoding="async" />
+        <img src={blurPhone} alt="" className="h-full w-full scale-125 object-cover opacity-70 md:blur-2xl" loading="lazy" decoding="async" />
       </picture>
       <picture className="relative block h-full w-full">
         {hasMobile && <source media="(min-width: 768px)" srcSet={desktopSet ?? desktop} sizes={desktopSet ? DESKTOP_SIZES : undefined} />}
@@ -72,7 +72,11 @@ export function BannerImage({ banner }: { banner: BannerImageData; carouselHasMo
           sizes={phoneSet ? phoneImgSizes : undefined}
           alt={banner.title}
           className="h-full w-full object-contain transition-opacity duration-500"
-          loading="lazy"
+          // The banner is the biggest picture at the top of the home page: it loads at once (not lazily) and first.
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : undefined}
+          width={600}
+          height={300}
           decoding="async"
           onError={() => {
             if (!original) {

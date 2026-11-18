@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions } from "@tanstack/react-query";
 import { getHomeData } from "@/lib/businesses.functions";
 import { listUpcomingEvents } from "@/lib/events.functions";
@@ -83,12 +83,11 @@ function HomePage() {
   const { data: home } = useQuery(homeQueryOptions(city ?? undefined, areaAt));
   const [search, setSearch] = useState("");
 
+  const navigate = useNavigate();
   const submitSearch = (q?: string) => {
-    const params = new URLSearchParams();
     const term = (q ?? search).trim();
-    if (term) params.set("q", term);
-    if (city) params.set("city", city);
-    window.location.href = `/search?${params.toString()}`;
+    // In-app navigation (no full page reload): the same address /search?q=...&city=..., opened without reloading the whole app.
+    void navigate({ to: "/search", search: { ...(term ? { q: term } : {}), ...(city ? { city } : {}) } });
   };
 
   const featureTiles = [
@@ -215,8 +214,8 @@ function HomePage() {
         </div>
         {home && home.featured.length > 0 ? (
           <HorizontalCardRow>
-            {home.featured.map((business) => (
-              <BusinessCard key={business.id} business={business} areaName={area?.name} />
+            {home.featured.map((business, i) => (
+              <BusinessCard key={business.id} business={business} areaName={area?.name} priority={i < 2} />
             ))}
           </HorizontalCardRow>
         ) : !home ? (

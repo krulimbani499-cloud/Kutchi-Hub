@@ -111,7 +111,7 @@ export function ResultCard({
   return (
     <article
       data-result-card
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md sm:flex-row"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow [contain-intrinsic-size:auto_460px] [content-visibility:auto] hover:shadow-md sm:flex-row sm:[contain-intrinsic-size:auto_250px]"
     >
       {/* The whole card opens the business; the photo, the arrows and the buttons sit above this link. */}
       <Link to="/business/$slug" params={{ slug: business.slug }} aria-label={business.name} className="absolute inset-0 z-10" />
@@ -155,8 +155,9 @@ export function ResultCard({
           <BlurFillImage
             src={current}
             alt={business.name}
-            loading={priority ? "eager" : "lazy"}
-            width={640}
+            loading="lazy"
+            priority={priority}
+            width={480}
             fallback={
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted/50 px-3 text-center text-sm text-muted-foreground">
                 {business.categories?.name ?? "Business"}
@@ -172,7 +173,7 @@ export function ResultCard({
         {tier >= AD_TIER && (
           <span
             data-ad-label
-            className="pointer-events-none absolute right-2 top-2 z-30 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm"
+            className="pointer-events-none absolute right-2 top-2 z-30 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
           >
             Ad
           </span>

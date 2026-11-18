@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Header } from "@/components/layout/Header";
 import { DiwaliToran } from "@/components/diwali/DiwaliToran";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -119,9 +120,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      // Fonts: a normal (blocking) stylesheet on purpose. A late swap from the system font re-wraps text and moves the page (CLS 0.26
+      // was measured when it was loaded without blocking). Only what the pages use: Open Sans in 5 weights, Baloo 2 800 for the logo.
+      // (Gujarati / Hindi text has no web font here: it always comes from the phone's own Noto font, so nothing for it can be missing.)
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=Montserrat:wght@700;800&family=Baloo+2:wght@700;800&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=Baloo+2:wght@800&display=swap",
       },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
@@ -131,9 +135,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       ldScript(organizationLd()),
       ldScript(websiteLd()),
       // Inside the iOS app: mark <html> before the page paints, so payment-related parts marked data-ios-hide never flash.
+      // Inside either app (data-native): the app-like touch rules in styles.css (no text selection on buttons, no edge bounce).
       {
         children:
-          "try{var w=window,c=w.Capacitor,ios=(c&&c.getPlatform&&c.getPlatform()==='ios')||!!(w.webkit&&w.webkit.messageHandlers&&w.webkit.messageHandlers.bridge);if(ios)document.documentElement.setAttribute('data-native-ios','1')}catch(e){}",
+          "try{var w=window,c=w.Capacitor,d=document.documentElement,ios=(c&&c.getPlatform&&c.getPlatform()==='ios')||!!(w.webkit&&w.webkit.messageHandlers&&w.webkit.messageHandlers.bridge);if(ios)d.setAttribute('data-native-ios','1');if(ios||(c&&c.isNativePlatform&&c.isNativePlatform()))d.setAttribute('data-native','1')}catch(e){}",
       },
     ],
     styles: [{ children: "html[data-native-ios] [data-ios-hide]{display:none!important}" }],
@@ -161,6 +166,16 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
+  // Inside the apps: the app-like touch rules (styles.css, html[data-native]). The head script sets this before the first paint when the
+  // native bridge is already there; this makes sure of it either way.
+  useEffect(() => {
+    try {
+      if (Capacitor.isNativePlatform()) document.documentElement.setAttribute("data-native", "1");
+    } catch {
+      /* noop */
+    }
+  }, []);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {

@@ -79,7 +79,7 @@ export function FavoriteButton({ businessId, className, size = "md" }: FavoriteB
       aria-pressed={isFavorite}
       disabled={mutation.isPending}
       className={cn(
-        "inline-flex items-center justify-center rounded-full bg-white/90 text-foreground shadow-sm ring-1 ring-border backdrop-blur transition hover:bg-white",
+        "inline-flex items-center justify-center rounded-full bg-white/90 text-foreground shadow-sm ring-1 ring-border transition sm:backdrop-blur hover:bg-white",
         dim,
         className,
       )}

@@ -331,6 +331,55 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+
+  /* App-like touch feel (phones, and the Android / iOS app):
+     - no grey flash over a tapped link / button (the buttons show their own pressed state instead),
+     - taps act at once (no double-tap-zoom wait), pinch-zoom of the page stays on. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  a,
+  button,
+  [role="button"],
+  summary,
+  label,
+  select,
+  input[type="submit"] {
+    touch-action: manipulation;
+  }
+  /* Pressed state: a quick, light dip so a tap is felt immediately (touch screens only, so desktop hover is untouched). */
+  @media (hover: none) and (pointer: coarse) {
+    button:not(:disabled):active,
+    a[class*="rounded"]:active,
+    [role="button"]:active {
+      opacity: 0.82;
+      transition: opacity 0.05s;
+    }
+  }
+}
+
+/* Inside the apps only: the page feels like an app, not like a web page. */
+html[data-native] {
+  overscroll-behavior-y: none; /* no stretch / glow pulling at the page edge, no scroll chaining */
+}
+html[data-native] button,
+html[data-native] a,
+html[data-native] img {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* no long-press menu on buttons, links and pictures */
+}
+
+/* Phones: the two endless decorative animations repaint every frame (a moving gradient and a shining text), which a mid-range phone
+   pays for all the time. They stand still there (the colours stay); tablets and desktops keep the motion. */
+@media (max-width: 767px) {
+  .animate-gradient-pan,
+  .animate-text-shine,
+  .animate-float-y,
+  .animate-pulse-glow,
+  .animate-shimmer-slide {
+    animation: none !important;
+  }
 }
 
 #lovable-badge {

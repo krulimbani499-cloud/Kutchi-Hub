@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Search, Menu, User, LogOut, Heart, Shield, Tag, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth, signOut } from "@/lib/auth";
@@ -22,6 +22,7 @@ export const HIDE_HEADER_SEARCH_ON_HOME = true;
 
 export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useNavigate();
   // The All Business page has its own (sticky) search box: no second one in the header.
   const hideHeaderSearch = hideSearch ?? ((HIDE_HEADER_SEARCH_ON_HOME && pathname === "/") || pathname === "/all-business");
   const { user, isLoading } = useAuth();
@@ -72,7 +73,8 @@ export function Header({ hideSearch }: { hideSearch?: boolean } = {}) {
             onSubmit={(e) => {
               e.preventDefault();
               if (search.trim()) {
-                window.location.href = `/search?q=${encodeURIComponent(search.trim())}`;
+                // In-app navigation (no full page reload): same address, the page opens much faster.
+                void navigate({ to: "/search", search: { q: search.trim() } });
               }
             }}
           >

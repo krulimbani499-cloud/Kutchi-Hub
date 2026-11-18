@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { citySlug } from "@/lib/seo-landing";
 import { useQuery } from "@tanstack/react-query";
@@ -42,7 +42,9 @@ import { listBusinessProducts } from "@/lib/products.functions";
 import { replyToReview, updateReview } from "@/lib/reviews.functions";
 import { PhotoUploader } from "./PhotoUploader";
 import { BlurFillImage } from "./BlurFillImage";
-import { PhotoLightbox, type LightboxPhoto } from "./PhotoLightbox";
+import type { LightboxPhoto } from "./PhotoLightbox";
+// The full-screen photo viewer is loaded the first time a photo is opened (not with the page).
+const PhotoLightbox = lazy(() => import("./PhotoLightbox").then((m) => ({ default: m.PhotoLightbox })));
 import { FavoriteButton } from "./FavoriteButton";
 import { SHOW_SAVED } from "@/lib/features";
 import { EnquiryDialog } from "./EnquiryDialog";
@@ -292,12 +294,14 @@ export function BusinessDetail({ business, reviews, photos, avgRating, reviewCou
           </div>
 
           {lightboxIndex !== null && galleryPhotos.length > 0 && (
-            <PhotoLightbox
-              photos={galleryPhotos}
-              index={lightboxIndex}
-              onClose={() => setLightboxIndex(null)}
-              onIndexChange={setLightboxIndex}
-            />
+            <Suspense fallback={null}>
+              <PhotoLightbox
+                photos={galleryPhotos}
+                index={lightboxIndex}
+                onClose={() => setLightboxIndex(null)}
+                onIndexChange={setLightboxIndex}
+              />
+            </Suspense>
           )}
 
           {/* Summary panel */}
