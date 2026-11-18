@@ -41,14 +41,16 @@ export function OfflineScreen() {
 
   if (!offline) return null;
   return (
-    <div role="alert" className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 text-[#ff6a00]">
-        <WifiOff className="h-8 w-8" />
+    <div role="alert" className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-4 bg-[#faf8f5] px-6 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-center">
+      {/* Same look as native-www/offline.html (the page shown when the app starts without internet). */}
+      <p className="mb-4 text-2xl font-extrabold tracking-wide text-[#111]"><span className="text-[#E8590C]">KUTCHI</span> HUB</p>
+      <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#ffe9d6] text-[#E8590C]">
+        <WifiOff className="h-9 w-9" />
       </span>
-      <h1 className="text-xl font-bold text-foreground">No internet connection</h1>
-      <p className="max-w-xs text-sm text-muted-foreground">Kutchi Hub needs the internet to show local businesses. Check your Wi-Fi or mobile data, then try again.</p>
-      <Button className="bg-[#ff6a00] text-white hover:bg-[#e65a00]" onClick={() => { if (navigator.onLine) setOffline(false); }}>
-        Try again
+      <h1 className="text-[1.35rem] font-bold text-[#1f2430]">Internet connection nahi hai</h1>
+      <p className="max-w-xs text-[#5b6270]">Apna Wi-Fi ya mobile data check karke dobara try karein.</p>
+      <Button className="min-h-12 rounded-full bg-[#E8590C] px-7 text-base text-white hover:bg-[#c94a06]" onClick={() => { if (navigator.onLine) setOffline(false); }}>
+        Dobara try karein
       </Button>
     </div>
   );

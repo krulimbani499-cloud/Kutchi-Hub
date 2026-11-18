@@ -24,8 +24,9 @@ export function WaitingActivationCard({ businessName, compact = false }: { busin
           <p className="font-semibold leading-snug">Waiting for activation</p>
           {!compact && (
             <p className="mt-1 text-sm text-amber-900/80">
-              Kutchi Hub team will call you within 24 hours to activate your listing. Once your plan is active you can add your
-              category, address, opening hours, photos and description.
+              {isIosApp
+                ? "Your listing is being reviewed by the Kutchi Hub team. Once it is ready you can add your category, address, opening hours, photos and description."
+                : "Kutchi Hub team will call you within 24 hours to activate your listing. Once your plan is active you can add your category, address, opening hours, photos and description."}
             </p>
           )}
           {/* Prices are hidden for everyone but admins (SHOW_PUBLIC_PRICING): Call / WhatsApp, no "View plans". */}

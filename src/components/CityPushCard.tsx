@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useCity } from "@/hooks/useCity";
 import { useLanguage } from "@/lib/i18n";
 import { useCityPushAccess } from "@/hooks/useCityPushAccess";
+import { isIosApp } from "@/lib/native";
 import { PUSH_EVENT, disableWebPush, dismissPush, enableWebPush, pushDismissed, pushSupported, readStoredPush } from "@/lib/web-push";
 
 /**
@@ -93,7 +94,7 @@ export function CityPushCard() {
       </div>
       {problem && (
         <p role="alert" className="text-xs text-destructive sm:basis-full">
-          {t(problem === "denied" ? "push.denied" : "push.error")}
+          {t(problem === "denied" ? (isIosApp() ? "push.deniedApp" : "push.denied") : "push.error")}
         </p>
       )}
     </div>

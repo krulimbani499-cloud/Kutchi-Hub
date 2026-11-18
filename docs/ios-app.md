@@ -8,36 +8,78 @@ reached through the Capacitor bridge, and every call checks the plugin exists (`
 native share, native location, push registration, offline screen and the payment-wording changes below. Android and the
 website are unchanged.
 
-## Mac checklist (after `git pull`)
+## Mac checklist (Xcode)
 
+Project facts: bundle id `app.kutchihub.mobile`, Team `66D7LCJY38` (KUTCHI HUB), Automatic signing, Version **1.0.0**, Build **1**,
+iOS 15+, `GoogleService-Info.plist` is already in the target (Copy Bundle Resources).
+
+**0. Before Xcode (Terminal)**
 ```bash
-node -v                      # needs Node 22 or newer (Capacitor 8). Install with nvm / nodejs.org if older.
-npm ci                       # the Swift packages point into node_modules/@capacitor/*
-npx cap sync ios             # MUST run once on the Mac: copies native-www, rewrites Package.swift for macOS, writes capacitor.config.json
-npx cap open ios             # opens ios/App/App.xcodeproj in Xcode
+git pull
+node -v                      # Node 22 or newer (Capacitor 8)
+npm ci                       # the Swift packages point into node_modules/@capacitor/* and @capacitor-firebase/*
+npx cap sync ios             # MUST run on the Mac: rewrites Package.swift paths for macOS, copies native-www
+npx cap open ios
 ```
 
-In Xcode:
+**1. Team + signing** (blue **App** project > target **App** > **Signing & Capabilities**)
+- [ ] Wait for "Resolving Package Dependencies" (bottom bar). The first time it downloads firebase-ios-sdk (a few minutes). If it fails: File > Packages > Reset Package Caches, then Resolve Package Versions.
+- [ ] **Automatically manage signing** ticked, **Team** = KUTCHI HUB (66D7LCJY38). Sign in under Xcode > Settings > Accounts if the team is not listed.
+- [ ] Bundle Identifier = `app.kutchihub.mobile`.
+- [ ] No red errors in the signing section (Xcode creates the provisioning profile by itself).
 
-1. Wait for "Resolving Package Dependencies" to finish (bottom bar). If it fails: File > Packages > Reset Package Caches, then File > Packages > Resolve Package Versions.
-2. Left list: click the blue **App** project > target **App** > **Signing & Capabilities**.
-   - Tick **Automatically manage signing**, choose your **Team** (needs the paid Apple Developer account for Push).
-   - Bundle Identifier must be `app.kutchihub.mobile`.
-   - **Push Notifications** should already be listed (from `App.entitlements`). If Xcode says the profile does not support it: **+ Capability** > **Push Notifications**.
-3. Top bar: pick an **iPhone simulator** (iPhone 15/16, iOS 17+), press **Cmd+R**. Expect the logo splash, then the website.
-4. Test in the simulator: browse, search, "Near me" (Features > Location > Custom Location, grant the prompt), share a business (native share sheet), turn Wi-Fi off in the Mac -> offline page, Dashboard > Settings > Delete my account (use a throw-away account), and check that **Pricing** appears nowhere (header, listing pages, cards).
-5. Real device: plug the iPhone in, select it, Cmd+R (first time: Settings > General > VPN & Device Management > trust your developer certificate). Push only works on a real device.
-6. Upload: destination **Any iOS Device (arm64)** > **Product > Archive** > **Distribute App > App Store Connect > Upload**. Raise the **Build** number (target > General > Identity) for every upload; **Version** is 1.0.
+**2. Capabilities** (same screen)
+- [ ] **Push Notifications** is listed (comes from `App.entitlements`). If not: **+ Capability** > Push Notifications.
+- [ ] **Background Modes** > tick **Remote notifications** (already in Info.plist as `UIBackgroundModes`; the tick makes Xcode show it and add it to the App ID).
+- [ ] `App.entitlements` keeps `aps-environment = development`: Xcode switches it to `production` by itself when you Archive / distribute. Do not edit it.
+- [ ] Left list: `GoogleService-Info.plist` is there; File Inspector (right) > Target Membership: **App** ticked.
 
-App Store Connect (once): create the app with bundle id `app.kutchihub.mobile`; fill App Privacy (location - not linked/not stored,
-photos, email, user content, push token); Support URL + Privacy Policy URL (https://www.kutchihub.com/privacy);
-give App Review a demo account (email + password) since the app needs sign-in for owner features.
+**3. Test on a real iPhone** (push does not work in the Simulator)
+- [ ] Plug in the iPhone, select it, **Cmd+R**. First time: iPhone Settings > General > VPN & Device Management > trust the developer certificate.
+- [ ] Open the app: **no** notification question appears at start.
+- [ ] Home page > pick a city > tap "🔔 Naye business ki khabar paayein": the iOS permission dialog appears now, tap Allow, the line "Alerts ... ON" appears. (The card is admin-only "TEST MODE" until `SHOW_CITY_PUSH = true`.)
+- [ ] Admin > Send test notification to my device: it arrives (app in background and closed). Tap it: the page opens.
+- [ ] Wi-Fi / mobile data off, reopen the app: the "Internet connection nahi hai" page appears (same design as Android).
+- [ ] Pricing / Upgrade / plan prices / "Contact to activate" appear nowhere (menu, home, listing page, dashboard, My Listings, footer).
+- [ ] Dashboard > Settings > Delete my account is reachable (use a throw-away account).
+- [ ] WhatsApp / Instagram / Maps / call buttons open the other app or Safari and you can come back to Kutchi Hub.
+
+**4. Archive + upload**
+- [ ] Destination (top bar) = **Any iOS Device (arm64)**.
+- [ ] **Product > Archive**. When the Organizer opens: **Distribute App > App Store Connect > Upload** (accept the defaults: automatic signing, upload symbols).
+- [ ] Every new upload needs a higher **Build** number (target > General > Identity > Build). Version stays 1.0.0 for the first release.
+
+**5. App Store Connect (appstoreconnect.apple.com) + TestFlight**
+- [ ] My Apps > Kutchi Hub > TestFlight: the build shows "Processing" for 10-30 minutes, then an email arrives. If it asks about **Export Compliance**: answer No (already set: `ITSAppUsesNonExemptEncryption = false`).
+- [ ] Internal testing: add testers (App Store Connect users), install with the TestFlight app, repeat the checks of step 3.
+- [ ] App Store tab > version 1.0.0 > choose the build; fill App Privacy (location - not linked / not stored, photos, email, user content, **push token / device ID**), Support URL, Privacy Policy URL `https://www.kutchihub.com/privacy`, screenshots, description.
+- [ ] App Review Information: give a demo account (email + password) and a note: "Sign in with email and password. Account deletion: Dashboard > Settings > Delete my account. Plans are not sold in the app."
+- [ ] Submit for Review.
+
+## Push notifications on iOS (how it works)
+
+- Plugin: **@capacitor-firebase/messaging** (the native iOS side; the page calls it through `src/lib/native-push.ts`). Reason: our server sends
+  through Firebase Cloud Messaging (`src/lib/fcm.server.ts`), which needs an **FCM token**; `@capacitor/push-notifications` on iOS only
+  returns the raw APNs token. The Firebase plugin asks Apple for permission, gets the APNs token and exchanges it for the FCM token.
+- The APNs key is uploaded in Firebase (Project settings > Cloud Messaging); `GoogleService-Info.plist` links the app to that project.
+- The token is saved with `registerPushSubscription` into `push_subscriptions` (`platform = 'ios'`, per city), exactly like the website.
+  No new SQL (the `city-push` migration already allows `ios`). `supabase/pending/ios-push` (`device_tokens`) is **obsolete**: do not run it.
+- The permission dialog opens only when the person taps "🔔 Naye business ki khabar paayein" (`CityPushCard`). `FirebaseMessagingAutoInitEnabled = NO`
+  in Info.plist: no FCM token is made or sent anywhere before that tap.
+- Tapping a notification opens `data.link_url` (`CityPushSync`).
+- `@capacitor/push-notifications` is **removed** from package.json: the Firebase plugin's README says no other push plugin may be installed (both set
+  `notificationRouter.pushNotificationHandler`, so the notification-tap event could go to the wrong plugin). Tap flow: the plugin fires
+  `notificationActionPerformed` (retained until a listener exists, so it also works when the app was closed) with `notification.data.link_url`;
+  `CityPushSync` -> `listenForNotificationTaps` opens that path (`/business/<slug>`, or `/all-business?city=..&sort=newest`) with `router.history.push`.
+- Android: the installed Android 1.0.3 is unchanged (the `android/` folder was not touched, and the web code never calls any push plugin on Android).
+  The next `npx cap sync android` would drop the old push plugin and add the Firebase one; Android push then needs a `google-services.json` (same
+  step Android 1.0.4 needs anyway).
 
 ## What was audited, and what was done
 
 | Guideline | State before | Now |
 |---|---|---|
-| 4.2 not just a website | Only the Android back-button handler | iOS: native share sheet (`@capacitor/share`), native location (`@capacitor/geolocation`, one real prompt), push registration (`@capacitor/push-notifications`), offline page (`native-www/offline.html` via `server.errorPath` + in-app overlay), icon + splash from the logo (1024 icon, 2732 splash) |
+| 4.2 not just a website | Only the Android back-button handler | iOS: native share sheet (`@capacitor/share`), native location (`@capacitor/geolocation`, one real prompt), push alerts (`@capacitor-firebase/messaging`, only after a tap on the alerts card), offline page (`native-www/offline.html` via `server.errorPath` + in-app overlay), icon + splash from the logo (1024 icon, 2732 splash) |
 | 5.1.1 account deletion | Web page that said "email us" | Dashboard > **Settings** > **Delete my account** (type DELETE). `src/lib/account.functions.ts`: owned businesses are **archived**, never deleted (paid or not); the sign-in account is deleted and its profile, reviews, favourites, points, notifications and push tokens cascade away |
 | 4.8 Sign in with Apple | Google + Apple buttons exist only on the web and only on Lovable hosts; they are hidden inside the app (`AuthForms.tsx`). The app offers **email + password only** | **Not required** (no third-party login in the app). If Google login is ever turned on inside the app, Sign in with Apple must be added at the same time |
 | 3.1.1 payments | Pricing page, header link, Upgrade / View plans / plan wording in several cards | iOS app only: pricing page replaced by "not available in the app", header Pricing hidden, Upgrade / View plans / plan wording removed from the cards and listing pages. No external payment link remains. Website + Android unchanged |
@@ -47,11 +89,10 @@ Permission texts live in `ios/App/App/Info.plist`.
 
 ## Not done / needs a decision
 
-- **Sending push notifications.** The phone registers and its token is saved (`device_tokens`, `supabase/pending/ios-push`),
-  but nothing sends pushes yet. That needs an APNs key (.p8) from the Apple Developer account, stored ONLY as a server secret
-  (Vercel env), plus a small sender (for example when a row is added to `notifications`). Never put the key in the app.
-- Remaining plan wording in toasts / server messages (for example "Plan active nahi hai ...") is text only, with no link or
-  payment action. Say if App Review asks and it will be neutralised on iOS too.
-- `capacitor.config.ts` now uses `webDir: 'native-www'` and `errorPath`. The Android project was not re-synced; it picks the
-  offline page up the next time `npx cap sync android` is run.
-- SQL to run (in `supabase/pending/`): `quick-listing` (if not yet), `no-hard-delete` (so archiving works), `ios-push`.
+- Remaining plan wording in server error texts (for example "Plan active nahi hai ...", "plan limit reached") is text only with no link or button.
+  In the iOS app the visible ones are neutralised (listing screens, "Contact Kutchi Hub to add more"). Say if App Review asks about the rest.
+- `GoogleService-Info.plist` is not a secret (Firebase client settings, shipped inside every app), so it may be committed. Restrict its API key
+  to the iOS bundle id in Google Cloud Console > APIs & Services > Credentials.
+- `capacitor.config.ts` uses `webDir: 'native-www'` and `errorPath`. The Android project was not re-synced; it picks the new offline page up the
+  next time `npx cap sync android` is run.
+- SQL to run (in `supabase/pending/`): `city-push` (replaces `ios-push`), `quick-listing` (if not yet), `no-hard-delete` (so archiving works).

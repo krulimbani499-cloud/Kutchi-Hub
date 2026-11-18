@@ -7,6 +7,7 @@
 import { downloadAppMode } from "@/hooks/useDownloadApp";
 import { cityKeyFor } from "@/lib/city-push";
 import { registerPushSubscription, setPushCity, unregisterPushSubscription } from "@/lib/push.functions";
+import { disableNativePush, enableNativePush, nativePushAvailable } from "@/lib/native-push";
 import type { Lang } from "@/lib/i18n";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.14.1/";
@@ -30,15 +31,19 @@ export function firebaseWebConfig(): FirebaseWebConfig | null {
   return Object.values(cfg).every(Boolean) ? cfg : null;
 }
 
-/** Can THIS browser take part? Not inside our Android / iOS app (old builds have no push set-up), not on an iPhone / iPad. */
+/** Can THIS browser take part? Not inside our Android app (no push set-up there) and not on an iPhone / iPad browser; the iOS app has its own way (native-push.ts). */
 export function browserCanPush(): boolean {
   if (typeof window === "undefined" || typeof navigator === "undefined") return false;
   if (downloadAppMode() === "hide") return false;
   return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
 
-/** Can this page do it technically: the Firebase settings are present and the browser can do it. (Who may SEE it is decided by useCityPushAccess.) */
+/**
+ * Can this page do it technically? Browser: the Firebase web settings are present and the browser can do it. iOS app: the build contains the
+ * Firebase push plugin (the settings come from GoogleService-Info.plist, not from VITE_FIREBASE_*). Who may SEE it is decided by useCityPushAccess.
+ */
 export function pushSupported(): boolean {
+  if (nativePushAvailable()) return true;
   return firebaseWebConfig() !== null && browserCanPush();
 }
 
@@ -131,6 +136,13 @@ export type EnableResult = { ok: true } | { ok: false; reason: "unavailable" | "
  * gets this browser's FCM token and hands it to the server. Never throws.
  */
 export async function enableWebPush(city: string, lang?: Lang): Promise<EnableResult> {
+  if (nativePushAvailable()) {
+    // iOS app: the system permission dialog + the FCM token come from the native plugin.
+    const native = await enableNativePush(city, lang);
+    if (!native.ok) return { ok: false, reason: native.reason };
+    writeStoredPush({ token: native.token, cityKey: cityKeyFor(city), city });
+    return { ok: true };
+  }
   const cfg = firebaseWebConfig();
   if (!pushSupported() || !cfg) return { ok: false, reason: "unavailable" };
   try {
@@ -157,7 +169,7 @@ let foregroundOn = false;
  * show). This shows it as a normal notification in that case too. Called when alerts are on; does nothing without permission.
  */
 export async function attachForegroundMessages(): Promise<void> {
-  if (foregroundOn) return;
+  if (foregroundOn || nativePushAvailable()) return; // (the iOS app shows its own banner)
   const cfg = firebaseWebConfig();
   if (!cfg || !browserCanPush() || Notification.permission !== "granted") return;
   try {
@@ -178,6 +190,10 @@ export async function disableWebPush(): Promise<void> {
   const stored = readStoredPush();
   writeStoredPush(null);
   if (!stored) return;
+  if (nativePushAvailable()) {
+    await disableNativePush(stored.token);
+    return;
+  }
   try {
     await unregisterPushSubscription({ data: { token: stored.token } });
   } catch {

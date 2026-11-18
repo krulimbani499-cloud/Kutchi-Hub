@@ -4,6 +4,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { getCategories, getListingFlow } from "@/lib/businesses.functions";
 import { BusinessForm } from "@/components/business/BusinessForm";
 import { QuickListingForm } from "@/components/business/QuickListingForm";
+import { useIsIosApp } from "@/hooks/useIsIosApp";
 
 const categoriesQueryOptions = queryOptions({
   queryKey: ["categories"],
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/_authenticated/business/new")({
 });
 
 function NewBusinessPage() {
+  const isIosApp = useIsIosApp(); // Apple 3.1.1: no "activate your listing" wording in the iOS app
   const { data: categories } = useSuspenseQuery(categoriesQueryOptions);
   const { data: flow } = useSuspenseQuery(listingFlowQueryOptions);
   // Owners get the 4-field quick form once the database is ready; admins (and everyone, until then) get the full form.
@@ -47,7 +49,7 @@ function NewBusinessPage() {
           <>
             <h2 className="mb-2 text-2xl font-bold text-foreground">Tell us about your business</h2>
             <p className="mb-6 text-muted-foreground">
-              Just 4 details. Our team will call you within 24 hours to activate your listing.
+              {isIosApp ? "Just 4 details. Our team will review your listing." : "Just 4 details. Our team will call you within 24 hours to activate your listing."}
             </p>
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
               <QuickListingForm categories={categories} />

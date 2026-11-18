@@ -25,11 +25,14 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Kutchi Hub uses your location to show businesses near you and to pick your nearest city. Your location is not stored.</string>
+	<string>Kutchi Hub uses your location only to show businesses near you and to pick your nearest city (aapke paas ke business dikhane ke liye). Your location is not stored.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Kutchi Hub needs the camera so you can take photos of your business, products or catalog to upload to your listing.</string>
+	<string>Kutchi Hub needs the camera only when you choose to take a photo of your business, products or catalog to add to your listing (listing mein photo lagane ke liye).</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Kutchi Hub needs access to your photos so you can choose pictures of your business, products or catalog to upload to your listing.</string>
+	<string>Kutchi Hub needs access to your photos only when you choose pictures of your business, products or catalog to add to your listing (listing mein photo lagane ke liye).</string>
+	<!-- Firebase: do not create / upload a push token at app start. The token is made only when the person taps "Naye business ki khabar" on the home page. -->
+	<key>FirebaseMessagingAutoInitEnabled</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

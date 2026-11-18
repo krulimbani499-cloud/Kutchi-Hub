@@ -1,4 +1,5 @@
 import { SHOW_PUBLIC_PRICING } from "./features";
+import { isIosApp } from "./native";
 
 // Owners can only edit a published business while it has an active plan. The database enforces this
 // (see supabase/pending/edit-requires-plan); these helpers turn its rejections into one friendly message.
@@ -42,6 +43,8 @@ export function isEditLockedError(err: unknown): boolean {
  * Hub ...": no upgrade wording anywhere. Admins are never held to plan limits, so they never meet these messages.
  */
 export function withoutUpgradeWording(message: string): string {
+  // iOS app (Apple 3.1.1): not even "Contact Kutchi Hub" next to a plan limit.
+  if (isIosApp()) return message.replace(/\s*Upgrade[^.]*\./i, "").trim();
   return SHOW_PUBLIC_PRICING ? message : message.replace(/\s*Upgrade[^.]*\./i, " Contact Kutchi Hub to add more.");
 }
 
